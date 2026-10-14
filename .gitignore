@@ -1,0 +1,11 @@
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+
+# Secrets / local env
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+!**/.env.example
