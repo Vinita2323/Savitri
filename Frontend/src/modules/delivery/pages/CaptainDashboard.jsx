@@ -268,7 +268,8 @@ const CaptainDashboard = () => {
         const orderId = job.orderId || job._id;
         await captainService.acceptJob(orderId);
       }
-      setIncomingJob(null); // Modal closes immediately
+      setIncomingJob(null); // Modal closes immediately — stops DeliveryAppRing
+      window.dispatchEvent(new CustomEvent('captain-stop-ringtone'));
       await fetchDashboard(true);
       if (job.isTransport) {
         navigate(`/captain/active-delivery?type=transport&bookingId=${job.bookingId || job._id}`);

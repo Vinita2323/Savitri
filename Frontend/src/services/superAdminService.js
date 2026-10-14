@@ -4,6 +4,13 @@ export const superAdminService = {
   // Authentication
   login: async (credentials) => {
     const response = await API.post('/auth/super-admin/login', credentials);
+    if (response.data?.success && response.data.token) {
+      localStorage.setItem('shippnex_super_admin_token', response.data.token);
+      if (response.data.superAdmin) {
+        localStorage.setItem('shippnex_super_admin_data', JSON.stringify(response.data.superAdmin));
+      }
+      localStorage.setItem('shippnex_super_admin_session', '1');
+    }
     return response.data;
   },
   getProfile: async () => {

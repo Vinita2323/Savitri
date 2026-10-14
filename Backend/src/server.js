@@ -89,7 +89,7 @@ app.use(cookieParser());
 app.use((req, res, next) => {
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self' http://localhost:* ws://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com http://localhost:*; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com http://localhost:*; img-src 'self' data: https: http://localhost:*; connect-src 'self' http://localhost:* https://maps.googleapis.com https://maps.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com http://localhost:*; frame-src 'self' https://maps.googleapis.com http://localhost:*;"
+    "default-src 'self' http://localhost:* ws://localhost:* https://*.vercel.app https://*.onrender.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com http://localhost:*; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com http://localhost:*; img-src 'self' data: https: http://localhost:*; connect-src 'self' http://localhost:* https://*.vercel.app https://*.onrender.com https://maps.googleapis.com https://maps.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com http://localhost:*; frame-src 'self' https://maps.googleapis.com http://localhost:*;"
   );
   next();
 });

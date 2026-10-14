@@ -219,11 +219,13 @@ export const authService = {
     return response.data;
   },
 
-  // Admin Auth — session is HttpOnly cookie; never store the password or JWT in localStorage.
+  // Admin Auth — store JWT for cross-origin (Vercel → Render); cookie alone is blocked by SameSite.
   adminLogin: async (email, password, rememberMe = false) => {
     const response = await API.post('/auth/admin/login', { email, password, rememberMe: Boolean(rememberMe) });
     if (response.data?.success && response.data.admin) {
-      localStorage.removeItem('shippnex_admin_token');
+      if (response.data.token) {
+        localStorage.setItem('shippnex_admin_token', response.data.token);
+      }
       localStorage.setItem('shippnex_admin_data', JSON.stringify(response.data.admin));
       localStorage.setItem('shippnex_admin_session', '1');
       registerFCMToken(true, 'admin').catch(() => {});
@@ -247,7 +249,9 @@ export const authService = {
     const response = await API.put('/auth/admin/profile', profileData);
     if (response.data && response.data.admin) {
       localStorage.setItem('shippnex_admin_data', JSON.stringify(response.data.admin));
-      localStorage.removeItem('shippnex_admin_token');
+      if (response.data.token) {
+        localStorage.setItem('shippnex_admin_token', response.data.token);
+      }
       try {
         window.dispatchEvent(new Event('admin_profile_updated'));
       } catch (e) {}

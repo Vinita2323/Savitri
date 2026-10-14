@@ -87,6 +87,7 @@ const CaptainOrderNotifier = () => {
         await captainService.acceptJob(orderId);
       }
       setIncomingJob(null);
+      window.dispatchEvent(new CustomEvent('captain-stop-ringtone'));
       if (job.isTransport) {
         navigate(`/captain/active-delivery?type=transport&bookingId=${job.bookingId || job._id}`);
       } else {

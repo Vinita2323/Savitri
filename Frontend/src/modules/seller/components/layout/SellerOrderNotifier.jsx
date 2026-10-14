@@ -74,8 +74,14 @@ const SellerOrderNotifier = () => {
 
   const stopRingtone = () => {
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
+      try {
+        audioRef.current.pause();
+        audioRef.current.loop = false;
+        audioRef.current.currentTime = 0;
+        audioRef.current.src = '';
+        audioRef.current.load();
+      } catch (e) {}
+      audioRef.current = null;
     }
     if (ringtoneIntervalRef.current) {
       clearInterval(ringtoneIntervalRef.current);
@@ -185,16 +191,24 @@ const SellerOrderNotifier = () => {
 
   const handleAcceptOrder = async () => {
     if (!activeNewOrder) return;
+    const accepted = activeNewOrder;
+    // Stop ring immediately on Accept — do not wait for API
+    stopRingtone();
+    knownOrderIdsRef.current.add(String(accepted._id));
+    notifiedOrderIdsRef.current.add(String(accepted._id));
+    activeOrderIdRef.current = null;
+    setActiveNewOrder(null);
     setActionLoading(true);
-    knownOrderIdsRef.current.add(String(activeNewOrder._id));
-    notifiedOrderIdsRef.current.add(String(activeNewOrder._id));
     try {
-      await orderService.acceptSellerOrder(activeNewOrder._id);
-      showToast(`Order #${activeNewOrder.orderId} Accepted Successfully! 🎉`);
-      closeIncomingModal();
+      await orderService.acceptSellerOrder(accepted._id);
+      window.dispatchEvent(new CustomEvent('seller-order-handled', { detail: { id: accepted._id } }));
+      showToast(`Order #${accepted.orderId} Accepted Successfully! 🎉`);
+      presentNextNewOrder();
       pollSellerOrders();
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to accept order.');
+      // Re-open only if still NEW somehow; otherwise keep silent
+      pollSellerOrders();
     } finally {
       setActionLoading(false);
     }

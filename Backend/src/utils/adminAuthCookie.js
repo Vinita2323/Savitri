@@ -9,13 +9,17 @@ const isProduction = () => process.env.NODE_ENV === 'production';
 
 /**
  * Cookie options for admin / super-admin auth.
- * Prefer Secure + HttpOnly + SameSite. Session cookies omit maxAge.
+ * Production is cross-origin (Vercel frontend → Render API), so cookies must be
+ * SameSite=None; Secure or the browser will drop them on XHR after login.
+ * Session cookies omit maxAge.
  */
 export const getAdminCookieOptions = (rememberMe = false) => {
+  const crossSite = isProduction();
   const options = {
     httpOnly: true,
-    secure: isProduction(),
-    sameSite: isProduction() ? 'lax' : 'lax',
+    secure: crossSite ? true : isProduction(),
+    // 'none' required for credentialed requests from another site (e.g. *.vercel.app → *.onrender.com)
+    sameSite: crossSite ? 'none' : 'lax',
     path: '/',
   };
 
@@ -31,10 +35,11 @@ export const setAdminAuthCookie = (res, token, rememberMe = false, cookieName = 
 };
 
 export const clearAdminAuthCookie = (res, cookieName = ADMIN_AUTH_COOKIE) => {
+  const crossSite = isProduction();
   res.clearCookie(cookieName, {
     httpOnly: true,
-    secure: isProduction(),
-    sameSite: 'lax',
+    secure: crossSite ? true : isProduction(),
+    sameSite: crossSite ? 'none' : 'lax',
     path: '/',
   });
 };

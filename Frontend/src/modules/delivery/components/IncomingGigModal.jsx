@@ -103,8 +103,14 @@ const IncomingGigModal = ({
 
   const stopRingtone = () => {
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
+      try {
+        audioRef.current.pause();
+        audioRef.current.loop = false;
+        audioRef.current.currentTime = 0;
+        audioRef.current.src = '';
+        audioRef.current.load();
+      } catch (e) {}
+      audioRef.current = null;
     }
     if (webAudioIntervalRef.current) {
       clearInterval(webAudioIntervalRef.current);
@@ -114,23 +120,29 @@ const IncomingGigModal = ({
 
   useEffect(() => {
     playRingtone();
+    const onForceStop = () => stopRingtone();
+    window.addEventListener('captain-stop-ringtone', onForceStop);
     return () => {
+      window.removeEventListener('captain-stop-ringtone', onForceStop);
       stopRingtone();
     };
-  }, [job]);
+  }, [job?._id || job?.orderId || job?.bookingId]);
 
   const handleAcceptClick = () => {
     stopRingtone();
+    window.dispatchEvent(new CustomEvent('captain-stop-ringtone'));
     if (onAccept) onAccept(job);
   };
 
   const handleRejectClick = () => {
     stopRingtone();
+    window.dispatchEvent(new CustomEvent('captain-stop-ringtone'));
     if (onReject) onReject(job);
   };
 
   const handleCloseClick = () => {
     stopRingtone();
+    window.dispatchEvent(new CustomEvent('captain-stop-ringtone'));
     if (onClose) onClose(job);
   };
 

@@ -86,7 +86,7 @@ export const AdminLogin = () => {
           </div>
           <div className="flex items-center justify-center gap-2">
             <ShieldCheck size={20} className="text-[#F7941D]" />
-            <h1 className="text-xl font-bold text-white tracking-tight">Super Admin Portal</h1>
+            <h1 className="text-xl font-bold text-white tracking-tight">Admin Portal</h1>
           </div>
           <p className="text-xs text-teal-300/70">Enter your credentials to access the system panel</p>
         </div>
@@ -104,12 +104,12 @@ export const AdminLogin = () => {
             <div className="relative">
               <Mail size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-teal-300/60 pointer-events-none" />
               <input
-                type="email"
+                type="text"
                 required
                 autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter admin email"
+                placeholder="savitriadmin@savitri.com"
                 className="w-full bg-[#1A2E0A] border border-[#355A1C] focus:border-[#F7941D] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-teal-300/40 outline-none transition-all"
               />
             </div>
@@ -174,7 +174,7 @@ export const AdminLogin = () => {
         </form>
 
         <div className="text-center pt-2 border-t border-[#355A1C]/50">
-          <p className="text-[11px] text-teal-300/50 font-mono">ShippNex Secure Gateway v2.4</p>
+          <p className="text-[11px] text-teal-300/50 font-mono">Savitri Admin Gateway</p>
         </div>
       </div>
     </div>

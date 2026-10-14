@@ -160,10 +160,11 @@ const Orders = () => {
 
   const handleAcceptOrder = async (notification) => {
     if (!notification) return;
+    // Close seller ringtone immediately when Accept is clicked
+    window.dispatchEvent(new CustomEvent('seller-order-handled', { detail: { id: notification._id } }));
     setActionLoading(true);
     try {
       const res = await orderService.acceptSellerOrder(notification._id);
-      window.dispatchEvent(new CustomEvent('seller-order-handled', { detail: { id: notification._id } }));
       showToast(`Order #${notification.orderId} Accepted Successfully! 🎉`);
       
       const updatedObj = res.notification || { ...notification, status: 'ACCEPTED', acceptedAt: new Date() };
