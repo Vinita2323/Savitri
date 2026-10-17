@@ -6,7 +6,7 @@ export const SuperAdminHeader = ({ title, subtitle, onRefresh, refreshing }) => 
   const { superAdmin, logout } = useSuperAdmin();
 
   return (
-    <header className="h-18 bg-white border-b border-slate-200/80 px-6 flex items-center justify-between shrink-0 sticky top-0 z-30 shadow-xs font-sans">
+    <header className="sticky top-0 z-30 flex h-18 w-full min-w-0 shrink-0 items-center justify-between border-b border-slate-200/80 bg-white px-4 shadow-xs font-sans sm:px-6 lg:px-8">
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-lg sm:text-xl font-black text-[#1A2E0A] tracking-tight m-0">{title || 'Treasury & Ledger'}</h1>

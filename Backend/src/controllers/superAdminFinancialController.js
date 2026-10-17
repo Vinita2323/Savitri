@@ -33,7 +33,7 @@ const logAudit = async ({
     await FinancialAuditLog.create({
       logId,
       actorId,
-      actorEmail: actorEmail || 'superadmin@shippnex.com',
+      actorEmail: actorEmail || 'superadmin@savitri.com',
       actorRole: 'super_admin',
       action,
       targetEntity,

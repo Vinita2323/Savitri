@@ -23,6 +23,39 @@ export const SuperAdminProvider = ({ children }) => {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  // UI-only brand list for Super Admin switcher (not wired to financial APIs)
+  const [brands, setBrands] = useState([
+    { id: 'brand_fg', name: 'Fashion Gallary', shortName: 'Fashion Gallary', city: 'Indore', code: 'FG-IND' },
+    { id: 'brand_fh', name: 'Fashion Hub', shortName: 'Fashion Hub', city: 'Bhopal', code: 'FH-BPL' },
+    { id: 'brand_fa', name: 'Fashion Adda', shortName: 'Fashion Adda', city: 'Jabalpur', code: 'FA-JBP' },
+  ]);
+
+  const [selectedBrandId, setSelectedBrandId] = useState('brand_fg');
+  const selectedBrand = brands.find((b) => b.id === selectedBrandId) || brands[0] || null;
+
+  const createBrand = useCallback((payload) => {
+    const code = String(payload.code || '').trim().toUpperCase();
+    const name = String(payload.name || '').trim();
+    const city = String(payload.city || '').trim();
+    if (!name || !code || !city) {
+      return { ok: false, message: 'Brand name, code, and city are required.' };
+    }
+    if (brands.some((b) => b.code.toUpperCase() === code)) {
+      return { ok: false, message: 'Brand code already exists in this list.' };
+    }
+    const id = `brand_${Date.now()}`;
+    const next = {
+      id,
+      name,
+      shortName: name,
+      city,
+      code,
+    };
+    setBrands((prev) => [next, ...prev]);
+    setSelectedBrandId(id);
+    return { ok: true, brand: next };
+  }, [brands]);
+
   useEffect(() => {
     let cancelled = false;
     const validate = async () => {
@@ -94,6 +127,11 @@ export const SuperAdminProvider = ({ children }) => {
         logout,
         isAuthenticated: sessionValid,
         sessionChecking,
+        brands,
+        selectedBrandId,
+        setSelectedBrandId,
+        selectedBrand,
+        createBrand,
       }}
     >
       {children}

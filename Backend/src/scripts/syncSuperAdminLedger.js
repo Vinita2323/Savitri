@@ -27,21 +27,31 @@ const sync = async () => {
     console.log('Connected to MongoDB');
 
     // 1. Seed or ensure Root Super Admin exists
-    const superAdminEmail = 'superadmin@shippnex.com';
+    const superAdminEmail = 'superadmin@savitri.com';
     let superAdmin = await Admin.findOne({ email: superAdminEmail });
     if (!superAdmin) {
-      superAdmin = new Admin({
-        name: 'Chief Financial Officer (Super Admin)',
-        email: superAdminEmail,
-        password: 'SuperAdmin@123',
-        role: 'super_admin',
-      });
-      await superAdmin.save();
-      console.log('Seeded Root Super Admin: superadmin@shippnex.com / SuperAdmin@123');
+      // Migrate legacy shippnex email if present
+      const legacy = await Admin.findOne({ email: 'superadmin@shippnex.com' });
+      if (legacy) {
+        legacy.email = superAdminEmail;
+        legacy.role = 'super_admin';
+        await legacy.save();
+        superAdmin = legacy;
+        console.log('Migrated Root Super Admin email to superadmin@savitri.com');
+      } else {
+        superAdmin = new Admin({
+          name: 'Chief Financial Officer (Super Admin)',
+          email: superAdminEmail,
+          password: 'SuperAdmin@123',
+          role: 'super_admin',
+        });
+        await superAdmin.save();
+        console.log('Seeded Root Super Admin: superadmin@savitri.com / SuperAdmin@123');
+      }
     } else if (superAdmin.role !== 'super_admin') {
       superAdmin.role = 'super_admin';
       await superAdmin.save();
-      console.log('Updated superadmin@shippnex.com role to super_admin');
+      console.log('Updated superadmin@savitri.com role to super_admin');
     }
 
     // 2. Sync existing WithdrawalRequests to PayoutRequests
