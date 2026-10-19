@@ -11,6 +11,8 @@ const AdminRoutes = lazy(() => import('./modules/admin/routes/AdminRoutes'));
 const SuperAdminRoutes = lazy(() => import('./modules/super-admin/routes/SuperAdminRoutes'));
 /** Brand Super Admin (frontend-only multi-brand demo) — isolated from /admin and /super-admin */
 const BrandSuperAdminRoutes = lazy(() => import('./modules/brand-super-admin/routes/BrandSuperAdminRoutes'));
+/** MyWillBook Super Admin (frontend-only platform demo) — isolated from other admin modules */
+const MyWillBookSuperAdminRoutes = lazy(() => import('./modules/mywillbook-super-admin/routes/MyWillBookSuperAdminRoutes'));
 
 import { CartProvider } from './modules/user/context/CartContext';
 import { WishlistProvider } from './modules/user/context/WishlistContext';
@@ -29,6 +31,7 @@ function App() {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isSuperAdminRoute = location.pathname.startsWith('/super-admin');
   const isBrandSuperAdminRoute = location.pathname.startsWith('/brand-super-admin');
+  const isMyWillBookSuperAdminRoute = location.pathname.startsWith('/mywillbook-super-admin');
 
   // Initialize Firebase Push Notifications on App mount (SOP Standard)
   React.useEffect(() => {
@@ -46,7 +49,7 @@ function App() {
   // Bypass splash screen if accessing any specific sub-route or if splash has already been dismissed
   const isSpecificRoute = location.pathname !== '/' && location.pathname !== '';
   const hasSeenSplash = typeof window !== 'undefined' && sessionStorage.getItem('shippnex_splash_seen') === 'true';
-  const bypassSplash = isCaptainRoute || isSellerRoute || isAdminRoute || isSuperAdminRoute || isBrandSuperAdminRoute || isSpecificRoute || hasSeenSplash;
+  const bypassSplash = isCaptainRoute || isSellerRoute || isAdminRoute || isSuperAdminRoute || isBrandSuperAdminRoute || isMyWillBookSuperAdminRoute || isSpecificRoute || hasSeenSplash;
 
   const [showSplash, setShowSplash] = useState(!bypassSplash);
 
@@ -78,6 +81,7 @@ function App() {
                           <Route path="/admin/*" element={<AdminRoutes />} />
                           <Route path="/super-admin/*" element={<SuperAdminRoutes />} />
                           <Route path="/brand-super-admin/*" element={<BrandSuperAdminRoutes />} />
+                          <Route path="/mywillbook-super-admin/*" element={<MyWillBookSuperAdminRoutes />} />
                           <Route path="/*" element={<UserRoutes />} />
                         </Routes>
                       </Suspense>

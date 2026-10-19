@@ -1,6 +1,44 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Building2, ChevronDown, Plus, X } from 'lucide-react';
+import { Building2, ChevronDown, Plus, Upload, X } from 'lucide-react';
 import { useSuperAdmin } from '../context/SuperAdminContext';
+
+const EMPTY_FORM = {
+  name: '',
+  code: '',
+  shortName: '',
+  category: 'Apparel & Fashion',
+  city: '',
+  state: 'Madhya Pradesh',
+  address: '',
+  contact: '',
+  email: '',
+  website: '',
+  gst: '',
+  pan: '',
+  status: 'Active',
+  description: '',
+  logo: '/LogoSavitri.png',
+};
+
+const CATEGORIES = [
+  'Apparel & Fashion',
+  'Electronics',
+  'Grocery & FMCG',
+  'Beauty & Personal Care',
+  'Home & Living',
+  'Other',
+];
+
+const STATES = [
+  'Madhya Pradesh',
+  'Maharashtra',
+  'Rajasthan',
+  'Gujarat',
+  'Uttar Pradesh',
+  'Delhi',
+  'Karnataka',
+  'Other',
+];
 
 /**
  * My Bill Book–style “Switch Brand” dropdown for Super Admin sidebar.
@@ -17,7 +55,7 @@ export const SuperAdminBrandSwitcher = ({ collapsed = false }) => {
   } = useSuperAdmin();
   const [open, setOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ name: '', code: '', city: '' });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
   const rootRef = useRef(null);
 
@@ -33,22 +71,38 @@ export const SuperAdminBrandSwitcher = ({ collapsed = false }) => {
     if (collapsed || !sidebarOpen) setOpen(false);
   }, [collapsed, sidebarOpen]);
 
+  const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+
   const openCreateModal = () => {
     setOpen(false);
-    setForm({ name: '', code: '', city: '' });
+    setForm(EMPTY_FORM);
     setError('');
     setShowCreate(true);
   };
 
+  const onLogoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setField('logo', String(reader.result || '/LogoSavitri.png'));
+    reader.readAsDataURL(file);
+  };
+
   const submitCreate = (e) => {
     e.preventDefault();
-    const result = createBrand(form);
+    const result = createBrand({
+      ...form,
+      shortName: form.shortName.trim() || form.name.trim(),
+    });
     if (!result.ok) {
       setError(result.message || 'Could not create brand.');
       return;
     }
     setShowCreate(false);
   };
+
+  const inputCls =
+    'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#79B433]';
 
   const panel = open ? (
     <div
@@ -76,7 +130,7 @@ export const SuperAdminBrandSwitcher = ({ collapsed = false }) => {
               }`}
             >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 p-1">
-                <img src="/LogoSavitri.png" alt="" className="h-full w-full object-contain" />
+                <img src={brand.logo || '/LogoSavitri.png'} alt="" className="h-full w-full object-contain" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-slate-900">{brand.name}</p>
@@ -107,16 +161,19 @@ export const SuperAdminBrandSwitcher = ({ collapsed = false }) => {
   ) : null;
 
   const createModal = showCreate ? (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/50 p-4">
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/50 p-3 sm:p-4"
+      onClick={() => setShowCreate(false)}
+    >
       <form
         onSubmit={submitCreate}
-        className="w-full max-w-md space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
+        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex shrink-0 items-start justify-between border-b border-slate-100 px-5 py-4">
           <div>
-            <h3 className="text-sm font-extrabold text-slate-900">Create New Brand</h3>
-            <p className="text-[11px] font-medium text-amber-700">
+            <h3 className="text-base font-extrabold text-slate-900">Create New Brand</h3>
+            <p className="mt-0.5 text-[11px] font-medium text-amber-700">
               Stays in Super Admin — demo list only (not saved to database).
             </p>
           </div>
@@ -125,55 +182,207 @@ export const SuperAdminBrandSwitcher = ({ collapsed = false }) => {
             onClick={() => setShowCreate(false)}
             className="cursor-pointer rounded-lg border-none bg-transparent p-1 text-slate-500 hover:bg-slate-100"
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
-        <div>
-          <label className="mb-1 block text-[11px] font-bold text-slate-600">Brand Name *</label>
-          <input
-            value={form.name}
-            onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#79B433]"
-            placeholder="e.g. Fashion Gallary"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-[11px] font-bold text-slate-600">Brand Code *</label>
-          <input
-            value={form.code}
-            onChange={(e) => setForm((p) => ({ ...p, code: e.target.value.toUpperCase() }))}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#79B433]"
-            placeholder="e.g. FG-IND"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-[11px] font-bold text-slate-600">City *</label>
-          <input
-            value={form.city}
-            onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#79B433]"
-            placeholder="e.g. Indore"
-          />
+        <div className="space-y-5 overflow-y-auto px-5 py-4">
+          {/* Logo */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <img
+              src={form.logo}
+              alt="Brand logo preview"
+              className="h-16 w-16 rounded-2xl border border-slate-200 bg-slate-50 object-contain p-1"
+            />
+            <div>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100">
+                <Upload size={14} /> Upload brand logo
+                <input type="file" accept="image/*" className="hidden" onChange={onLogoChange} />
+              </label>
+              <p className="mt-1 text-[10px] text-slate-400">PNG or JPG · preview only in this session</p>
+            </div>
+          </div>
+
+          {/* Identity */}
+          <section>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Brand identity</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-[11px] font-bold text-slate-600">Brand Name *</label>
+                <input
+                  className={inputCls}
+                  value={form.name}
+                  onChange={(e) => setField('name', e.target.value)}
+                  placeholder="e.g. Fashion Gallary"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-bold text-slate-600">Display / Short Name</label>
+                <input
+                  className={inputCls}
+                  value={form.shortName}
+                  onChange={(e) => setField('shortName', e.target.value)}
+                  placeholder="Shown in sidebar (optional)"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-bold text-slate-600">Brand Code *</label>
+                <input
+                  className={inputCls}
+                  value={form.code}
+                  onChange={(e) => setField('code', e.target.value.toUpperCase())}
+                  placeholder="e.g. FG-IND"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-bold text-slate-600">Business Category *</label>
+                <select
+                  className={inputCls}
+                  value={form.category}
+                  onChange={(e) => setField('category', e.target.value)}
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-[11px] font-bold text-slate-600">Brand Description</label>
+                <textarea
+                  className={inputCls}
+                  rows={2}
+                  value={form.description}
+                  onChange={(e) => setField('description', e.target.value)}
+                  placeholder="Short note about this brand / store cluster"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Location */}
+          <section>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Operating location</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-[11px] font-bold text-slate-600">City *</label>
+                <input
+                  className={inputCls}
+                  value={form.city}
+                  onChange={(e) => setField('city', e.target.value)}
+                  placeholder="e.g. Indore"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-bold text-slate-600">State *</label>
+                <select className={inputCls} value={form.state} onChange={(e) => setField('state', e.target.value)}>
+                  {STATES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-[11px] font-bold text-slate-600">Business Address *</label>
+                <textarea
+                  className={inputCls}
+                  rows={2}
+                  value={form.address}
+                  onChange={(e) => setField('address', e.target.value)}
+                  placeholder="Registered / warehouse address"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Contact */}
+          <section>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact details</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-[11px] font-bold text-slate-600">Contact Number *</label>
+                <input
+                  className={inputCls}
+                  value={form.contact}
+                  onChange={(e) => setField('contact', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  placeholder="10-digit mobile"
+                  inputMode="numeric"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-bold text-slate-600">Business Email *</label>
+                <input
+                  type="email"
+                  className={inputCls}
+                  value={form.email}
+                  onChange={(e) => setField('email', e.target.value)}
+                  placeholder="ops@brand.com"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-[11px] font-bold text-slate-600">Website</label>
+                <input
+                  className={inputCls}
+                  value={form.website}
+                  onChange={(e) => setField('website', e.target.value)}
+                  placeholder="https:// (optional)"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Compliance */}
+          <section>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Tax & compliance</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-[11px] font-bold text-slate-600">GSTIN *</label>
+                <input
+                  className={inputCls}
+                  value={form.gst}
+                  onChange={(e) => setField('gst', e.target.value.toUpperCase().slice(0, 15))}
+                  placeholder="15-character GSTIN"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-bold text-slate-600">PAN *</label>
+                <input
+                  className={inputCls}
+                  value={form.pan}
+                  onChange={(e) => setField('pan', e.target.value.toUpperCase().slice(0, 10))}
+                  placeholder="e.g. AABCF1234A"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-bold text-slate-600">Brand Status</label>
+                <select className={inputCls} value={form.status} onChange={(e) => setField('status', e.target.value)}>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {error && (
+            <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700">
+              {error}
+            </p>
+          )}
         </div>
 
-        {error && (
-          <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700">
-            {error}
-          </p>
-        )}
-
-        <div className="flex gap-2 pt-1">
+        <div className="flex shrink-0 gap-2 border-t border-slate-100 px-5 py-3">
           <button
             type="submit"
-            className="cursor-pointer rounded-xl border-none bg-[#79B433] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#689A2B]"
+            className="cursor-pointer rounded-xl border-none bg-[#79B433] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#689A2B]"
           >
             Add Brand
           </button>
           <button
             type="button"
             onClick={() => setShowCreate(false)}
-            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700"
+            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-700"
           >
             Cancel
           </button>
@@ -210,7 +419,7 @@ export const SuperAdminBrandSwitcher = ({ collapsed = false }) => {
           className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-[#355A1C] bg-[#0F1C06] px-2.5 py-2 text-left transition hover:border-[#79B433]/60"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1">
-            <img src="/LogoSavitri.png" alt="" className="h-full w-full object-contain" />
+            <img src={selectedBrand?.logo || '/LogoSavitri.png'} alt="" className="h-full w-full object-contain" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
