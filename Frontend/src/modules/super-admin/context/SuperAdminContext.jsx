@@ -78,7 +78,21 @@ export const SuperAdminProvider = ({ children }) => {
     },
   ]);
 
-  const [selectedBrandId, setSelectedBrandId] = useState('brand_fg');
+  const [selectedBrandId, setSelectedBrandIdState] = useState(() => {
+    try {
+      return sessionStorage.getItem('shippnex_super_admin_brand') || 'brand_fg';
+    } catch {
+      return 'brand_fg';
+    }
+  });
+  const setSelectedBrandId = useCallback((id) => {
+    setSelectedBrandIdState(id);
+    try {
+      sessionStorage.setItem('shippnex_super_admin_brand', id);
+    } catch {
+      /* ignore private-mode storage failures */
+    }
+  }, []);
   const selectedBrand = brands.find((b) => b.id === selectedBrandId) || brands[0] || null;
 
   const createBrand = useCallback((payload) => {

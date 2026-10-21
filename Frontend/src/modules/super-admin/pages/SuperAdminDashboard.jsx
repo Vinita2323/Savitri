@@ -100,18 +100,11 @@ export const SuperAdminDashboard = () => {
 
           <div className="flex flex-wrap gap-3 relative z-10">
             <button
-              onClick={() => navigate('/super-admin/payouts')}
+              onClick={() => navigate('/super-admin/payouts/sellers')}
               className="px-4 py-2.5 bg-[#79B433] hover:bg-[#ea4e00] text-white font-extrabold text-xs rounded-xl border-none cursor-pointer flex items-center gap-2 shadow-md transition-all active:scale-95"
             >
               <ArrowUpRight size={16} />
-              <span>Review Payouts ({Number(metrics.pendingSellerPayoutsCount || 0) + Number(metrics.pendingCaptainPayoutsCount || 0)})</span>
-            </button>
-            <button
-              onClick={() => navigate('/super-admin/financial-adjustments')}
-              className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl border border-white/20 cursor-pointer flex items-center gap-2 transition-all active:scale-95"
-            >
-              <Wallet size={16} />
-              <span>Manual Adjustment</span>
+              <span>Seller Payouts</span>
             </button>
           </div>
         </div>
@@ -350,7 +343,7 @@ export const SuperAdminDashboard = () => {
 
               <div className="space-y-3 pt-2">
                 <div
-                  onClick={() => navigate('/super-admin/payouts?tab=SELLER')}
+                  onClick={() => navigate('/super-admin/payouts/sellers')}
                   className="p-3.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md cursor-pointer transition-all flex items-center justify-between shadow-2xs"
                 >
                   <div className="flex items-center gap-3">
@@ -370,7 +363,7 @@ export const SuperAdminDashboard = () => {
                 </div>
 
                 <div
-                  onClick={() => navigate('/super-admin/payouts?tab=CAPTAIN')}
+                  onClick={() => navigate('/super-admin/payouts/captains')}
                   className="p-3.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md cursor-pointer transition-all flex items-center justify-between shadow-2xs"
                 >
                   <div className="flex items-center gap-3">
@@ -392,10 +385,10 @@ export const SuperAdminDashboard = () => {
             </div>
 
             <button
-              onClick={() => navigate('/super-admin/payouts')}
+              onClick={() => navigate('/super-admin/payouts/sellers')}
               className="w-full py-2.5 bg-[#1A2E0A] hover:bg-[#003837] text-white font-extrabold text-xs rounded-xl border-none cursor-pointer flex items-center justify-center gap-2 transition-all shadow-xs active:scale-95"
             >
-              <span>Manage All Payout Requests</span>
+              <span>View Seller Payouts</span>
               <ArrowRight size={14} />
             </button>
           </div>

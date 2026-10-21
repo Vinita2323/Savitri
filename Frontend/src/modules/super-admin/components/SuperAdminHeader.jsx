@@ -2,11 +2,11 @@ import React from 'react';
 import { useSuperAdmin } from '../context/SuperAdminContext';
 import { ShieldCheck, Bell, RefreshCw, Lock } from 'lucide-react';
 
-export const SuperAdminHeader = ({ title, subtitle, onRefresh, refreshing }) => {
+export const SuperAdminHeader = ({ title, subtitle, onRefresh, refreshing, titleClassName, subtitleClassName }) => {
   const { superAdmin, logout } = useSuperAdmin();
 
   return (
-    <header className="sticky top-0 z-30 flex h-18 w-full min-w-0 shrink-0 items-center justify-between border-b border-slate-200/80 bg-white px-4 shadow-xs font-sans sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 flex min-h-18 w-full min-w-0 shrink-0 items-center justify-between border-b border-slate-200/80 bg-white px-4 py-3 shadow-xs font-sans sm:px-6 lg:px-8">
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-lg sm:text-xl font-black text-[#1A2E0A] tracking-tight m-0">{title || 'Treasury & Ledger'}</h1>
@@ -14,7 +14,7 @@ export const SuperAdminHeader = ({ title, subtitle, onRefresh, refreshing }) => 
             <ShieldCheck size={12} /> SECURE TREASURY
           </span>
         </div>
-        {subtitle && <p className="text-xs text-slate-500 m-0 mt-0.5 font-medium">{subtitle}</p>}
+        {subtitle && <p className={subtitleClassName || 'text-xs text-slate-500 m-0 mt-0.5 font-medium'}>{subtitle}</p>}
       </div>
 
       <div className="flex items-center gap-3">

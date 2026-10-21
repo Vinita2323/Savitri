@@ -6,17 +6,16 @@ import {
   BookOpen,
   Receipt,
   Store,
-  Truck,
-  ArrowUpRight,
+  Wallet,
+  Bike,
   RotateCcw,
   Percent,
-  SlidersHorizontal,
   BarChart3,
-  ShieldAlert,
   LogOut,
   ChevronLeft,
   ChevronRight,
   Lock,
+  Boxes,
 } from 'lucide-react';
 import { SuperAdminBrandSwitcher } from './SuperAdminBrandSwitcher';
 
@@ -35,7 +34,7 @@ export const SuperAdminSidebar = () => {
         },
         {
           to: '/super-admin/transactions',
-          label: 'Central Ledger',
+          label: 'Seller Payments',
           icon: BookOpen,
         },
         {
@@ -49,19 +48,39 @@ export const SuperAdminSidebar = () => {
       group: 'SETTLEMENTS & PAYOUTS',
       items: [
         {
-          to: '/super-admin/payouts',
-          label: 'Payout Requests',
-          icon: ArrowUpRight,
+          to: '/super-admin/payouts/sellers',
+          label: 'Seller Payouts',
+          icon: Wallet,
+        },
+        {
+          to: '/super-admin/payouts/captains',
+          label: 'Captain Payouts',
+          icon: Bike,
         },
         {
           to: '/super-admin/seller-settlements',
-          label: 'Seller Settlements',
+          label: 'Seller Purchases',
+          icon: Store,
+        },
+      ],
+    },
+    {
+      group: 'OPERATIONS & INVENTORY',
+      items: [
+        {
+          to: '/super-admin/stores',
+          label: 'Stores & Sellers',
           icon: Store,
         },
         {
-          to: '/super-admin/captain-settlements',
-          label: 'Captain Settlements',
-          icon: Truck,
+          to: '/super-admin/inventory',
+          label: 'Inventory Control',
+          icon: Boxes,
+        },
+        {
+          to: '/super-admin/delivery-partners',
+          label: 'Delivery Partners',
+          icon: Bike,
         },
       ],
     },
@@ -78,11 +97,6 @@ export const SuperAdminSidebar = () => {
           label: 'Commissions',
           icon: Percent,
         },
-        {
-          to: '/super-admin/financial-adjustments',
-          label: 'Financial Adjustments',
-          icon: SlidersHorizontal,
-        },
       ],
     },
     {
@@ -90,13 +104,8 @@ export const SuperAdminSidebar = () => {
       items: [
         {
           to: '/super-admin/reports',
-          label: 'Financial Reports',
+          label: 'Reports & Analytics',
           icon: BarChart3,
-        },
-        {
-          to: '/super-admin/audit-logs',
-          label: 'Audit Trail',
-          icon: ShieldAlert,
         },
       ],
     },
