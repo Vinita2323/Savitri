@@ -46,11 +46,11 @@ export const clearAdminAuthCookie = (res, cookieName = ADMIN_AUTH_COOKIE) => {
 
 export const extractBearerOrCookieToken = (req) => {
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-    const bearer = req.headers.authorization.split(' ')[1];
-    if (bearer) return bearer;
+    const bearer = req.headers.authorization.split(' ')[1]?.trim();
+    if (bearer && bearer !== 'null' && bearer !== 'undefined') return bearer;
   }
 
-  if (req.cookies?.[ADMIN_AUTH_COOKIE]) return req.cookies[ADMIN_AUTH_COOKIE];
   if (req.cookies?.[SUPER_ADMIN_AUTH_COOKIE]) return req.cookies[SUPER_ADMIN_AUTH_COOKIE];
+  if (req.cookies?.[ADMIN_AUTH_COOKIE]) return req.cookies[ADMIN_AUTH_COOKIE];
   return null;
 };

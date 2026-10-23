@@ -70,11 +70,11 @@ API.interceptors.request.use(
     // Browser path takes priority over request URL so /admin panel always uses admin token
     // (even when it calls /super-admin/* endpoints that are now dual-role accessible)
     if (currentPath.startsWith('/super-admin')) {
-      token = localStorage.getItem('shippnex_super_admin_token');
+      token = localStorage.getItem('shippnex_super_admin_token') || localStorage.getItem('shippnex_admin_token');
     } else if (currentPath.startsWith('/admin')) {
-      token = localStorage.getItem('shippnex_admin_token');
+      token = localStorage.getItem('shippnex_admin_token') || localStorage.getItem('shippnex_super_admin_token');
     } else if (requestUrl.includes('/super-admin')) {
-      token = localStorage.getItem('shippnex_super_admin_token');
+      token = localStorage.getItem('shippnex_super_admin_token') || localStorage.getItem('shippnex_admin_token');
     } else if (requestUrl.includes('/admin')) {
       token = localStorage.getItem('shippnex_admin_token') || localStorage.getItem('shippnex_super_admin_token');
     } else if (requestUrl.includes('/captain') || currentPath.startsWith('/captain') || currentPath.startsWith('/delivery')) {
@@ -103,8 +103,8 @@ API.interceptors.request.use(
         localStorage.getItem('shippnex_super_admin_token');
     }
 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (token && token !== 'null' && token !== 'undefined' && token.trim()) {
+      config.headers.Authorization = `Bearer ${token.trim()}`;
     }
     return config;
   },

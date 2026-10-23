@@ -17,14 +17,16 @@ export const AuthProvider = ({ children }) => {
       const userToken = localStorage.getItem('shippnex_user_token');
       const sellerToken = localStorage.getItem('shippnex_seller_token');
       const captainToken = localStorage.getItem('shippnex_captain_token');
-      const adminSession = localStorage.getItem('shippnex_admin_session') === '1' || adminSessionValid;
+      const adminToken = localStorage.getItem('shippnex_admin_token');
+      const superAdminToken = localStorage.getItem('shippnex_super_admin_token');
+      const adminSession = localStorage.getItem('shippnex_admin_session') === '1' || adminSessionValid || Boolean(adminToken);
       const superAdminSession =
-        localStorage.getItem('shippnex_super_admin_session') === '1' || superAdminSessionValid;
+        localStorage.getItem('shippnex_super_admin_session') === '1' || superAdminSessionValid || Boolean(superAdminToken);
 
-      if (preferredRole === 'super_admin' && (superAdminSession || superAdminSessionValid)) {
+      if (preferredRole === 'super_admin' && (superAdminSession || superAdminSessionValid || Boolean(superAdminToken))) {
         return { isAuth: true, role: 'super_admin' };
       }
-      if (preferredRole === 'admin' && (adminSession || adminSessionValid || superAdminSession)) {
+      if (preferredRole === 'admin' && (adminSession || adminSessionValid || superAdminSession || Boolean(adminToken))) {
         return { isAuth: true, role: 'admin' };
       }
       if (preferredRole === 'seller' && sellerToken) return { isAuth: true, role: 'seller' };
@@ -32,10 +34,10 @@ export const AuthProvider = ({ children }) => {
       if (preferredRole === 'user' && userToken) return { isAuth: true, role: 'user' };
 
       const path = typeof window !== 'undefined' && window.location ? window.location.pathname : '';
-      if (path.startsWith('/super-admin') && (superAdminSession || superAdminSessionValid)) {
+      if (path.startsWith('/super-admin') && (superAdminSession || superAdminSessionValid || Boolean(superAdminToken))) {
         return { isAuth: true, role: 'super_admin' };
       }
-      if (path.startsWith('/admin') && (adminSession || adminSessionValid || superAdminSession)) {
+      if (path.startsWith('/admin') && (adminSession || adminSessionValid || superAdminSession || Boolean(adminToken))) {
         return { isAuth: true, role: 'admin' };
       }
       if (path.startsWith('/seller') && sellerToken) {
@@ -46,8 +48,8 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (userToken) return { isAuth: true, role: 'user' };
-      if (adminSession || adminSessionValid) return { isAuth: true, role: 'admin' };
-      if (superAdminSession || superAdminSessionValid) return { isAuth: true, role: 'super_admin' };
+      if (superAdminSession || superAdminSessionValid || Boolean(superAdminToken)) return { isAuth: true, role: 'super_admin' };
+      if (adminSession || adminSessionValid || Boolean(adminToken)) return { isAuth: true, role: 'admin' };
       if (sellerToken) return { isAuth: true, role: 'seller' };
       if (captainToken) return { isAuth: true, role: 'captain' };
 
@@ -64,17 +66,18 @@ export const AuthProvider = ({ children }) => {
         return !!localStorage.getItem('shippnex_user_token');
       }
       if (role === 'admin') {
-        // Provisional UI access after a successful login sets shippnex_admin_session.
-        // Cookie is still required for every admin API; invalid cookies are cleared on init/401.
         return (
           adminSessionValid === true ||
-          localStorage.getItem('shippnex_admin_session') === '1'
+          localStorage.getItem('shippnex_admin_session') === '1' ||
+          Boolean(localStorage.getItem('shippnex_admin_token'))
         );
       }
       if (role === 'super_admin') {
         return (
           superAdminSessionValid === true ||
-          localStorage.getItem('shippnex_super_admin_session') === '1'
+          localStorage.getItem('shippnex_super_admin_session') === '1' ||
+          Boolean(localStorage.getItem('shippnex_super_admin_token')) ||
+          Boolean(localStorage.getItem('shippnex_admin_token'))
         );
       }
       if (role === 'seller') {
@@ -103,6 +106,16 @@ export const AuthProvider = ({ children }) => {
       const path = typeof window !== 'undefined' ? window.location.pathname : '';
 
       if (path.startsWith('/admin') && !path.startsWith('/admin/login')) {
+        const hasAdminToken = Boolean(localStorage.getItem('shippnex_admin_token')) || Boolean(localStorage.getItem('shippnex_super_admin_token'));
+        const hasAdminSession = localStorage.getItem('shippnex_admin_session') === '1';
+
+        if (!hasAdminToken && !hasAdminSession) {
+          if (!cancelled) setAdminSessionValid(false);
+          syncAuthFromStorage();
+          if (!cancelled) setIsAuthInitializing(false);
+          return;
+        }
+
         try {
           const res = await authService.getAdminProfile();
           if (!cancelled && res?.success && res.admin) {
@@ -123,6 +136,18 @@ export const AuthProvider = ({ children }) => {
           }
         }
       } else if (path.startsWith('/super-admin') && !path.startsWith('/super-admin/login')) {
+        const hasSuperAdminToken =
+          Boolean(localStorage.getItem('shippnex_super_admin_token')) ||
+          Boolean(localStorage.getItem('shippnex_admin_token'));
+        const hasSuperAdminSession = localStorage.getItem('shippnex_super_admin_session') === '1';
+
+        if (!hasSuperAdminToken && !hasSuperAdminSession) {
+          if (!cancelled) setSuperAdminSessionValid(false);
+          syncAuthFromStorage();
+          if (!cancelled) setIsAuthInitializing(false);
+          return;
+        }
+
         try {
           const res = await API.get('/auth/super-admin/me');
           if (!cancelled && res.data?.success && res.data.superAdmin) {

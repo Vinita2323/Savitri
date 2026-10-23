@@ -21,10 +21,20 @@ export const SuperAdminLogin = () => {
   useEffect(() => {
     let cancelled = false;
     const validate = async () => {
+      const storedToken =
+        localStorage.getItem('shippnex_super_admin_token') ||
+        localStorage.getItem('shippnex_admin_token');
+      const hasSession = localStorage.getItem('shippnex_super_admin_session') === '1';
+
+      if (!storedToken && !hasSession) {
+        if (!cancelled) setCheckingSession(false);
+        return;
+      }
+
       try {
         const res = await superAdminService.getProfile();
         if (!cancelled && res?.success && res.superAdmin) {
-          login(res.superAdmin);
+          login(res.superAdmin, storedToken);
           setSuperAdminSessionValid?.(true);
           navigate('/super-admin/dashboard', { replace: true });
           return;
@@ -40,9 +50,7 @@ export const SuperAdminLogin = () => {
     return () => {
       cancelled = true;
     };
-    // Run once on mount to resume a valid cookie session.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [login, navigate, setSuperAdminSessionValid]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,7 +70,7 @@ export const SuperAdminLogin = () => {
       });
       if (res.success && res.superAdmin) {
         setPassword('');
-        login(res.superAdmin);
+        login(res.superAdmin, res.token);
         setSuperAdminSessionValid?.(true);
         navigate('/super-admin/dashboard');
       } else {

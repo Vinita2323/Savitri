@@ -225,6 +225,11 @@ export const authService = {
     if (response.data?.success && response.data.admin) {
       if (response.data.token) {
         localStorage.setItem('shippnex_admin_token', response.data.token);
+        if (response.data.admin.role === 'super_admin') {
+          localStorage.setItem('shippnex_super_admin_token', response.data.token);
+          localStorage.setItem('shippnex_super_admin_data', JSON.stringify(response.data.admin));
+          localStorage.setItem('shippnex_super_admin_session', '1');
+        }
       }
       localStorage.setItem('shippnex_admin_data', JSON.stringify(response.data.admin));
       localStorage.setItem('shippnex_admin_session', '1');

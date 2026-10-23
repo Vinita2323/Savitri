@@ -9,7 +9,17 @@ export const SuperAdminProvider = ({ children }) => {
   const navigate = useNavigate();
   const { setSuperAdminSessionValid } = useAuth();
 
-  const [sessionValid, setSessionValid] = useState(false);
+  const [sessionValid, setSessionValid] = useState(() => {
+    try {
+      const hasToken =
+        Boolean(localStorage.getItem('shippnex_super_admin_token')) ||
+        Boolean(localStorage.getItem('shippnex_admin_token'));
+      const hasSession = localStorage.getItem('shippnex_super_admin_session') === '1';
+      return hasToken || hasSession;
+    } catch {
+      return false;
+    }
+  });
   const [sessionChecking, setSessionChecking] = useState(true);
 
   const [superAdmin, setSuperAdmin] = useState(() => {
@@ -156,6 +166,20 @@ export const SuperAdminProvider = ({ children }) => {
         if (!cancelled) setSessionChecking(false);
         return;
       }
+
+      const storedToken =
+        localStorage.getItem('shippnex_super_admin_token') ||
+        localStorage.getItem('shippnex_admin_token');
+      const hasSession = localStorage.getItem('shippnex_super_admin_session') === '1';
+
+      if (!storedToken && !hasSession) {
+        if (!cancelled) {
+          setSessionValid(false);
+          setSessionChecking(false);
+        }
+        return;
+      }
+
       try {
         const res = await API.get('/auth/super-admin/me');
         if (!cancelled && res.data?.success && res.data.superAdmin) {
@@ -164,7 +188,6 @@ export const SuperAdminProvider = ({ children }) => {
           setSuperAdminSessionValid?.(true);
           localStorage.setItem('shippnex_super_admin_session', '1');
           localStorage.setItem('shippnex_super_admin_data', JSON.stringify(res.data.superAdmin));
-          localStorage.removeItem('shippnex_super_admin_token');
         } else if (!cancelled) {
           setSessionValid(false);
           setSuperAdminSessionValid?.(false);
@@ -186,8 +209,11 @@ export const SuperAdminProvider = ({ children }) => {
     };
   }, [setSuperAdminSessionValid]);
 
-  const login = useCallback((adminData) => {
-    localStorage.removeItem('shippnex_super_admin_token');
+  const login = useCallback((adminData, token = null) => {
+    if (token) {
+      localStorage.setItem('shippnex_super_admin_token', token);
+      localStorage.setItem('shippnex_admin_token', token);
+    }
     localStorage.setItem('shippnex_super_admin_data', JSON.stringify(adminData));
     localStorage.setItem('shippnex_super_admin_session', '1');
     setSuperAdmin(adminData);
@@ -199,9 +225,15 @@ export const SuperAdminProvider = ({ children }) => {
     try {
       await API.post('/auth/super-admin/logout');
     } catch (e) {}
-    localStorage.removeItem('shippnex_super_admin_token');
-    localStorage.removeItem('shippnex_super_admin_data');
-    localStorage.removeItem('shippnex_super_admin_session');
+    // Login mirrors the token/session into the admin keys, so clear both sets.
+    [
+      'shippnex_super_admin_token',
+      'shippnex_super_admin_data',
+      'shippnex_super_admin_session',
+      'shippnex_admin_token',
+      'shippnex_admin_data',
+      'shippnex_admin_session',
+    ].forEach((key) => localStorage.removeItem(key));
     setSuperAdmin(null);
     setSessionValid(false);
     setSuperAdminSessionValid?.(false);
@@ -211,7 +243,10 @@ export const SuperAdminProvider = ({ children }) => {
   return (
     <SuperAdminContext.Provider
       value={{
-        token: sessionValid ? 'cookie' : null,
+        token:
+          localStorage.getItem('shippnex_super_admin_token') ||
+          localStorage.getItem('shippnex_admin_token') ||
+          (sessionValid ? 'session' : null),
         superAdmin,
         sidebarOpen,
         setSidebarOpen,
