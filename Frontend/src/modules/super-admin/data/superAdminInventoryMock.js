@@ -42,7 +42,7 @@ export const STATIC_SUPER_ADMIN_INVENTORY = [
     unit: '10kg Bag',
     unitCost: 395,
     salePrice: 470,
-    lastRestocked: '2026-10-18',
+    lastRestocked: '2026-10-24',
     status: 'In Stock',
   },
   {
@@ -65,7 +65,7 @@ export const STATIC_SUPER_ADMIN_INVENTORY = [
     unit: '5L Can',
     unitCost: 680,
     salePrice: 790,
-    lastRestocked: '2026-10-12',
+    lastRestocked: '2026-10-15',
     status: 'Low Stock',
   },
   {
@@ -88,7 +88,7 @@ export const STATIC_SUPER_ADMIN_INVENTORY = [
     unit: '5kg Pack',
     unitCost: 340,
     salePrice: 425,
-    lastRestocked: '2026-09-28',
+    lastRestocked: '2026-09-15',
     status: 'Out of Stock',
   },
   {
@@ -111,7 +111,7 @@ export const STATIC_SUPER_ADMIN_INVENTORY = [
     unit: '500g Pouch',
     unitCost: 190,
     salePrice: 245,
-    lastRestocked: '2026-10-19',
+    lastRestocked: '2026-10-22',
     status: 'In Stock',
   },
   {
@@ -157,7 +157,7 @@ export const STATIC_SUPER_ADMIN_INVENTORY = [
     unit: '1kg Pack',
     unitCost: 135,
     salePrice: 175,
-    lastRestocked: '2026-10-16',
+    lastRestocked: '2026-08-28',
     status: 'In Stock',
   },
   {
@@ -180,7 +180,7 @@ export const STATIC_SUPER_ADMIN_INVENTORY = [
     unit: '1kg Zipper Pack',
     unitCost: 720,
     salePrice: 890,
-    lastRestocked: '2026-10-17',
+    lastRestocked: '2026-10-06',
     status: 'In Stock',
   },
   {
@@ -203,7 +203,7 @@ export const STATIC_SUPER_ADMIN_INVENTORY = [
     unit: '1kg Pouch',
     unitCost: 410,
     salePrice: 490,
-    lastRestocked: '2026-10-04',
+    lastRestocked: '2026-08-10',
     status: 'Low Stock',
   },
   {
@@ -226,7 +226,7 @@ export const STATIC_SUPER_ADMIN_INVENTORY = [
     unit: '800g Pack',
     unitCost: 170,
     salePrice: 220,
-    lastRestocked: '2026-10-20',
+    lastRestocked: '2026-10-21',
     status: 'In Stock',
   },
   {
@@ -249,7 +249,7 @@ export const STATIC_SUPER_ADMIN_INVENTORY = [
     unit: 'Bundle of 50',
     unitCost: 850,
     salePrice: 1150,
-    lastRestocked: '2026-10-15',
+    lastRestocked: '2026-06-18',
     status: 'In Stock',
   },
   {
@@ -272,7 +272,7 @@ export const STATIC_SUPER_ADMIN_INVENTORY = [
     unit: 'Box of 1000',
     unitCost: 1400,
     salePrice: 1850,
-    lastRestocked: '2026-09-18',
+    lastRestocked: '2025-08-15',
     status: 'Out of Stock',
   },
   {
@@ -295,7 +295,7 @@ export const STATIC_SUPER_ADMIN_INVENTORY = [
     unit: 'Unit Box',
     unitCost: 880,
     salePrice: 1299,
-    lastRestocked: '2026-10-14',
+    lastRestocked: '2026-05-20',
     status: 'In Stock',
   },
   {
@@ -318,7 +318,7 @@ export const STATIC_SUPER_ADMIN_INVENTORY = [
     unit: 'Complete Kit',
     unitCost: 1100,
     salePrice: 1499,
-    lastRestocked: '2026-10-11',
+    lastRestocked: '2026-02-14',
     status: 'Low Stock',
   },
   {
@@ -341,7 +341,7 @@ export const STATIC_SUPER_ADMIN_INVENTORY = [
     unit: 'Box of 100',
     unitCost: 190,
     salePrice: 299,
-    lastRestocked: '2026-10-09',
+    lastRestocked: '2026-01-10',
     status: 'In Stock',
   },
 ];

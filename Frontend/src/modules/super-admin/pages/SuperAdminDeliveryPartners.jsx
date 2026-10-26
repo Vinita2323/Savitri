@@ -51,10 +51,47 @@ export const SuperAdminDeliveryPartners = () => {
   const [selectedAccountStatus, setSelectedAccountStatus] = useState('ALL');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedPeriod, setSelectedPeriod] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
 
   // Active drawer state
   const [activePartner, setActivePartner] = useState(null);
+
+  const handlePeriodChange = (period) => {
+    setSelectedPeriod(period);
+    if (period === 'ALL') {
+      setStartDate('');
+      setEndDate('');
+    } else {
+      const today = new Date();
+      const endStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const start = new Date(today);
+
+      if (period === 'weekly') {
+        start.setDate(today.getDate() - 7);
+      } else if (period === 'monthly') {
+        start.setMonth(today.getMonth() - 1);
+      } else if (period === 'quarterly') {
+        start.setMonth(today.getMonth() - 3);
+      } else if (period === 'half_yearly') {
+        start.setMonth(today.getMonth() - 6);
+      } else if (period === 'yearly') {
+        start.setFullYear(today.getFullYear() - 1);
+      }
+
+      const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+      setStartDate(startStr);
+      setEndDate(endStr);
+    }
+    setCurrentPage(1);
+  };
+
+  const handleCustomDateChange = (type, val) => {
+    if (type === 'start') setStartDate(val);
+    else setEndDate(val);
+    setSelectedPeriod('custom');
+    setCurrentPage(1);
+  };
 
   // Reset filters
   const handleResetFilters = () => {
@@ -64,6 +101,7 @@ export const SuperAdminDeliveryPartners = () => {
     setSelectedVerification('ALL');
     setSelectedAvailability('ALL');
     setSelectedAccountStatus('ALL');
+    setSelectedPeriod('ALL');
     setStartDate('');
     setEndDate('');
     setCurrentPage(1);
@@ -116,6 +154,16 @@ export const SuperAdminDeliveryPartners = () => {
       if (endDate && partner.joinedDate > endDate) {
         return false;
       }
+      if (!startDate && !endDate && selectedPeriod && selectedPeriod !== 'ALL' && selectedPeriod !== 'custom') {
+        const today = new Date();
+        const pDate = new Date(partner.joinedDate);
+        const diffDays = (today - pDate) / (1000 * 60 * 60 * 24);
+        if (selectedPeriod === 'weekly' && diffDays > 7) return false;
+        if (selectedPeriod === 'monthly' && diffDays > 30) return false;
+        if (selectedPeriod === 'quarterly' && diffDays > 91) return false;
+        if (selectedPeriod === 'half_yearly' && diffDays > 182) return false;
+        if (selectedPeriod === 'yearly' && diffDays > 365) return false;
+      }
 
       return true;
     });
@@ -127,6 +175,7 @@ export const SuperAdminDeliveryPartners = () => {
     selectedVerification,
     selectedAvailability,
     selectedAccountStatus,
+    selectedPeriod,
     startDate,
     endDate,
   ]);
@@ -392,8 +441,8 @@ export const SuperAdminDeliveryPartners = () => {
             </div>
           </div>
 
-          {/* Secondary Filter Row: Availability, Account Status, Date Range */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 border-t border-slate-100 pt-3">
+          {/* Secondary Filter Row: Availability, Account Status, Period, Date Range */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 border-t border-slate-100 pt-3">
             {/* Availability Filter */}
             <div>
               <select
@@ -428,16 +477,32 @@ export const SuperAdminDeliveryPartners = () => {
               </select>
             </div>
 
+            {/* Period Filter */}
+            <div>
+              <select
+                value={selectedPeriod}
+                onChange={(e) => handlePeriodChange(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 outline-none transition-all focus:border-[#F7941D] focus:bg-white cursor-pointer"
+                aria-label="Filter by time period"
+                title="Filter by time period"
+              >
+                <option value="ALL">All Time</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="half_yearly">Half-Yearly</option>
+                <option value="yearly">Yearly</option>
+                {selectedPeriod === 'custom' && <option value="custom">Custom Range</option>}
+              </select>
+            </div>
+
             {/* Date From */}
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] text-slate-400 font-bold shrink-0">From:</span>
               <input
                 type="date"
                 value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  setCurrentPage(1);
-                }}
+                onChange={(e) => handleCustomDateChange('start', e.target.value)}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-700 outline-none focus:border-[#F7941D] focus:bg-white"
               />
             </div>
@@ -448,10 +513,7 @@ export const SuperAdminDeliveryPartners = () => {
               <input
                 type="date"
                 value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
-                  setCurrentPage(1);
-                }}
+                onChange={(e) => handleCustomDateChange('end', e.target.value)}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-700 outline-none focus:border-[#F7941D] focus:bg-white"
               />
             </div>
@@ -464,6 +526,7 @@ export const SuperAdminDeliveryPartners = () => {
                 selectedVerification !== 'ALL' ||
                 selectedAvailability !== 'ALL' ||
                 selectedAccountStatus !== 'ALL' ||
+                selectedPeriod !== 'ALL' ||
                 startDate ||
                 endDate) && (
                 <button

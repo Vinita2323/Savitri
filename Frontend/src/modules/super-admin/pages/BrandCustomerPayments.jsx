@@ -21,7 +21,7 @@ import {
   thClass,
 } from '../components/customer-payments/paymentUi';
 
-const EMPTY = { search: '', status: 'ALL' };
+const EMPTY = { search: '', status: 'ALL', period: 'ALL' };
 
 const BrandCustomerPayments = () => {
   const { brandSlug } = useParams();
@@ -40,8 +40,22 @@ const BrandCustomerPayments = () => {
 
   const filtered = useMemo(() => {
     const query = filters.search.trim().toLowerCase();
+    const today = new Date();
     return customers.filter((customer) => {
       if (filters.status !== 'ALL' && customer.latestStatus !== filters.status) return false;
+
+      if (filters.period && filters.period !== 'ALL') {
+        if (!customer.lastPurchaseAt) return false;
+        const purchaseDate = new Date(customer.lastPurchaseAt);
+        const diffDays = (today - purchaseDate) / (1000 * 60 * 60 * 24);
+        if (diffDays < 0) return false;
+        if (filters.period === 'weekly' && diffDays > 7) return false;
+        if (filters.period === 'monthly' && diffDays > 30) return false;
+        if (filters.period === 'quarterly' && diffDays > 91) return false;
+        if (filters.period === 'half_yearly' && diffDays > 182) return false;
+        if (filters.period === 'yearly' && diffDays > 365) return false;
+      }
+
       if (!query) return true;
       return [customer.id, customer.name, customer.email, customer.store, customer.phone].join(' ').toLowerCase().includes(query);
     });
@@ -133,6 +147,20 @@ const BrandCustomerPayments = () => {
               {['Successful', 'Pending', 'Failed', 'Partially Refunded', 'Refunded'].map((status) => (
                 <option key={status} value={status}>{status}</option>
               ))}
+            </select>
+            <select
+              value={filters.period}
+              onChange={(event) => setFilters((prev) => ({ ...prev, period: event.target.value }))}
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none"
+              aria-label="Filter by time period"
+              title="Filter by time period"
+            >
+              <option value="ALL">All Time</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="half_yearly">Half-Yearly</option>
+              <option value="yearly">Yearly</option>
             </select>
           </div>
           <div className="flex gap-2">

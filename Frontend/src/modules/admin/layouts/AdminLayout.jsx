@@ -65,6 +65,16 @@ const AdminRefundReturn = lazy(() => import('../pages/AdminPayoutManagement').th
 const AdminFinancialDashboard = lazy(() => import('../pages/AdminFinancialDashboard').then(m => ({ default: m.AdminFinancialDashboard })));
 const AdminCashSettlements = lazy(() => import('../pages/AdminCashSettlements').then(m => ({ default: m.AdminCashSettlements || m.default })));
 
+// ── Quotation Management Module Pages ──
+import { QuotationProvider } from '../quotations/context/QuotationContext';
+const QuotationDashboard = lazy(() => import('../quotations/pages/QuotationDashboard').then(m => ({ default: m.QuotationDashboard })));
+const QuotationList = lazy(() => import('../quotations/pages/QuotationList').then(m => ({ default: m.QuotationList })));
+const CreateQuotation = lazy(() => import('../quotations/pages/CreateQuotation').then(m => ({ default: m.CreateQuotation })));
+const QuotationRequests = lazy(() => import('../quotations/pages/QuotationRequests').then(m => ({ default: m.QuotationRequests })));
+const AcceptedQuotations = lazy(() => import('../quotations/pages/AcceptedQuotations').then(m => ({ default: m.AcceptedQuotations })));
+const ClosedQuotations = lazy(() => import('../quotations/pages/ClosedQuotations').then(m => ({ default: m.ClosedQuotations })));
+const QuotationDetails = lazy(() => import('../quotations/pages/QuotationDetails').then(m => ({ default: m.QuotationDetails })));
+
 export const AdminLayout = () => {
   const { activeTab, setActiveTab, sidebarOpen, setSidebarOpen, isCompact } = useAdmin();
 
@@ -265,6 +275,34 @@ export const AdminLayout = () => {
       case 'payout-refund-return':
       case 'payout_refund':
         return <AdminRefundReturn />;
+      // ── Quotation Management Module ──
+      case 'quotations/dashboard':
+      case 'quotation_dashboard':
+      case 'quotations-dashboard':
+        return <QuotationDashboard onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'quotations':
+      case 'quotation_list':
+      case 'quotations_all':
+        return <QuotationList onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'quotations/create':
+      case 'quotation_create':
+      case 'create_quotation':
+        return <CreateQuotation onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'quotations/requests':
+      case 'quotation_requests':
+      case 'rfq_requests':
+        return <QuotationRequests onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'quotations/accepted':
+      case 'accepted_quotations':
+        return <AcceptedQuotations onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'quotations/closed':
+      case 'rejected_quotations':
+      case 'closed_quotations':
+      case 'expired_quotations':
+        return <ClosedQuotations onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'quotations/details':
+      case 'quotation_details':
+        return <QuotationDetails onNavigate={(tab) => setActiveTab(tab)} />;
       default:
         return <AdminDashboard onNavigate={(tab) => setActiveTab(tab)} />;
     }
@@ -286,9 +324,11 @@ export const AdminLayout = () => {
         <AdminHeader />
 
         <main className="flex-1 overflow-y-auto p-3 sm:p-6">
-          <Suspense fallback={<PageSkeleton />}>
-            {renderActiveTabContent()}
-          </Suspense>
+          <QuotationProvider>
+            <Suspense fallback={<PageSkeleton />}>
+              {renderActiveTabContent()}
+            </Suspense>
+          </QuotationProvider>
         </main>
       </div>
     </div>

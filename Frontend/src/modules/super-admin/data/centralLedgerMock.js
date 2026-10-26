@@ -81,7 +81,7 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
   {
     id: 'txn_002',
     transactionId: 'TXN-2026-002',
-    createdAt: '2026-10-18T11:24:10+05:30',
+    createdAt: '2026-08-25T11:24:10+05:30',
     brand: 'Auriva Bites',
     category: 'Platform Commission',
     partyName: 'Platform Treasury',
@@ -96,7 +96,7 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
     sellerPayable: 2249.1,
     remarks: 'Illustrative 10% commission split on ORD-88421.',
     timeline: timeline([
-      { at: '2026-10-18T11:24:10+05:30', label: 'Commission posted to treasury (demo)' },
+      { at: '2026-08-25T11:24:10+05:30', label: 'Commission posted to treasury (demo)' },
     ]),
   },
   {
@@ -188,7 +188,7 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
   {
     id: 'txn_007',
     transactionId: 'TXN-2026-007',
-    createdAt: '2026-10-15T20:11:00+05:30',
+    createdAt: '2026-06-15T20:11:00+05:30',
     brand: 'Auriva Bites',
     category: 'Customer Payment',
     partyName: 'Customer #CUS-109',
@@ -203,8 +203,8 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
     sellerPayable: null,
     remarks: 'Sample declined card authorization. No money moved.',
     timeline: timeline([
-      { at: '2026-10-15T20:10:00+05:30', label: 'Authorization started' },
-      { at: '2026-10-15T20:11:00+05:30', label: 'Marked failed (demo)' },
+      { at: '2026-06-15T20:10:00+05:30', label: 'Authorization started' },
+      { at: '2026-06-15T20:11:00+05:30', label: 'Marked failed (demo)' },
     ]),
   },
   {
@@ -274,7 +274,7 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
   {
     id: 'txn_011',
     transactionId: 'TXN-2026-011',
-    createdAt: '2026-10-13T12:30:00+05:30',
+    createdAt: '2026-09-13T12:30:00+05:30',
     brand: 'Quick Commerce',
     category: 'Platform Commission',
     partyName: 'Platform Treasury',
@@ -289,13 +289,13 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
     sellerPayable: 3240,
     remarks: 'Commission on a quick-commerce basket.',
     timeline: timeline([
-      { at: '2026-10-13T12:30:00+05:30', label: 'Commission posted (demo)' },
+      { at: '2026-09-13T12:30:00+05:30', label: 'Commission posted (demo)' },
     ]),
   },
   {
     id: 'txn_012',
     transactionId: 'TXN-2026-012',
-    createdAt: '2026-10-11T17:55:00+05:30',
+    createdAt: '2026-07-11T17:55:00+05:30',
     brand: 'Shippnex',
     category: 'Refund',
     partyName: 'Customer #CUS-044',
@@ -310,14 +310,14 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
     sellerPayable: null,
     remarks: 'Refund was reversed in this sample after a dispute review.',
     timeline: timeline([
-      { at: '2026-10-11T14:00:00+05:30', label: 'Refund issued' },
-      { at: '2026-10-11T17:55:00+05:30', label: 'Reversed (demo)' },
+      { at: '2026-07-11T14:00:00+05:30', label: 'Refund issued' },
+      { at: '2026-07-11T17:55:00+05:30', label: 'Reversed (demo)' },
     ]),
   },
   {
     id: 'txn_013',
     transactionId: 'TXN-2026-013',
-    createdAt: '2026-10-10T19:08:00+05:30',
+    createdAt: '2026-06-10T19:08:00+05:30',
     brand: 'MedCred',
     category: 'Captain Settlement',
     partyName: 'Captain #CAP-088',
@@ -332,13 +332,13 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
     sellerPayable: null,
     remarks: 'Sample captain earning for a completed drop.',
     timeline: timeline([
-      { at: '2026-10-10T19:08:00+05:30', label: 'Settlement marked paid (demo)' },
+      { at: '2026-06-10T19:08:00+05:30', label: 'Settlement marked paid (demo)' },
     ]),
   },
   {
     id: 'txn_014',
     transactionId: 'TXN-2026-014',
-    createdAt: '2026-10-09T11:12:00+05:30',
+    createdAt: '2026-03-09T11:12:00+05:30',
     brand: 'Auriva Bites',
     category: 'COD Collection',
     partyName: 'Captain #CAP-019',
@@ -353,14 +353,14 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
     sellerPayable: 1890,
     remarks: 'COD handed to treasury in this sample.',
     timeline: timeline([
-      { at: '2026-10-09T10:40:00+05:30', label: 'Cash collected' },
-      { at: '2026-10-09T11:12:00+05:30', label: 'Reconciled (demo)' },
+      { at: '2026-03-09T10:40:00+05:30', label: 'Cash collected' },
+      { at: '2026-03-09T11:12:00+05:30', label: 'Reconciled (demo)' },
     ]),
   },
   {
     id: 'txn_015',
     transactionId: 'TXN-2026-015',
-    createdAt: '2026-10-08T09:26:00+05:30',
+    createdAt: '2026-06-08T09:26:00+05:30',
     brand: 'Quick Commerce',
     category: 'Subscription Payment',
     partyName: 'Seller #SEL-410',
@@ -375,13 +375,13 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
     sellerPayable: null,
     remarks: 'Sample membership charge that did not capture.',
     timeline: timeline([
-      { at: '2026-10-08T09:26:00+05:30', label: 'UPI collect failed (demo)' },
+      { at: '2026-06-08T09:26:00+05:30', label: 'UPI collect failed (demo)' },
     ]),
   },
   {
     id: 'txn_016',
     transactionId: 'TXN-2026-016',
-    createdAt: '2026-10-07T14:33:00+05:30',
+    createdAt: '2026-05-07T14:33:00+05:30',
     brand: 'Shippnex',
     category: 'Customer Payment',
     partyName: 'Customer #CUS-301',
@@ -396,7 +396,7 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
     sellerPayable: 787.5,
     remarks: 'Wallet checkout for a local delivery.',
     timeline: timeline([
-      { at: '2026-10-07T14:33:00+05:30', label: 'Wallet debit captured (demo)' },
+      { at: '2026-05-07T14:33:00+05:30', label: 'Wallet debit captured (demo)' },
     ]),
   },
   {
@@ -444,7 +444,7 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
   {
     id: 'txn_019',
     transactionId: 'TXN-2026-019',
-    createdAt: '2026-10-06T11:00:00+05:30',
+    createdAt: '2026-02-06T11:00:00+05:30',
     brand: 'Quick Commerce',
     category: 'Seller Payout',
     partyName: 'Seller #SEL-277',
@@ -459,14 +459,14 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
     sellerPayable: 5600,
     remarks: 'Payout reversed in the sample after a bank mismatch.',
     timeline: timeline([
-      { at: '2026-10-06T09:00:00+05:30', label: 'NEFT initiated' },
-      { at: '2026-10-06T11:00:00+05:30', label: 'Reversed (demo)' },
+      { at: '2026-02-06T09:00:00+05:30', label: 'NEFT initiated' },
+      { at: '2026-02-06T11:00:00+05:30', label: 'Reversed (demo)' },
     ]),
   },
   {
     id: 'txn_020',
     transactionId: 'TXN-2026-020',
-    createdAt: '2026-10-05T18:40:00+05:30',
+    createdAt: '2026-01-05T18:40:00+05:30',
     brand: 'Shippnex',
     category: 'COD Collection',
     partyName: 'Captain #CAP-052',
@@ -481,8 +481,8 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
     sellerPayable: 666,
     remarks: 'Sample COD deposit matched to the order.',
     timeline: timeline([
-      { at: '2026-10-05T18:10:00+05:30', label: 'Cash collected' },
-      { at: '2026-10-05T18:40:00+05:30', label: 'Matched (demo)' },
+      { at: '2026-01-05T18:10:00+05:30', label: 'Cash collected' },
+      { at: '2026-01-05T18:40:00+05:30', label: 'Matched (demo)' },
     ]),
   },
 ];

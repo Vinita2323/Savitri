@@ -10,14 +10,19 @@ export const AdminProvider = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const pathParts = location.pathname.split('/').filter(Boolean);
-  const currentTabFromUrl = pathParts.length > 1 ? pathParts[1] : 'dashboard';
-  const [activeTab, setActiveState] = useState(currentTabFromUrl);
+  const getTabFromLocation = (pathname) => {
+    const parts = pathname.split('/').filter(Boolean);
+    if (parts.length <= 1) return 'dashboard';
+    if (parts[1] === 'quotations' && parts[2]) {
+      return `quotations/${parts[2]}`;
+    }
+    return parts[1];
+  };
+
+  const [activeTab, setActiveState] = useState(() => getTabFromLocation(location.pathname));
 
   useEffect(() => {
-    const parts = location.pathname.split('/').filter(Boolean);
-    const tab = parts.length > 1 ? parts[1] : 'dashboard';
-    setActiveState(tab);
+    setActiveState(getTabFromLocation(location.pathname));
   }, [location.pathname]);
 
   useEffect(() => {

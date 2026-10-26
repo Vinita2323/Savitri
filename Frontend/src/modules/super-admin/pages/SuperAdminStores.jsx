@@ -52,6 +52,7 @@ export const SuperAdminStores = () => {
   const [selectedCity, setSelectedCity] = useState('ALL');
   const [selectedVerification, setSelectedVerification] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedPeriod, setSelectedPeriod] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
 
   // Drawer modal state for store details
@@ -76,6 +77,7 @@ export const SuperAdminStores = () => {
     setSelectedCity('ALL');
     setSelectedVerification('ALL');
     setSelectedStatus('ALL');
+    setSelectedPeriod('ALL');
     setCurrentPage(1);
     searchParams.delete('brand');
     setSearchParams(searchParams, { replace: true });
@@ -122,6 +124,20 @@ export const SuperAdminStores = () => {
         return false;
       }
 
+      // Period filter (based on registeredAt)
+      if (selectedPeriod !== 'ALL') {
+        if (!store.registeredAt) return false;
+        const today = new Date();
+        const rDate = new Date(store.registeredAt);
+        const diffDays = (today - rDate) / (1000 * 60 * 60 * 24);
+        if (diffDays < 0) return false;
+        if (selectedPeriod === 'weekly' && diffDays > 7) return false;
+        if (selectedPeriod === 'monthly' && diffDays > 30) return false;
+        if (selectedPeriod === 'quarterly' && diffDays > 91) return false;
+        if (selectedPeriod === 'half_yearly' && diffDays > 182) return false;
+        if (selectedPeriod === 'yearly' && diffDays > 365) return false;
+      }
+
       // Search Query filter (store name, seller name, store ID)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -136,7 +152,7 @@ export const SuperAdminStores = () => {
 
       return true;
     });
-  }, [selectedBrand, selectedCity, selectedVerification, selectedStatus, searchQuery]);
+  }, [selectedBrand, selectedCity, selectedVerification, selectedStatus, selectedPeriod, searchQuery]);
 
   // Current scope KPI stats based on selected brand
   const scopeStats = useMemo(() => {
@@ -409,7 +425,7 @@ export const SuperAdminStores = () => {
 
         {/* Search & Filter Toolbar */}
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
             {/* Search Input */}
             <div className="relative lg:col-span-2">
               <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -476,6 +492,27 @@ export const SuperAdminStores = () => {
                 <option value="Under Review">Under Review</option>
               </select>
             </div>
+
+            {/* Registration Period Dropdown */}
+            <div>
+              <select
+                value={selectedPeriod}
+                onChange={(e) => {
+                  setSelectedPeriod(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-medium text-slate-700 outline-none transition-all focus:border-[#F7941D] focus:bg-white cursor-pointer"
+                aria-label="Filter by registration period"
+                title="Filter by registration period"
+              >
+                <option value="ALL">All Time</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="half_yearly">Half-Yearly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
           </div>
 
           {/* Secondary Row: Store Status Filter & Reset */}
@@ -501,7 +538,7 @@ export const SuperAdminStores = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              {(selectedBrand !== 'ALL' || selectedCity !== 'ALL' || selectedVerification !== 'ALL' || selectedStatus !== 'ALL' || searchQuery.trim()) && (
+              {(selectedBrand !== 'ALL' || selectedCity !== 'ALL' || selectedVerification !== 'ALL' || selectedStatus !== 'ALL' || selectedPeriod !== 'ALL' || searchQuery.trim()) && (
                 <button
                   onClick={handleResetFilters}
                   className="flex items-center gap-1 text-xs font-bold text-[#F7941D] hover:underline bg-transparent border-none cursor-pointer"

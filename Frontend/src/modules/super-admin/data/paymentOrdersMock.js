@@ -38,9 +38,12 @@ const ORDER_STATUS = ['Delivered', 'Delivered', 'Processing', 'Cancelled', 'Deli
 
 const round2 = (value) => Math.round(value * 100) / 100;
 
+const CUSTOMER_DAYS_AGO = [0, 1, 7, 65, 130, 245];
+
 const purchasedAt = (customerIndex, orderIndex) => {
   const date = new Date('2026-10-20T15:30:00+05:30');
-  date.setDate(date.getDate() - (customerIndex * 2 + orderIndex * 4));
+  const baseOffset = CUSTOMER_DAYS_AGO[customerIndex % CUSTOMER_DAYS_AGO.length] || 0;
+  date.setDate(date.getDate() - (baseOffset + orderIndex * 4));
   date.setHours(9 + (orderIndex % 8), (orderIndex * 7) % 60, 0, 0);
   return date.toISOString();
 };

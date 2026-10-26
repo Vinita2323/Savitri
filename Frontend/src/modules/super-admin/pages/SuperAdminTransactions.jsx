@@ -85,6 +85,7 @@ const EMPTY_FILTERS = {
   category: 'ALL',
   type: 'ALL',
   status: 'ALL',
+  period: 'ALL',
   startDate: '',
   endDate: '',
 };
@@ -110,6 +111,57 @@ export const SuperAdminTransactions = () => {
     setPage(1);
   };
 
+  const handlePeriodChange = (period) => {
+    if (period === 'ALL') {
+      setFilters((prev) => ({
+        ...prev,
+        period: 'ALL',
+        startDate: '',
+        endDate: '',
+      }));
+      setPage(1);
+      return;
+    }
+
+    const today = new Date();
+    const endStr = dayKey(today);
+    const start = new Date(today);
+
+    if (period === 'weekly') {
+      start.setDate(today.getDate() - 7);
+    } else if (period === 'monthly') {
+      start.setMonth(today.getMonth() - 1);
+    } else if (period === 'quarterly') {
+      start.setMonth(today.getMonth() - 3);
+    } else if (period === 'half_yearly') {
+      start.setMonth(today.getMonth() - 6);
+    } else if (period === 'yearly') {
+      start.setFullYear(today.getFullYear() - 1);
+    }
+
+    const startStr = dayKey(start);
+    setFilters((prev) => ({
+      ...prev,
+      period,
+      startDate: startStr,
+      endDate: endStr,
+    }));
+    setPage(1);
+  };
+
+  const handleDateChange = (key, value) => {
+    setFilters((prev) => {
+      const next = { ...prev, [key]: value };
+      if (!next.startDate && !next.endDate) {
+        next.period = 'ALL';
+      } else {
+        next.period = 'custom';
+      }
+      return next;
+    });
+    setPage(1);
+  };
+
   const filtered = useMemo(() => {
     const q = filters.search.trim().toLowerCase();
     return scopedTransactions.filter((txn) => {
@@ -120,6 +172,16 @@ export const SuperAdminTransactions = () => {
       const day = dayKey(txn.createdAt);
       if (filters.startDate && day < filters.startDate) return false;
       if (filters.endDate && day > filters.endDate) return false;
+      if (!filters.startDate && !filters.endDate && filters.period && filters.period !== 'ALL' && filters.period !== 'custom') {
+        const today = new Date();
+        const txnDate = new Date(txn.createdAt);
+        const diffDays = (today - txnDate) / (1000 * 60 * 60 * 24);
+        if (filters.period === 'weekly' && diffDays > 7) return false;
+        if (filters.period === 'monthly' && diffDays > 30) return false;
+        if (filters.period === 'quarterly' && diffDays > 91) return false;
+        if (filters.period === 'half_yearly' && diffDays > 182) return false;
+        if (filters.period === 'yearly' && diffDays > 365) return false;
+      }
       if (!q) return true;
       const haystack = [
         txn.transactionId,
@@ -299,13 +361,13 @@ export const SuperAdminTransactions = () => {
 
         <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
-            <div className="relative sm:col-span-2 xl:col-span-2">
+            <div className="relative sm:col-span-2 xl:col-span-1">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="search"
                 value={filters.search}
                 onChange={(e) => setFilter('search', e.target.value)}
-                placeholder="Txn ID, order, payment ref, party"
+                placeholder="Txn ID, order, party..."
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#F7941D]"
               />
             </div>
@@ -343,18 +405,33 @@ export const SuperAdminTransactions = () => {
               <option value="Failed">Failed</option>
               <option value="Reversed">Reversed</option>
             </select>
+            <select
+              className={selectClass}
+              value={filters.period}
+              onChange={(e) => handlePeriodChange(e.target.value)}
+              aria-label="Filter by time period"
+              title="Filter by time period"
+            >
+              <option value="ALL">All Time</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="half_yearly">Half-Yearly</option>
+              <option value="yearly">Yearly</option>
+              {filters.period === 'custom' && <option value="custom">Custom Range</option>}
+            </select>
             <input
               type="date"
               aria-label="Start date"
               value={filters.startDate}
-              onChange={(e) => setFilter('startDate', e.target.value)}
+              onChange={(e) => handleDateChange('startDate', e.target.value)}
               className={selectClass}
             />
             <input
               type="date"
               aria-label="End date"
               value={filters.endDate}
-              onChange={(e) => setFilter('endDate', e.target.value)}
+              onChange={(e) => handleDateChange('endDate', e.target.value)}
               className={selectClass}
             />
           </div>

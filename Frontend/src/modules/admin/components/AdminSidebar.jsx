@@ -49,7 +49,8 @@ import {
   Percent,
   Gift,
   Navigation,
-  Car
+  Car,
+  FileSpreadsheet
 } from 'lucide-react';
 import { authService } from '../../../services/authService';
 
@@ -108,6 +109,7 @@ export const AdminSidebar = () => {
     manage_location: false, 
     delivery_boy: false,
     orders: false,
+    quotation_management: false,
     transport: false,
     pricing_charges: false,
     payout_requests: false,
@@ -255,6 +257,24 @@ export const AdminSidebar = () => {
             { id: 'orders_return', label: 'Return', icon: RefreshCw },
           ]
         },
+      ]
+    },
+    {
+      title: 'QUOTATION MANAGEMENT',
+      items: [
+        {
+          id: 'quotation_management',
+          label: 'Quotation Management',
+          icon: FileSpreadsheet,
+          submenu: [
+            { id: 'quotations/dashboard', label: 'Quotation Dashboard' },
+            { id: 'quotations', label: 'All Quotations' },
+            { id: 'quotations/create', label: 'Create Quotation' },
+            { id: 'quotations/requests', label: 'Quotation Requests' },
+            { id: 'quotations/accepted', label: 'Accepted Quotations' },
+            { id: 'quotations/closed', label: 'Rejected / Expired' },
+          ]
+        }
       ]
     },
     {
@@ -408,7 +428,10 @@ export const AdminSidebar = () => {
             <div className="space-y-1">
               {sec.items.map((item) => {
                 const Icon = item.icon;
-                const isItemActive = activeTab === item.id || (item.submenu && item.submenu.some(sub => sub.id === activeTab));
+                const isItemActive =
+                  activeTab === item.id ||
+                  (item.submenu && item.submenu.some((sub) => sub.id === activeTab)) ||
+                  (item.id === 'quotation_management' && typeof activeTab === 'string' && activeTab.startsWith('quotations'));
 
                 if (item.submenu) {
                   const isExpanded = expandedMenus[item.id] || searchQuery.length > 0;

@@ -1,6 +1,6 @@
 
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { SuperAdminProvider, useSuperAdmin } from '../context/SuperAdminContext';
 import { SuperAdminLayout } from '../layouts/SuperAdminLayout';
 import PageSkeleton from '../../../components/PageSkeleton';
@@ -23,6 +23,30 @@ const CustomerPurchaseHistory = lazy(() => import('../pages/CustomerPurchaseHist
 const SuperAdminInventory = lazy(() => import('../pages/SuperAdminInventory'));
 const SuperAdminStores = lazy(() => import('../pages/SuperAdminStores'));
 const SuperAdminDeliveryPartners = lazy(() => import('../pages/SuperAdminDeliveryPartners'));
+
+// Quotation Management Module Pages
+import { QuotationProvider } from '../../admin/quotations/context/QuotationContext';
+const QuotationDashboard = lazy(() => import('../../admin/quotations/pages/QuotationDashboard').then(m => ({ default: m.QuotationDashboard })));
+const QuotationList = lazy(() => import('../../admin/quotations/pages/QuotationList').then(m => ({ default: m.QuotationList })));
+const CreateQuotation = lazy(() => import('../../admin/quotations/pages/CreateQuotation').then(m => ({ default: m.CreateQuotation })));
+const QuotationRequests = lazy(() => import('../../admin/quotations/pages/QuotationRequests').then(m => ({ default: m.QuotationRequests })));
+const AcceptedQuotations = lazy(() => import('../../admin/quotations/pages/AcceptedQuotations').then(m => ({ default: m.AcceptedQuotations })));
+const ClosedQuotations = lazy(() => import('../../admin/quotations/pages/ClosedQuotations').then(m => ({ default: m.ClosedQuotations })));
+const QuotationDetails = lazy(() => import('../../admin/quotations/pages/QuotationDetails').then(m => ({ default: m.QuotationDetails })));
+
+const SuperAdminQuotationWrapper = ({ Component }) => {
+  const navigate = useNavigate();
+  return (
+    <QuotationProvider>
+      <Component
+        onNavigate={(tab, data) => {
+          const cleanTab = tab ? tab.replace(/^\//, '') : 'quotations';
+          navigate(`/super-admin/${cleanTab}`, { state: data });
+        }}
+      />
+    </QuotationProvider>
+  );
+};
 
 // Protected Route Component for Super Admin — cookie session must be validated
 const SuperAdminProtectedRoute = ({ children }) => {
@@ -63,6 +87,16 @@ const SuperAdminRoutesContent = () => {
           <Route path="/brands/:brandSlug/stores" element={<SuperAdminStores />} />
           <Route path="/inventory" element={<SuperAdminInventory />} />
           <Route path="/delivery-partners" element={<SuperAdminDeliveryPartners />} />
+          
+          {/* Quotation Management Module Routes */}
+          <Route path="/quotations" element={<SuperAdminQuotationWrapper Component={QuotationList} />} />
+          <Route path="/quotations/dashboard" element={<SuperAdminQuotationWrapper Component={QuotationDashboard} />} />
+          <Route path="/quotations/create" element={<SuperAdminQuotationWrapper Component={CreateQuotation} />} />
+          <Route path="/quotations/requests" element={<SuperAdminQuotationWrapper Component={QuotationRequests} />} />
+          <Route path="/quotations/accepted" element={<SuperAdminQuotationWrapper Component={AcceptedQuotations} />} />
+          <Route path="/quotations/closed" element={<SuperAdminQuotationWrapper Component={ClosedQuotations} />} />
+          <Route path="/quotations/details" element={<SuperAdminQuotationWrapper Component={QuotationDetails} />} />
+
           <Route path="/captain-settlements" element={<Navigate to="/super-admin/dashboard" replace />} />
           <Route path="/payouts" element={<Navigate to="/super-admin/payouts/sellers" replace />} />
           <Route path="/payouts/sellers" element={<SuperAdminSellerPayoutData />} />

@@ -40,6 +40,7 @@ export const SuperAdminInventory = () => {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedWarehouse, setSelectedWarehouse] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [selectedPeriod, setSelectedPeriod] = useState('ALL');
 
   // Drawer / Modal State
   const [selectedItem, setSelectedItem] = useState(null);
@@ -53,6 +54,15 @@ export const SuperAdminInventory = () => {
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 4000);
+  };
+
+  const handleResetFilters = () => {
+    setSearch('');
+    setSelectedBrand('ALL');
+    setSelectedCategory('ALL');
+    setSelectedWarehouse('ALL');
+    setStatusFilter('ALL');
+    setSelectedPeriod('ALL');
   };
 
   // Filtered inventory calculations
@@ -79,9 +89,23 @@ export const SuperAdminInventory = () => {
       // Status filter
       const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
 
+      // Period filter (based on lastRestocked)
+      if (selectedPeriod !== 'ALL') {
+        if (!item.lastRestocked) return false;
+        const today = new Date();
+        const rDate = new Date(item.lastRestocked);
+        const diffDays = (today - rDate) / (1000 * 60 * 60 * 24);
+        if (diffDays < 0) return false;
+        if (selectedPeriod === 'weekly' && diffDays > 7) return false;
+        if (selectedPeriod === 'monthly' && diffDays > 30) return false;
+        if (selectedPeriod === 'quarterly' && diffDays > 91) return false;
+        if (selectedPeriod === 'half_yearly' && diffDays > 182) return false;
+        if (selectedPeriod === 'yearly' && diffDays > 365) return false;
+      }
+
       return matchesSearch && matchesBrand && matchesCategory && matchesWarehouse && matchesStatus;
     });
-  }, [inventoryList, search, selectedBrand, selectedCategory, selectedWarehouse, statusFilter]);
+  }, [inventoryList, search, selectedBrand, selectedCategory, selectedWarehouse, statusFilter, selectedPeriod]);
 
   // Overall Statistics across full or filtered inventory
   const stats = useMemo(() => {
@@ -322,7 +346,7 @@ export const SuperAdminInventory = () => {
 
         {/* Filter & Search Toolbar */}
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {/* Search Input */}
             <div className="relative">
               <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -382,6 +406,24 @@ export const SuperAdminInventory = () => {
                 ))}
               </select>
             </div>
+
+            {/* Period Filter */}
+            <div>
+              <select
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-medium text-slate-700 outline-none transition-all focus:border-[#F7941D] focus:bg-white cursor-pointer"
+                aria-label="Filter by restock period"
+                title="Filter by restock period"
+              >
+                <option value="ALL">All Time</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="half_yearly">Half-Yearly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
           </div>
 
           {/* Quick Status Pill Bar */}
@@ -405,8 +447,18 @@ export const SuperAdminInventory = () => {
               ))}
             </div>
 
-            <div className="text-xs font-semibold text-slate-500">
-              Showing <span className="font-bold text-slate-800">{filteredInventory.length}</span> of {inventoryList.length} SKUs
+            <div className="flex items-center gap-3">
+              {(search || selectedBrand !== 'ALL' || selectedCategory !== 'ALL' || selectedWarehouse !== 'ALL' || statusFilter !== 'ALL' || selectedPeriod !== 'ALL') && (
+                <button
+                  onClick={handleResetFilters}
+                  className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                  Reset Filters
+                </button>
+              )}
+              <div className="text-xs font-semibold text-slate-500">
+                Showing <span className="font-bold text-slate-800">{filteredInventory.length}</span> of {inventoryList.length} SKUs
+              </div>
             </div>
           </div>
         </div>
@@ -433,13 +485,7 @@ export const SuperAdminInventory = () => {
                       <Boxes size={36} className="mx-auto mb-2 text-slate-300" />
                       <p className="font-bold text-sm text-slate-600">No inventory matches your search criteria.</p>
                       <button
-                        onClick={() => {
-                          setSearch('');
-                          setSelectedBrand('ALL');
-                          setSelectedCategory('ALL');
-                          setSelectedWarehouse('ALL');
-                          setStatusFilter('ALL');
-                        }}
+                        onClick={handleResetFilters}
                         className="mt-2 text-xs font-bold text-[#F7941D] hover:underline bg-transparent border-none cursor-pointer"
                       >
                         Reset all filters
