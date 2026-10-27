@@ -75,8 +75,15 @@ const AcceptedQuotations = lazy(() => import('../quotations/pages/AcceptedQuotat
 const ClosedQuotations = lazy(() => import('../quotations/pages/ClosedQuotations').then(m => ({ default: m.ClosedQuotations })));
 const QuotationDetails = lazy(() => import('../quotations/pages/QuotationDetails').then(m => ({ default: m.QuotationDetails })));
 
+// ── Delivery Challan Module Pages ──
+import { DeliveryChallanProvider } from '../delivery-challans/context/DeliveryChallanContext';
+const DeliveryChallanList = lazy(() => import('../delivery-challans/pages/DeliveryChallanList').then(m => ({ default: m.DeliveryChallanList })));
+const CreateDeliveryChallan = lazy(() => import('../delivery-challans/pages/CreateDeliveryChallan').then(m => ({ default: m.CreateDeliveryChallan })));
+const DeliveryChallanDetails = lazy(() => import('../delivery-challans/pages/DeliveryChallanDetails').then(m => ({ default: m.DeliveryChallanDetails })));
+const EditDeliveryChallan = lazy(() => import('../delivery-challans/pages/EditDeliveryChallan').then(m => ({ default: m.EditDeliveryChallan })));
+
 export const AdminLayout = () => {
-  const { activeTab, setActiveTab, sidebarOpen, setSidebarOpen, isCompact } = useAdmin();
+  const { activeTab, setActiveTab, tabData, sidebarOpen, setSidebarOpen, isCompact } = useAdmin();
 
   const renderActiveTabContent = () => {
     switch (activeTab) {
@@ -303,6 +310,22 @@ export const AdminLayout = () => {
       case 'quotations/details':
       case 'quotation_details':
         return <QuotationDetails onNavigate={(tab) => setActiveTab(tab)} />;
+      // ── Delivery Challan Management Module ──
+      case 'delivery_challans':
+      case 'delivery-challans':
+      case 'delivery_challans/list':
+      case 'delivery-challans/list':
+        return <DeliveryChallanList onNavigate={(tab, data) => setActiveTab(tab, data)} />;
+      case 'delivery_challans/create':
+      case 'delivery-challans/create':
+      case 'create_delivery_challan':
+        return <CreateDeliveryChallan onNavigate={(tab, data) => setActiveTab(tab, data)} />;
+      case 'delivery_challans/details':
+      case 'delivery-challans/details':
+        return <DeliveryChallanDetails onNavigate={(tab, data) => setActiveTab(tab, data)} challanData={tabData} />;
+      case 'delivery_challans/edit':
+      case 'delivery-challans/edit':
+        return <EditDeliveryChallan onNavigate={(tab, data) => setActiveTab(tab, data)} challanData={tabData} />;
       default:
         return <AdminDashboard onNavigate={(tab) => setActiveTab(tab)} />;
     }
@@ -325,9 +348,11 @@ export const AdminLayout = () => {
 
         <main className="flex-1 overflow-y-auto p-3 sm:p-6">
           <QuotationProvider>
-            <Suspense fallback={<PageSkeleton />}>
-              {renderActiveTabContent()}
-            </Suspense>
+            <DeliveryChallanProvider>
+              <Suspense fallback={<PageSkeleton />}>
+                {renderActiveTabContent()}
+              </Suspense>
+            </DeliveryChallanProvider>
           </QuotationProvider>
         </main>
       </div>

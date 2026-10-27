@@ -1,6 +1,6 @@
 import React from 'react';
-import { Plus, Trash2, Package, Sparkles } from 'lucide-react';
-import { GST_RATES, PRODUCT_UNITS, SAMPLE_PRODUCTS_CATALOG } from '../data/mockQuotations';
+import { Plus, Trash2 } from 'lucide-react';
+import { GST_RATES, PRODUCT_UNITS } from '../data/mockQuotations';
 import { formatINR, calculateLineItem } from '../utils/quotationCalculations';
 
 export const QuotationItemsTable = ({ items, onChangeItems }) => {
@@ -22,24 +22,6 @@ export const QuotationItemsTable = ({ items, onChangeItems }) => {
       taxAmount: 0,
       lineTotal: 0,
     };
-    onChangeItems([...items, newRow]);
-  };
-
-  // Add sample product from catalog
-  const handleAddFromCatalog = (product) => {
-    const newRow = calculateLineItem({
-      id: `item-${Date.now()}`,
-      name: product.name,
-      sku: product.sku,
-      description: product.description,
-      hsn: product.hsn,
-      quantity: 1,
-      unit: product.unit,
-      unitPrice: product.unitPrice,
-      discountType: 'percentage',
-      discountValue: 0,
-      gstRate: product.gstRate,
-    });
     onChangeItems([...items, newRow]);
   };
 
@@ -82,33 +64,6 @@ export const QuotationItemsTable = ({ items, onChangeItems }) => {
 
   return (
     <div className="space-y-4">
-      {/* Quick Catalog Bar */}
-      <div className="rounded-xl border border-amber-200/80 bg-amber-50/50 p-3 sm:p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-            <Sparkles size={14} className="text-[#F7941D]" />
-            <span>Quick Add from Master Product Catalog:</span>
-          </div>
-          <span className="text-[11px] text-amber-700 font-medium">Click any item below to populate line items</span>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {SAMPLE_PRODUCTS_CATALOG.map((prod, pIdx) => (
-            <button
-              key={pIdx}
-              type="button"
-              onClick={() => handleAddFromCatalog(prod)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-amber-300/80 bg-white text-slate-700 text-xs font-medium hover:border-[#F7941D] hover:text-[#1A2E0A] hover:shadow-2xs transition-all cursor-pointer"
-            >
-              <Package size={12} className="text-[#F7941D]" />
-              <span className="max-w-[200px] truncate">{prod.name}</span>
-              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
-                ₹{prod.unitPrice}/{prod.unit}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Table Container */}
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-2xs">
         <table className="w-full text-left border-collapse text-xs font-sans min-w-[950px]">

@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   CheckCircle,
   X,
+  Mail,
   ChevronLeft,
   ChevronRight,
   MoreVertical,
@@ -31,9 +32,7 @@ export const QuotationList = ({ onNavigate }) => {
     setEditingQuotationId,
     duplicateQuotation,
     deleteQuotation,
-    sendQuotation,
-    acceptQuotation,
-    rejectQuotation,
+    sendQuotationEmail,
   } = useQuotations();
 
   // Filter States
@@ -142,8 +141,18 @@ export const QuotationList = ({ onNavigate }) => {
 
   const handleConfirmSend = () => {
     if (!sendDialogQuote) return;
-    sendQuotation(sendDialogQuote.id);
-    showToast(`Quotation ${sendDialogQuote.quotationNumber} dispatched to ${sendDialogQuote.buyer?.organizationName}`);
+    // Mark quotation as Ready to Send (status only — email sent separately)
+    sendQuotationEmail(sendDialogQuote.id, {
+      recipientEmail: sendDialogQuote.buyer?.email || '',
+      recipientName: sendDialogQuote.buyer?.contactPerson || '',
+      organizationName: sendDialogQuote.buyer?.organizationName || '',
+      subject: `Quotation ${sendDialogQuote.quotationNumber} — ${sendDialogQuote.buyer?.organizationName}`,
+      body: `Dear ${sendDialogQuote.buyer?.contactPerson || 'Sir/Madam'},\n\nPlease find our quotation ${sendDialogQuote.quotationNumber} for your reference.\n\nBest regards,\nSavitri Enterprise Solutions`,
+    }).then((result) => {
+      showToast(result.success
+        ? `Email sent to ${sendDialogQuote.buyer?.organizationName} successfully.`
+        : `Email failed: ${result.message}`);
+    });
     setSendDialogQuote(null);
   };
 
@@ -243,6 +252,7 @@ export const QuotationList = ({ onNavigate }) => {
                 <th className="py-4 px-4">Valid Until</th>
                 <th className="py-4 px-4 text-right">Total Amount</th>
                 <th className="py-4 px-4">Status</th>
+                <th className="py-4 px-4">Email Status</th>
                 <th className="py-4 px-4">Created By</th>
                 <th className="py-4 px-4 text-right">Actions</th>
               </tr>
@@ -250,7 +260,7 @@ export const QuotationList = ({ onNavigate }) => {
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {paginatedQuotations.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
+                  <td colSpan={10} className="py-12 text-center text-slate-400">
                     <FileText size={36} className="mx-auto mb-2 text-slate-300" />
                     <p className="font-bold text-sm text-slate-600">No quotations match your filters.</p>
                     <button
@@ -318,6 +328,22 @@ export const QuotationList = ({ onNavigate }) => {
                       <QuotationStatusChip status={quote.status} size="sm" />
                     </td>
 
+                    {/* Email Status */}
+                    <td className="py-3.5 px-4">
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                        quote.emailStatus === 'Sent'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : quote.emailStatus === 'Failed'
+                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : quote.emailStatus === 'Sending'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : 'bg-slate-100 text-slate-500 border-slate-200'
+                      }`}>
+                        <Mail size={9} />
+                        <span>{quote.emailStatus || 'Not Sent'}</span>
+                      </span>
+                    </td>
+
                     {/* Created By */}
                     <td className="py-3.5 px-4 text-[11px] text-slate-500 truncate max-w-[140px]">
                       {quote.createdBy || 'System Admin'}
@@ -334,6 +360,16 @@ export const QuotationList = ({ onNavigate }) => {
                           className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors border-none bg-transparent cursor-pointer"
                         >
                           <Eye size={15} />
+                        </button>
+
+                        {/* Download PDF Modal */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPreview(quote)}
+                          title="Preview & Download PDF"
+                          className="p-1.5 rounded-lg text-[#F7941D] hover:text-[#e08316] hover:bg-amber-50 transition-colors border-none bg-transparent cursor-pointer"
+                        >
+                          <Download size={15} />
                         </button>
 
                         {/* Edit Draft */}
@@ -507,19 +543,8 @@ export const QuotationList = ({ onNavigate }) => {
           isOpen={!!previewModalQuote}
           onClose={() => setPreviewModalQuote(null)}
           onSend={(id) => {
-            sendQuotation(id);
             setPreviewModalQuote(null);
-            showToast('Quotation dispatched to buyer successfully.');
-          }}
-          onAccept={(id) => {
-            acceptQuotation(id);
-            setPreviewModalQuote(null);
-            showToast('Quotation marked as Accepted by buyer.');
-          }}
-          onReject={(id) => {
-            rejectQuotation(id);
-            setPreviewModalQuote(null);
-            showToast('Quotation marked as Rejected.');
+            showToast('Quotation status updated. Use "Email to Client" to send the email.');
           }}
           onEdit={(id) => {
             setPreviewModalQuote(null);

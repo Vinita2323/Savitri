@@ -69,7 +69,9 @@ API.interceptors.request.use(
     // Endpoint-specific token resolution
     // Browser path takes priority over request URL so /admin panel always uses admin token
     // (even when it calls /super-admin/* endpoints that are now dual-role accessible)
-    if (currentPath.startsWith('/super-admin')) {
+    if (requestUrl.includes('/user/notifications') || requestUrl.includes('/user/notifications/')) {
+      token = localStorage.getItem('shippnex_user_token');
+    } else if (currentPath.startsWith('/super-admin')) {
       token = localStorage.getItem('shippnex_super_admin_token') || localStorage.getItem('shippnex_admin_token');
     } else if (currentPath.startsWith('/admin')) {
       token = localStorage.getItem('shippnex_admin_token') || localStorage.getItem('shippnex_super_admin_token');

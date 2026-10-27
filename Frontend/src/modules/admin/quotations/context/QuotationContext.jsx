@@ -50,7 +50,7 @@ export const QuotationProvider = ({ children }) => {
     } catch (e) {}
   }, [quotationRequests]);
 
-  // Create new quotation (Draft or Sent)
+  // Create new quotation (Draft)
   const addQuotation = (newQuotation) => {
     const quoteNumber = newQuotation.quotationNumber || generateNextQuotationNumber(quotations);
     const quotationWithMeta = {
@@ -59,6 +59,8 @@ export const QuotationProvider = ({ children }) => {
       quotationNumber: quoteNumber,
       createdAt: newQuotation.createdAt || new Date().toISOString(),
       status: newQuotation.status || 'Draft',
+      emailStatus: newQuotation.emailStatus || 'Not Sent',
+      emailLog: newQuotation.emailLog || [],
     };
 
     setQuotations((prev) => [quotationWithMeta, ...prev]);
@@ -105,78 +107,155 @@ export const QuotationProvider = ({ children }) => {
       quotationDate: today,
       validUntil: validUntil,
       status: 'Draft',
+      emailStatus: 'Not Sent',
+      emailLog: [],
       subject: `${source.subject} (Copy)`,
       createdAt: new Date().toISOString(),
-      acceptedAt: null,
-      convertedOrderId: null,
+      updatedAt: null,
+      sentAt: null,
     };
 
     setQuotations((prev) => [duplicated, ...prev]);
     return duplicated;
   };
 
-  // Simulate sending quotation
-  const sendQuotation = (id) => {
+  // Mark quotation as "Ready to Send" (status update only — no email)
+  const markReadyToSend = (id) => {
     setQuotations((prev) =>
       prev.map((q) =>
         q.id === id
           ? {
               ...q,
-              status: 'Sent',
-              sentAt: new Date().toISOString(),
+              status: 'Ready to Send',
+              updatedAt: new Date().toISOString(),
             }
           : q
       )
     );
   };
 
-  // Simulate accepting quotation
-  const acceptQuotation = (id) => {
+  // Cancel / close a quotation
+  const cancelQuotation = (id, reason = '') => {
     setQuotations((prev) =>
       prev.map((q) =>
         q.id === id
           ? {
               ...q,
-              status: 'Accepted',
-              acceptedAt: new Date().toISOString(),
+              status: 'Cancelled',
+              cancellationReason: reason,
+              cancelledAt: new Date().toISOString(),
             }
           : q
       )
     );
   };
 
-  // Simulate rejecting quotation
-  const rejectQuotation = (id, reason = 'Client decided to postpone requirement') => {
-    setQuotations((prev) =>
-      prev.map((q) =>
-        q.id === id
-          ? {
-              ...q,
-              status: 'Rejected',
-              rejectedAt: new Date().toISOString(),
-              rejectionReason: reason,
-            }
-          : q
-      )
-    );
-  };
+  /**
+   * Send quotation email to client via backend API.
+   * Records the attempt result (success/failure) in the quotation's emailLog.
+   *
+   * @param {string} id - Quotation ID
+   * @param {Object} emailPayload - { recipientEmail, subject, body }
+   * @returns {Promise<{success: boolean, message: string}>}
+   */
+  const sendQuotationEmail = async (id, emailPayload) => {
+    const quotation = quotations.find((q) => q.id === id);
+    if (!quotation) {
+      return { success: false, message: 'Quotation not found.' };
+    }
 
-  // Convert accepted quotation to order
-  const convertToOrder = (id) => {
-    const orderNumber = `ORD-QT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    // Optimistically mark as Sending
     setQuotations((prev) =>
       prev.map((q) =>
-        q.id === id
-          ? {
-              ...q,
-              status: 'Converted to Order',
-              convertedOrderId: orderNumber,
-              convertedAt: new Date().toISOString(),
-            }
-          : q
+        q.id === id ? { ...q, emailStatus: 'Sending' } : q
       )
     );
-    return orderNumber;
+
+    try {
+      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const response = await fetch(`${apiBase}/quotations/send-email`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          quotationId: id,
+          quotationNumber: quotation.quotationNumber,
+          recipientEmail: emailPayload.recipientEmail,
+          recipientName: emailPayload.recipientName || quotation.buyer?.contactPerson || '',
+          organizationName: emailPayload.organizationName || quotation.buyer?.organizationName || '',
+          emailSubject: emailPayload.subject,
+          emailBody: emailPayload.body,
+          grandTotal: quotation.summary?.grandTotal || 0,
+          validUntil: quotation.validUntil,
+        }),
+      });
+
+      const data = await response.json();
+
+      const logEntry = {
+        timestamp: new Date().toISOString(),
+        recipientEmail: emailPayload.recipientEmail,
+        subject: emailPayload.subject,
+        success: data.success === true,
+        error: data.success ? null : (data.message || 'Unknown error'),
+        messageId: data.messageId || null,
+      };
+
+      if (data.success) {
+        setQuotations((prev) =>
+          prev.map((q) =>
+            q.id === id
+              ? {
+                  ...q,
+                  status: q.status === 'Draft' ? 'Sent' : q.status,
+                  emailStatus: 'Sent',
+                  sentAt: new Date().toISOString(),
+                  lastEmailSentAt: new Date().toISOString(),
+                  emailLog: [...(q.emailLog || []), logEntry],
+                }
+              : q
+          )
+        );
+        return { success: true, message: `Email successfully sent to ${emailPayload.recipientEmail}.` };
+      } else {
+        setQuotations((prev) =>
+          prev.map((q) =>
+            q.id === id
+              ? {
+                  ...q,
+                  emailStatus: 'Failed',
+                  emailLog: [...(q.emailLog || []), logEntry],
+                }
+              : q
+          )
+        );
+        return { success: false, message: data.message || 'Email delivery failed. Please check SMTP configuration.' };
+      }
+    } catch (err) {
+      const logEntry = {
+        timestamp: new Date().toISOString(),
+        recipientEmail: emailPayload.recipientEmail,
+        subject: emailPayload.subject,
+        success: false,
+        error: err.message || 'Network error',
+        messageId: null,
+      };
+
+      setQuotations((prev) =>
+        prev.map((q) =>
+          q.id === id
+            ? {
+                ...q,
+                emailStatus: 'Failed',
+                emailLog: [...(q.emailLog || []), logEntry],
+              }
+            : q
+        )
+      );
+      return { success: false, message: `Network error: ${err.message}. Is the backend server running?` };
+    }
   };
 
   // Update RFQ request status
@@ -262,10 +341,9 @@ export const QuotationProvider = ({ children }) => {
         updateQuotation,
         deleteQuotation,
         duplicateQuotation,
-        sendQuotation,
-        acceptQuotation,
-        rejectQuotation,
-        convertToOrder,
+        markReadyToSend,
+        cancelQuotation,
+        sendQuotationEmail,
         updateRequestStatus,
         rejectQuotationRequest,
         startQuotationFromRequest,

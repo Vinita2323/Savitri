@@ -1,6 +1,6 @@
 
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { SuperAdminProvider, useSuperAdmin } from '../context/SuperAdminContext';
 import { SuperAdminLayout } from '../layouts/SuperAdminLayout';
 import PageSkeleton from '../../../components/PageSkeleton';
@@ -34,6 +34,13 @@ const AcceptedQuotations = lazy(() => import('../../admin/quotations/pages/Accep
 const ClosedQuotations = lazy(() => import('../../admin/quotations/pages/ClosedQuotations').then(m => ({ default: m.ClosedQuotations })));
 const QuotationDetails = lazy(() => import('../../admin/quotations/pages/QuotationDetails').then(m => ({ default: m.QuotationDetails })));
 
+// Delivery Challan Module Pages
+import { DeliveryChallanProvider } from '../../admin/delivery-challans/context/DeliveryChallanContext';
+const DeliveryChallanList = lazy(() => import('../../admin/delivery-challans/pages/DeliveryChallanList').then(m => ({ default: m.DeliveryChallanList })));
+const CreateDeliveryChallan = lazy(() => import('../../admin/delivery-challans/pages/CreateDeliveryChallan').then(m => ({ default: m.CreateDeliveryChallan })));
+const DeliveryChallanDetails = lazy(() => import('../../admin/delivery-challans/pages/DeliveryChallanDetails').then(m => ({ default: m.DeliveryChallanDetails })));
+const EditDeliveryChallan = lazy(() => import('../../admin/delivery-challans/pages/EditDeliveryChallan').then(m => ({ default: m.EditDeliveryChallan })));
+
 const SuperAdminQuotationWrapper = ({ Component }) => {
   const navigate = useNavigate();
   return (
@@ -45,6 +52,22 @@ const SuperAdminQuotationWrapper = ({ Component }) => {
         }}
       />
     </QuotationProvider>
+  );
+};
+
+const SuperAdminDeliveryChallanWrapper = ({ Component }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  return (
+    <DeliveryChallanProvider>
+      <Component
+        onNavigate={(tab, data) => {
+          const cleanTab = tab ? tab.replace(/^delivery_challans/, 'delivery-challans') : 'delivery-challans';
+          navigate(`/super-admin/${cleanTab}`, { state: data });
+        }}
+        challanData={location.state}
+      />
+    </DeliveryChallanProvider>
   );
 };
 
@@ -96,6 +119,12 @@ const SuperAdminRoutesContent = () => {
           <Route path="/quotations/accepted" element={<SuperAdminQuotationWrapper Component={AcceptedQuotations} />} />
           <Route path="/quotations/closed" element={<SuperAdminQuotationWrapper Component={ClosedQuotations} />} />
           <Route path="/quotations/details" element={<SuperAdminQuotationWrapper Component={QuotationDetails} />} />
+
+          {/* Delivery Challan Management Module Routes */}
+          <Route path="/delivery-challans" element={<SuperAdminDeliveryChallanWrapper Component={DeliveryChallanList} />} />
+          <Route path="/delivery-challans/create" element={<SuperAdminDeliveryChallanWrapper Component={CreateDeliveryChallan} />} />
+          <Route path="/delivery-challans/details" element={<SuperAdminDeliveryChallanWrapper Component={DeliveryChallanDetails} />} />
+          <Route path="/delivery-challans/edit" element={<SuperAdminDeliveryChallanWrapper Component={EditDeliveryChallan} />} />
 
           <Route path="/captain-settlements" element={<Navigate to="/super-admin/dashboard" replace />} />
           <Route path="/payouts" element={<Navigate to="/super-admin/payouts/sellers" replace />} />

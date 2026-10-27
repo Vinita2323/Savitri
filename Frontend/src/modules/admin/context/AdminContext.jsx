@@ -16,10 +16,17 @@ export const AdminProvider = ({ children }) => {
     if (parts[1] === 'quotations' && parts[2]) {
       return `quotations/${parts[2]}`;
     }
+    if ((parts[1] === 'delivery-challans' || parts[1] === 'delivery_challans') && parts[2]) {
+      return `delivery_challans/${parts[2]}`;
+    }
+    if (parts[1] === 'delivery-challans') {
+      return 'delivery_challans';
+    }
     return parts[1];
   };
 
   const [activeTab, setActiveState] = useState(() => getTabFromLocation(location.pathname));
+  const [tabData, setTabData] = useState(null);
 
   useEffect(() => {
     setActiveState(getTabFromLocation(location.pathname));
@@ -38,13 +45,17 @@ export const AdminProvider = ({ children }) => {
     return () => window.removeEventListener('resize', syncLayout);
   }, []);
 
-  const setActiveTab = (tab) => {
+  const setActiveTab = (tab, data = null) => {
     setActiveState(tab);
+    if (data !== undefined) {
+      setTabData(data);
+    }
     if (window.innerWidth < 1024) setSidebarOpen(false);
     if (tab === 'dashboard') {
       navigate('/admin');
     } else {
-      navigate(`/admin/${tab}`);
+      const routePath = tab.replace(/_/g, '-');
+      navigate(`/admin/${routePath}`, { state: data });
     }
   };
 
@@ -65,6 +76,8 @@ export const AdminProvider = ({ children }) => {
         toggleSidebar,
         activeTab,
         setActiveTab,
+        tabData,
+        setTabData,
         searchQuery,
         setSearchQuery,
         notificationsCount,

@@ -23,7 +23,6 @@ import {
   PAYMENT_TERMS_OPTIONS,
   DELIVERY_TIMELINES,
   PROCUREMENT_PORTALS,
-  SAMPLE_PRODUCTS_CATALOG,
 } from '../data/mockQuotations';
 import {
   calculateQuotationSummary,
@@ -86,26 +85,26 @@ export const CreateQuotation = ({ onNavigate }) => {
     pincode: '452001',
   });
 
-  // Items
+  // Items (start with clean blank row)
   const [items, setItems] = useState([
     calculateLineItem({
       id: 'item-1',
-      name: SAMPLE_PRODUCTS_CATALOG[0].name,
-      sku: SAMPLE_PRODUCTS_CATALOG[0].sku,
-      description: SAMPLE_PRODUCTS_CATALOG[0].description,
-      hsn: SAMPLE_PRODUCTS_CATALOG[0].hsn,
-      quantity: 50,
-      unit: SAMPLE_PRODUCTS_CATALOG[0].unit,
-      unitPrice: SAMPLE_PRODUCTS_CATALOG[0].unitPrice,
+      name: '',
+      sku: '',
+      description: '',
+      hsn: '',
+      quantity: 1,
+      unit: 'Pcs',
+      unitPrice: 0,
       discountType: 'percentage',
       discountValue: 0,
-      gstRate: SAMPLE_PRODUCTS_CATALOG[0].gstRate,
+      gstRate: 5,
     }),
   ]);
 
   // Commercial Terms
   const [overallDiscount, setOverallDiscount] = useState(0);
-  const [shippingCharges, setShippingCharges] = useState(1000);
+  const [shippingCharges, setShippingCharges] = useState(0);
   const [additionalCharges, setAdditionalCharges] = useState(0);
   const [paymentTerms, setPaymentTerms] = useState(PAYMENT_TERMS_OPTIONS[2]);
   const [deliveryTimeline, setDeliveryTimeline] = useState(DELIVERY_TIMELINES[1]);
@@ -371,16 +370,16 @@ export const CreateQuotation = ({ onNavigate }) => {
     setItems([
       calculateLineItem({
         id: 'item-1',
-        name: SAMPLE_PRODUCTS_CATALOG[0].name,
-        sku: SAMPLE_PRODUCTS_CATALOG[0].sku,
-        description: SAMPLE_PRODUCTS_CATALOG[0].description,
-        hsn: SAMPLE_PRODUCTS_CATALOG[0].hsn,
-        quantity: 50,
-        unit: SAMPLE_PRODUCTS_CATALOG[0].unit,
-        unitPrice: SAMPLE_PRODUCTS_CATALOG[0].unitPrice,
+        name: '',
+        sku: '',
+        description: '',
+        hsn: '',
+        quantity: 1,
+        unit: 'Pcs',
+        unitPrice: 0,
         discountType: 'percentage',
         discountValue: 0,
-        gstRate: SAMPLE_PRODUCTS_CATALOG[0].gstRate,
+        gstRate: 5,
       }),
     ]);
     setAttachments([]);

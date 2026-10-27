@@ -25,7 +25,14 @@ export const NotificationProvider = ({ children }) => {
   );
 
   const refreshNotifications = useCallback(async () => {
-    if (!localStorage.getItem('shippnex_user_token')) {
+    const pathname = typeof window !== 'undefined' && window.location ? window.location.pathname : '';
+    const isAdminOrPartnerRoute =
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/super-admin') ||
+      pathname.startsWith('/seller') ||
+      pathname.startsWith('/captain');
+
+    if (isAdminOrPartnerRoute || !localStorage.getItem('shippnex_user_token')) {
       setNotifications([]);
       setUnreadCount(0);
       return;
@@ -38,7 +45,9 @@ export const NotificationProvider = ({ children }) => {
         setUnreadCount(Number(res.unreadCount) || 0);
       }
     } catch (err) {
-      console.warn('[Notifications] fetch failed:', err.message);
+      if (err?.response?.status !== 401 && err?.response?.status !== 403) {
+        console.warn('[Notifications] fetch failed:', err.message);
+      }
     } finally {
       setLoading(false);
     }

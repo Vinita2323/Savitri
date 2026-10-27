@@ -170,3 +170,99 @@
     padding-right: 1.5rem;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PRINT & QUOTATION PDF STYLES
+   Ensures clean full-page printing without modal chrome or UI elements
+   ═══════════════════════════════════════════════════════════════ */
+@media print {
+  /* Hide standard page elements and background UI */
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Hide navigation, sidebars, buttons, modal wrappers */
+  header,
+  nav,
+  aside,
+  button,
+  .no-print,
+  .fixed.inset-0.z-50:not(:has(.quotation-printable-document)) {
+    display: none !important;
+  }
+
+  /* When a quotation modal is open, hide all sibling page elements (table, search, filters) */
+  body:has(.quotation-modal-dialog) main > div > *:not(:has(.quotation-modal-dialog)),
+  body:has(.quotation-modal-dialog) aside,
+  body:has(.quotation-modal-dialog) header,
+  body:has(.quotation-modal-dialog) nav {
+    display: none !important;
+  }
+
+  /* Hide modal backdrop and make container transparent full width */
+  .fixed.inset-0.z-50 {
+    position: static !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    display: block !important;
+  }
+
+  .quotation-modal-dialog {
+    max-width: 100% !important;
+    max-height: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  .quotation-modal-header,
+  .quotation-modal-footer {
+    display: none !important;
+  }
+
+  .quotation-printable-document {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+    font-size: 11pt !important;
+  }
+
+  .quotation-printable-document table {
+    page-break-inside: auto;
+    width: 100% !important;
+  }
+
+  .quotation-printable-document tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  .quotation-printable-document thead {
+    display: table-header-group;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm 12mm 10mm;
+  }
+}
+

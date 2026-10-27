@@ -278,6 +278,20 @@ export const AdminSidebar = () => {
       ]
     },
     {
+      title: 'DELIVERY CHALLAN',
+      items: [
+        {
+          id: 'delivery_challans_menu',
+          label: 'Delivery Challan',
+          icon: Truck,
+          submenu: [
+            { id: 'delivery_challans', label: 'Delivery Challan List' },
+            { id: 'delivery_challans/create', label: '+ Create Delivery Challan' },
+          ]
+        }
+      ]
+    },
+    {
       title: 'PROMOTION',
       items: [
         { id: 'promo_dashboard', label: 'Promotion Dashboard', icon: LayoutDashboard },
@@ -431,7 +445,8 @@ export const AdminSidebar = () => {
                 const isItemActive =
                   activeTab === item.id ||
                   (item.submenu && item.submenu.some((sub) => sub.id === activeTab)) ||
-                  (item.id === 'quotation_management' && typeof activeTab === 'string' && activeTab.startsWith('quotations'));
+                  (item.id === 'quotation_management' && typeof activeTab === 'string' && activeTab.startsWith('quotations')) ||
+                  (item.id === 'delivery_challans_menu' && typeof activeTab === 'string' && (activeTab.startsWith('delivery_challans') || activeTab.startsWith('delivery-challans')));
 
                 if (item.submenu) {
                   const isExpanded = expandedMenus[item.id] || searchQuery.length > 0;

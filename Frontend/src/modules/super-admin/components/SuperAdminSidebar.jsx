@@ -17,6 +17,7 @@ import {
   Lock,
   Boxes,
   FileSpreadsheet,
+  Truck,
 } from 'lucide-react';
 import { SuperAdminBrandSwitcher } from './SuperAdminBrandSwitcher';
 
@@ -87,6 +88,11 @@ export const SuperAdminSidebar = () => {
           to: '/super-admin/quotations',
           label: 'Quotation Management',
           icon: FileSpreadsheet,
+        },
+        {
+          to: '/super-admin/delivery-challans',
+          label: 'Delivery Challan',
+          icon: Truck,
         },
       ],
     },

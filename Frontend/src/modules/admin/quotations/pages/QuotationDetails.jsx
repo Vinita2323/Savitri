@@ -1,35 +1,38 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
   ArrowLeft,
   Printer,
   Download,
   Send,
   Edit,
-  CheckCircle2,
-  XCircle,
-  RotateCcw,
-  Building2,
-  Calendar,
+  Mail,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
   FileText,
   Award,
-  Package,
-  Clock,
-  ShieldCheck,
+  X,
 } from 'lucide-react';
 import { useQuotations } from '../context/QuotationContext';
 import { formatINR } from '../utils/quotationCalculations';
 import { QuotationStatusChip } from '../components/QuotationStatusChip';
+import { downloadQuotationPdf, printQuotationDocument } from '../utils/quotationPdfGenerator';
 
 export const QuotationDetails = ({ onNavigate }) => {
   const {
     selectedQuotationId,
     getQuotationById,
     setEditingQuotationId,
-    sendQuotation,
-    acceptQuotation,
-    rejectQuotation,
-    convertToOrder,
+    sendQuotationEmail,
   } = useQuotations();
+
+  // Email dialog state
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [emailRecipient, setEmailRecipient] = useState('');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailResult, setEmailResult] = useState(null);
 
   const quotation = getQuotationById(selectedQuotationId);
 
@@ -56,15 +59,75 @@ export const QuotationDetails = ({ onNavigate }) => {
   const commercial = quotation.commercialTerms || {};
   const terms = quotation.termsAndConditions || {};
   const govt = quotation.governmentInfo;
+  const printRef = useRef(null);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
 
   const handlePrint = () => {
-    window.print();
+    if (printRef.current) {
+      printQuotationDocument(printRef.current, `Quotation ${quotation.quotationNumber}`);
+    } else {
+      window.print();
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!printRef.current || isDownloadingPdf) return;
+    setIsDownloadingPdf(true);
+    setDownloadSuccess(false);
+    try {
+      const ok = await downloadQuotationPdf(quotation);
+      if (ok) {
+        setDownloadSuccess(true);
+        setTimeout(() => setDownloadSuccess(false), 5000);
+      }
+    } catch (err) {
+      console.error('Failed to download PDF:', err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
+  const handleOpenEmailDialog = () => {
+    setEmailRecipient(buyer.email || '');
+    setEmailSubject(
+      `Quotation ${quotation.quotationNumber} — ${buyer.organizationName || 'Your Organisation'}`
+    );
+    setEmailBody(
+      `Dear ${buyer.contactPerson || 'Sir/Madam'},\n\nPlease find attached our official commercial quotation ${quotation.quotationNumber} for your reference.\n\nQuotation Summary:\n• Valid Until: ${quotation.validUntil}\n• Grand Total: ${formatINR(summary.grandTotal)}\n\nKindly review and revert at your earliest convenience.\n\nBest regards,\nSavitri Enterprise Solutions`
+    );
+    setEmailResult(null);
+    setShowEmailDialog(true);
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailRecipient.trim() || !emailRecipient.includes('@')) {
+      setEmailResult({ success: false, message: 'Please enter a valid recipient email address.' });
+      return;
+    }
+    setEmailSending(true);
+    setEmailResult(null);
+    const result = await sendQuotationEmail(quotation.id, {
+      recipientEmail: emailRecipient.trim(),
+      recipientName: buyer.contactPerson || '',
+      organizationName: buyer.organizationName || '',
+      subject: emailSubject,
+      body: emailBody,
+    });
+    setEmailSending(false);
+    setEmailResult(result);
+    if (result.success) {
+      setTimeout(() => {
+        setShowEmailDialog(false);
+        setEmailResult(null);
+      }, 2500);
+    }
   };
 
   return (
     <div className="space-y-6 pb-16 font-sans">
       {/* Top Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-xs">
+      <div className="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-xs">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -87,44 +150,44 @@ export const QuotationDetails = ({ onNavigate }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {quotation.status === 'Draft' && (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingQuotationId(quotation.id);
-                  onNavigate('quotations/create');
-                }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all cursor-pointer"
-              >
-                <Edit size={14} className="text-blue-600" />
-                <span>Edit Draft</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => sendQuotation(quotation.id)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1A2E0A] hover:bg-[#2F5218] text-white text-xs font-bold transition-all cursor-pointer border-none shadow-xs"
-              >
-                <Send size={14} className="text-[#F7941D]" />
-                <span>Send to Buyer</span>
-              </button>
-            </>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Email Status Badge */}
+          {quotation.emailStatus && quotation.emailStatus !== 'Not Sent' && (
+            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${
+              quotation.emailStatus === 'Sent'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : quotation.emailStatus === 'Failed'
+                ? 'bg-rose-50 text-rose-700 border-rose-200'
+                : 'bg-blue-50 text-blue-700 border-blue-200'
+            }`}>
+              <Mail size={11} />
+              <span>Email: {quotation.emailStatus}</span>
+            </span>
           )}
 
-          {quotation.status === 'Accepted' && (
+          {quotation.status === 'Draft' && (
             <button
               type="button"
               onClick={() => {
-                const ord = convertToOrder(quotation.id);
-                alert(`Quotation successfully converted to Order: ${ord}`);
+                setEditingQuotationId(quotation.id);
+                onNavigate('quotations/create');
               }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all cursor-pointer border-none shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all cursor-pointer"
             >
-              <CheckCircle2 size={14} />
-              <span>Convert to Purchase Order</span>
+              <Edit size={14} className="text-blue-600" />
+              <span>Edit Draft</span>
             </button>
           )}
+
+          {/* Send Email to Client */}
+          <button
+            type="button"
+            onClick={handleOpenEmailDialog}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer border-none shadow-xs"
+          >
+            <Mail size={14} />
+            <span>Email to Client</span>
+          </button>
 
           <button
             type="button"
@@ -137,17 +200,44 @@ export const QuotationDetails = ({ onNavigate }) => {
 
           <button
             type="button"
-            onClick={handlePrint}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#F7941D] hover:bg-[#e08316] text-[#1A2E0A] text-xs font-bold transition-all cursor-pointer border-none shadow-xs"
+            onClick={handleDownloadPdf}
+            disabled={isDownloadingPdf}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#F7941D] hover:bg-[#e08316] text-[#1A2E0A] text-xs font-bold transition-all cursor-pointer border-none shadow-xs disabled:opacity-70 disabled:cursor-wait"
           >
-            <Download size={14} />
-            <span>Download PDF</span>
+            {isDownloadingPdf ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                <span>Downloading...</span>
+              </>
+            ) : (
+              <>
+                <Download size={14} />
+                <span>Download PDF</span>
+              </>
+            )}
           </button>
         </div>
       </div>
 
+      {/* Download Success Banner */}
+      {downloadSuccess && (
+        <div className="no-print p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-2xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle size={16} className="text-emerald-600 shrink-0" />
+            <span>Official quotation PDF has been downloaded to your computer! Check your downloads folder.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDownloadSuccess(false)}
+            className="text-emerald-700 hover:text-emerald-900 border-none bg-transparent cursor-pointer font-bold px-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Main Document Container */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-10 shadow-xs space-y-6 text-slate-800">
+      <div ref={printRef} className="quotation-printable-document bg-white rounded-2xl border border-slate-200 p-6 sm:p-10 shadow-xs space-y-6 text-slate-800">
         {/* Document Header */}
         <div className="border-b-2 border-slate-900 pb-5">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -415,37 +505,151 @@ export const QuotationDetails = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Buyer Simulation Bar (for Demo / Review) */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-slate-700">Buyer Review Actions Simulation:</span>
-          <span className="text-slate-400">|</span>
-          <span className="text-slate-500">Test client response transitions in demo:</span>
+      {/* Email Log (last attempt info) */}
+      {quotation.emailLog && quotation.emailLog.length > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">Email Dispatch History</span>
+          <div className="space-y-2">
+            {quotation.emailLog.slice().reverse().map((log, idx) => (
+              <div key={idx} className={`flex items-start gap-3 rounded-xl p-3 text-xs border ${
+                log.success
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-rose-50 border-rose-200 text-rose-800'
+              }`}>
+                <div className="flex-1">
+                  <span className="font-bold block">{log.success ? '✓ Email Sent' : '✗ Email Failed'}</span>
+                  <span className="text-[11px] opacity-80">To: {log.recipientEmail}</span>
+                  {log.error && <span className="text-[11px] block opacity-70">Error: {log.error}</span>}
+                </div>
+                <span className="text-[10px] opacity-60 whitespace-nowrap shrink-0">
+                  {new Date(log.timestamp).toLocaleString('en-IN')}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
+      )}
 
-        <div className="flex items-center gap-2">
-          {quotation.status !== 'Accepted' && quotation.status !== 'Converted to Order' && (
-            <>
+      {/* Email Compose Dialog */}
+      {showEmailDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs font-sans">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+            {/* Dialog Header */}
+            <div className="flex items-center justify-between px-6 py-4 bg-blue-600 text-white">
+              <div className="flex items-center gap-2.5">
+                <Mail size={18} />
+                <div>
+                  <h3 className="text-sm font-bold">Send Quotation via Email</h3>
+                  <p className="text-[11px] text-blue-100">{quotation.quotationNumber}</p>
+                </div>
+              </div>
               <button
                 type="button"
-                onClick={() => acceptQuotation(quotation.id)}
-                className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer border-none"
+                onClick={() => { setShowEmailDialog(false); setEmailResult(null); }}
+                className="p-1.5 rounded-lg hover:bg-blue-700 text-white border-none bg-transparent cursor-pointer"
               >
-                <CheckCircle2 size={13} />
-                <span>Mark as Accepted</span>
+                <X size={16} />
               </button>
-              <button
-                type="button"
-                onClick={() => rejectQuotation(quotation.id)}
-                className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold cursor-pointer border-none"
-              >
-                <XCircle size={13} />
-                <span>Mark as Rejected</span>
-              </button>
-            </>
-          )}
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Result Banner */}
+              {emailResult && (
+                <div className={`flex items-start gap-2.5 rounded-xl p-3.5 text-xs font-semibold border ${
+                  emailResult.success
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                }`}>
+                  {emailResult.success
+                    ? <CheckCircle size={15} className="shrink-0 mt-0.5 text-emerald-600" />
+                    : <AlertCircle size={15} className="shrink-0 mt-0.5 text-rose-600" />
+                  }
+                  <span>{emailResult.message}</span>
+                </div>
+              )}
+
+              {/* Recipient Email */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Recipient Email <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={emailRecipient}
+                  onChange={(e) => setEmailRecipient(e.target.value)}
+                  placeholder="client@organization.com"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 text-xs font-medium text-slate-900 outline-none focus:border-blue-500 focus:bg-white"
+                />
+              </div>
+
+              {/* Subject */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Email Subject
+                </label>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 text-xs font-medium text-slate-900 outline-none focus:border-blue-500 focus:bg-white"
+                />
+              </div>
+
+              {/* Body */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Email Message
+                </label>
+                <textarea
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  rows={6}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 text-xs font-medium text-slate-900 outline-none focus:border-blue-500 focus:bg-white resize-none"
+                />
+              </div>
+
+              <p className="text-[11px] text-slate-500 bg-slate-50 rounded-lg p-2.5 border border-slate-200">
+                📎 Quotation details are embedded in the email. To send the PDF, download it above and attach separately.
+              </p>
+            </div>
+
+            {/* Dialog Footer */}
+            <div className="flex items-center justify-between gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200">
+              <div className="text-[11px] text-slate-500">
+                Sending to: <strong>{emailRecipient || '—'}</strong>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => { setShowEmailDialog(false); setEmailResult(null); }}
+                  disabled={emailSending}
+                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSendEmail}
+                  disabled={emailSending || !emailRecipient.trim()}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer border-none disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                >
+                  {emailSending ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" />
+                      <span>Sending…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={13} />
+                      <span>Send Email</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
