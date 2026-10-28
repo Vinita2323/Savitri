@@ -82,6 +82,16 @@ const CreateDeliveryChallan = lazy(() => import('../delivery-challans/pages/Crea
 const DeliveryChallanDetails = lazy(() => import('../delivery-challans/pages/DeliveryChallanDetails').then(m => ({ default: m.DeliveryChallanDetails })));
 const EditDeliveryChallan = lazy(() => import('../delivery-challans/pages/EditDeliveryChallan').then(m => ({ default: m.EditDeliveryChallan })));
 
+// ── Employee Attendance & Task Management Module Pages ──
+import { EmployeeProvider } from '../employees/context/EmployeeContext';
+const EmployeeDashboardPage = lazy(() => import('../employees/pages/EmployeeDashboardPage'));
+const EmployeeDirectoryPage = lazy(() => import('../employees/pages/EmployeeDirectoryPage'));
+const EmployeeAttendancePage = lazy(() => import('../employees/pages/EmployeeAttendancePage'));
+const EmployeeTasksPage = lazy(() => import('../employees/pages/EmployeeTasksPage'));
+const EmployeeLeavesPage = lazy(() => import('../employees/pages/EmployeeLeavesPage'));
+const EmployeeShiftsHolidaysPage = lazy(() => import('../employees/pages/EmployeeShiftsHolidaysPage'));
+const EmployeeReportsPage = lazy(() => import('../employees/pages/EmployeeReportsPage'));
+
 export const AdminLayout = () => {
   const { activeTab, setActiveTab, tabData, sidebarOpen, setSidebarOpen, isCompact } = useAdmin();
 
@@ -326,6 +336,30 @@ export const AdminLayout = () => {
       case 'delivery_challans/edit':
       case 'delivery-challans/edit':
         return <EditDeliveryChallan onNavigate={(tab, data) => setActiveTab(tab, data)} challanData={tabData} />;
+      // ── Employee Attendance & Task Management Module ──
+      case 'employee_management':
+      case 'employee_dashboard':
+      case 'employees':
+      case 'employees/dashboard':
+        return <EmployeeDashboardPage onNavigate={(tab) => setActiveTab(tab)} currentTab="dashboard" />;
+      case 'employee_directory':
+      case 'employees/directory':
+        return <EmployeeDirectoryPage onNavigate={(tab) => setActiveTab(tab)} currentTab="directory" />;
+      case 'employee_attendance':
+      case 'employees/attendance':
+        return <EmployeeAttendancePage onNavigate={(tab) => setActiveTab(tab)} currentTab="attendance" />;
+      case 'employee_tasks':
+      case 'employees/tasks':
+        return <EmployeeTasksPage onNavigate={(tab) => setActiveTab(tab)} currentTab="tasks" />;
+      case 'employee_leaves':
+      case 'employees/leaves':
+        return <EmployeeLeavesPage onNavigate={(tab) => setActiveTab(tab)} currentTab="leaves" />;
+      case 'employee_shifts':
+      case 'employees/shifts':
+        return <EmployeeShiftsHolidaysPage onNavigate={(tab) => setActiveTab(tab)} currentTab="shifts" />;
+      case 'employee_reports':
+      case 'employees/reports':
+        return <EmployeeReportsPage onNavigate={(tab) => setActiveTab(tab)} currentTab="reports" />;
       default:
         return <AdminDashboard onNavigate={(tab) => setActiveTab(tab)} />;
     }
@@ -349,9 +383,11 @@ export const AdminLayout = () => {
         <main className="flex-1 overflow-y-auto p-3 sm:p-6">
           <QuotationProvider>
             <DeliveryChallanProvider>
-              <Suspense fallback={<PageSkeleton />}>
-                {renderActiveTabContent()}
-              </Suspense>
+              <EmployeeProvider>
+                <Suspense fallback={<PageSkeleton />}>
+                  {renderActiveTabContent()}
+                </Suspense>
+              </EmployeeProvider>
             </DeliveryChallanProvider>
           </QuotationProvider>
         </main>

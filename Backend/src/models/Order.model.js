@@ -53,6 +53,12 @@ const orderSchema = new mongoose.Schema(
       time: { type: String, default: 'Standard Delivery' },
     },
     deliveryInstructions: { type: String, default: '' },
+    orderSource: {
+      type: String,
+      enum: ['ONLINE', 'POS', 'ADMIN', 'APP'],
+      default: 'ONLINE',
+    },
+    posInvoiceNumber: { type: String, default: null },
     paymentMethod: {
       type: String,
       enum: ['COD', 'UPI', 'CARD', 'NETBANKING', 'WALLET', 'ONLINE'],

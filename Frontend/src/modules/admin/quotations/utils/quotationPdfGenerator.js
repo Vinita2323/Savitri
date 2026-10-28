@@ -183,7 +183,7 @@ export function buildQuotationPdfDocument(quotation, logoBase64 = null) {
     doc.text('Tender/GeM ID: ' + (govt.tenderId || 'N/A'), margin + 60, y + 8.5);
     doc.text('Portal: ' + (govt.procurementPortal || 'Government e-Marketplace (GeM)'), margin + 115, y + 8.5);
     y += 15;
-  }
+  }hoe 
 
   // 3. Buyer & Destination Details Box
   const boxHeight = 26;
@@ -520,7 +520,7 @@ export function printQuotationDocument(element, title = 'Quotation') {
             page-break-after: auto;
           }
           thead {
-            display: table-header-group;
+            display: table-header-group; 
           }
         </style>
       </head>
@@ -548,3 +548,6 @@ export function printQuotationDocument(element, title = 'Quotation') {
     }
   }, 400);
 }
+
+
+

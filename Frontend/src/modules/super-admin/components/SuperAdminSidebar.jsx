@@ -18,6 +18,14 @@ import {
   Boxes,
   FileSpreadsheet,
   Truck,
+  Landmark,
+  ScanBarcode,
+  Users,
+  UserCheck,
+  CalendarCheck,
+  ClipboardList,
+  CalendarRange,
+  Clock,
 } from 'lucide-react';
 import { SuperAdminBrandSwitcher } from './SuperAdminBrandSwitcher';
 
@@ -33,6 +41,11 @@ export const SuperAdminSidebar = () => {
           to: '/super-admin/dashboard',
           label: 'Financial Dashboard',
           icon: LayoutDashboard,
+        },
+        {
+          to: '/super-admin/cash-bank',
+          label: 'Cash and Bank',
+          icon: Landmark,
         },
         {
           to: '/super-admin/transactions',
@@ -80,6 +93,11 @@ export const SuperAdminSidebar = () => {
           icon: Boxes,
         },
         {
+          to: '/super-admin/pos-billing',
+          label: 'POS Billing',
+          icon: ScanBarcode,
+        },
+        {
           to: '/super-admin/delivery-partners',
           label: 'Delivery Partners',
           icon: Bike,
@@ -90,9 +108,54 @@ export const SuperAdminSidebar = () => {
           icon: FileSpreadsheet,
         },
         {
+          to: '/super-admin/proforma-invoices',
+          label: 'Proforma Invoices',
+          icon: Receipt,
+        },
+        {
           to: '/super-admin/delivery-challans',
           label: 'Delivery Challan',
           icon: Truck,
+        },
+      ],
+    },
+    {
+      group: 'WORKFORCE & EMPLOYEE MANAGEMENT',
+      items: [
+        {
+          to: '/super-admin/employees',
+          label: 'Employee Dashboard',
+          icon: Users,
+        },
+        {
+          to: '/super-admin/employees/directory',
+          label: 'Employee Directory',
+          icon: UserCheck,
+        },
+        {
+          to: '/super-admin/employees/attendance',
+          label: 'Attendance Management',
+          icon: CalendarCheck,
+        },
+        {
+          to: '/super-admin/employees/tasks',
+          label: 'Task Management',
+          icon: ClipboardList,
+        },
+        {
+          to: '/super-admin/employees/leaves',
+          label: 'Leave Management',
+          icon: CalendarRange,
+        },
+        {
+          to: '/super-admin/employees/shifts',
+          label: 'Shifts & Holidays',
+          icon: Clock,
+        },
+        {
+          to: '/super-admin/employees/reports',
+          label: 'Workforce Reports',
+          icon: BarChart3,
         },
       ],
     },
@@ -160,7 +223,9 @@ export const SuperAdminSidebar = () => {
                 const Icon = item.icon;
                 const isActive =
                   location.pathname === item.to ||
-                  (item.to !== '/super-admin/dashboard' && location.pathname.startsWith(item.to));
+                  (item.to === '/super-admin/employees'
+                    ? location.pathname === '/super-admin/employees' || location.pathname === '/super-admin/employees/' || location.pathname === '/super-admin/employees/dashboard'
+                    : item.to !== '/super-admin/dashboard' && location.pathname.startsWith(item.to));
 
                 return (
                   <NavLink

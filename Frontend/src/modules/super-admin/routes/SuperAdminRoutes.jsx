@@ -41,6 +41,46 @@ const CreateDeliveryChallan = lazy(() => import('../../admin/delivery-challans/p
 const DeliveryChallanDetails = lazy(() => import('../../admin/delivery-challans/pages/DeliveryChallanDetails').then(m => ({ default: m.DeliveryChallanDetails })));
 const EditDeliveryChallan = lazy(() => import('../../admin/delivery-challans/pages/EditDeliveryChallan').then(m => ({ default: m.EditDeliveryChallan })));
 
+// Proforma Invoice Module Pages
+import { ProformaInvoiceProvider } from '../../admin/proforma-invoices/context/ProformaInvoiceContext';
+const ProformaInvoiceList = lazy(() => import('../../admin/proforma-invoices/pages/ProformaInvoiceList').then(m => ({ default: m.ProformaInvoiceList })));
+const CreateProformaInvoice = lazy(() => import('../../admin/proforma-invoices/pages/CreateProformaInvoice').then(m => ({ default: m.CreateProformaInvoice })));
+const ProformaInvoiceDetails = lazy(() => import('../../admin/proforma-invoices/pages/ProformaInvoiceDetails').then(m => ({ default: m.ProformaInvoiceDetails })));
+const EditProformaInvoice = lazy(() => import('../../admin/proforma-invoices/pages/EditProformaInvoice').then(m => ({ default: m.EditProformaInvoice })));
+const ProformaInvoicePdfPreview = lazy(() => import('../../admin/proforma-invoices/pages/ProformaInvoicePdfPreview').then(m => ({ default: m.ProformaInvoicePdfPreview })));
+const CashBankPage = lazy(() => import('../../admin/cash-bank/pages/CashBankPage').then(m => ({ default: m.CashBankPage })));
+const PosBillingPage = lazy(() => import('../../admin/pos-billing/pages/PosBillingPage').then(m => ({ default: m.PosBillingPage })));
+const PosHistoryPage = lazy(() => import('../../admin/pos-billing/pages/PosHistoryPage').then(m => ({ default: m.PosHistoryPage })));
+
+// Employee Attendance & Task Management Module Pages
+import { EmployeeProvider } from '../../admin/employees/context/EmployeeContext';
+const EmployeeDashboardPage = lazy(() => import('../../admin/employees/pages/EmployeeDashboardPage'));
+const EmployeeDirectoryPage = lazy(() => import('../../admin/employees/pages/EmployeeDirectoryPage'));
+const EmployeeAttendancePage = lazy(() => import('../../admin/employees/pages/EmployeeAttendancePage'));
+const EmployeeTasksPage = lazy(() => import('../../admin/employees/pages/EmployeeTasksPage'));
+const EmployeeLeavesPage = lazy(() => import('../../admin/employees/pages/EmployeeLeavesPage'));
+const EmployeeShiftsHolidaysPage = lazy(() => import('../../admin/employees/pages/EmployeeShiftsHolidaysPage'));
+const EmployeeReportsPage = lazy(() => import('../../admin/employees/pages/EmployeeReportsPage'));
+
+const SuperAdminEmployeeWrapper = ({ Component, currentTab }) => {
+  const navigate = useNavigate();
+  return (
+    <EmployeeProvider>
+      <Component
+        currentTab={currentTab}
+        onNavigate={(tab, data) => {
+          const cleanTab = tab ? tab.replace(/^\//, '') : 'employees';
+          if (cleanTab === 'dashboard') {
+            navigate('/super-admin/employees', { state: data });
+          } else {
+            navigate(`/super-admin/employees/${cleanTab}`, { state: data });
+          }
+        }}
+      />
+    </EmployeeProvider>
+  );
+};
+
 const SuperAdminQuotationWrapper = ({ Component }) => {
   const navigate = useNavigate();
   return (
@@ -68,6 +108,26 @@ const SuperAdminDeliveryChallanWrapper = ({ Component }) => {
         challanData={location.state}
       />
     </DeliveryChallanProvider>
+  );
+};
+
+const SuperAdminProformaInvoiceWrapper = ({ Component }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  return (
+    <QuotationProvider>
+      <ProformaInvoiceProvider>
+        <Component
+          onNavigate={(tab, data) => {
+            const cleanTab = tab
+              ? tab.replace(/^proforma_invoices/, 'proforma-invoices').replace(/^\//, '')
+              : 'proforma-invoices';
+            navigate(`/super-admin/${cleanTab}`, { state: data });
+          }}
+          proformaData={location.state}
+        />
+      </ProformaInvoiceProvider>
+    </QuotationProvider>
   );
 };
 
@@ -99,6 +159,7 @@ const SuperAdminRoutesContent = () => {
         >
           <Route index element={<Navigate to="/super-admin/dashboard" replace />} />
           <Route path="/dashboard" element={<SuperAdminDashboard />} />
+          <Route path="/cash-bank" element={<CashBankPage />} />
           <Route path="/transactions" element={<SuperAdminTransactions />} />
           <Route path="/brands/:brandSlug/seller-payouts" element={<BrandSellerPayouts />} />
           <Route path="/brands/:brandSlug/seller-payouts/:sellerId" element={<BrandSellerDetail />} />
@@ -125,6 +186,27 @@ const SuperAdminRoutesContent = () => {
           <Route path="/delivery-challans/create" element={<SuperAdminDeliveryChallanWrapper Component={CreateDeliveryChallan} />} />
           <Route path="/delivery-challans/details" element={<SuperAdminDeliveryChallanWrapper Component={DeliveryChallanDetails} />} />
           <Route path="/delivery-challans/edit" element={<SuperAdminDeliveryChallanWrapper Component={EditDeliveryChallan} />} />
+
+          {/* Proforma Invoice Management Module Routes */}
+          <Route path="/proforma-invoices" element={<SuperAdminProformaInvoiceWrapper Component={ProformaInvoiceList} />} />
+          <Route path="/proforma-invoices/create" element={<SuperAdminProformaInvoiceWrapper Component={CreateProformaInvoice} />} />
+          <Route path="/proforma-invoices/details" element={<SuperAdminProformaInvoiceWrapper Component={ProformaInvoiceDetails} />} />
+          <Route path="/proforma-invoices/edit" element={<SuperAdminProformaInvoiceWrapper Component={EditProformaInvoice} />} />
+          <Route path="/proforma-invoices/preview" element={<SuperAdminProformaInvoiceWrapper Component={ProformaInvoicePdfPreview} />} />
+
+          {/* POS Billing Module Routes */}
+          <Route path="/pos-billing" element={<PosBillingPage />} />
+          <Route path="/pos-billing/history" element={<PosHistoryPage />} />
+
+          {/* Employee Attendance and Task Management Routes */}
+          <Route path="/employees" element={<SuperAdminEmployeeWrapper Component={EmployeeDashboardPage} currentTab="dashboard" />} />
+          <Route path="/employees/dashboard" element={<SuperAdminEmployeeWrapper Component={EmployeeDashboardPage} currentTab="dashboard" />} />
+          <Route path="/employees/directory" element={<SuperAdminEmployeeWrapper Component={EmployeeDirectoryPage} currentTab="directory" />} />
+          <Route path="/employees/attendance" element={<SuperAdminEmployeeWrapper Component={EmployeeAttendancePage} currentTab="attendance" />} />
+          <Route path="/employees/tasks" element={<SuperAdminEmployeeWrapper Component={EmployeeTasksPage} currentTab="tasks" />} />
+          <Route path="/employees/leaves" element={<SuperAdminEmployeeWrapper Component={EmployeeLeavesPage} currentTab="leaves" />} />
+          <Route path="/employees/shifts" element={<SuperAdminEmployeeWrapper Component={EmployeeShiftsHolidaysPage} currentTab="shifts" />} />
+          <Route path="/employees/reports" element={<SuperAdminEmployeeWrapper Component={EmployeeReportsPage} currentTab="reports" />} />
 
           <Route path="/captain-settlements" element={<Navigate to="/super-admin/dashboard" replace />} />
           <Route path="/payouts" element={<Navigate to="/super-admin/payouts/sellers" replace />} />

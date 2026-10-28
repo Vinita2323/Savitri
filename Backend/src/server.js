@@ -48,6 +48,9 @@ import pricingRoutes from './routes/pricingRoutes.js';
 import razorpayWebhookRoutes from './routes/razorpayWebhookRoutes.js';
 import deliveryChallanRoutes from './routes/deliveryChallanRoutes.js';
 import quotationRoutes from './routes/quotationRoutes.js';
+import proformaInvoiceRoutes from './routes/proformaInvoiceRoutes.js';
+import posRoutes from './routes/posRoutes.js';
+import employeeRoutes from './routes/employeeRoutes.js';
 import compression from 'compression';
 import performanceLogger from './middleware/performanceMiddleware.js';
 
@@ -165,6 +168,9 @@ const registerRoutes = (prefix = '') => {
   app.use(`${prefix}/pricing`, pricingRoutes);
   app.use(`${prefix}/delivery-challans`, deliveryChallanRoutes);
   app.use(`${prefix}/quotations`, quotationRoutes);
+  app.use(`${prefix}/proforma-invoices`, proformaInvoiceRoutes);
+  app.use(`${prefix}/pos`, posRoutes);
+  app.use(`${prefix}/employees`, employeeRoutes);
   app.use(`${prefix}`, commissionRoutes);
 };
 

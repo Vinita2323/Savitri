@@ -110,6 +110,8 @@ export const AdminSidebar = () => {
     delivery_boy: false,
     orders: false,
     quotation_management: false,
+    delivery_challans_menu: false,
+    employee_management: false,
     transport: false,
     pricing_charges: false,
     payout_requests: false,
@@ -292,6 +294,25 @@ export const AdminSidebar = () => {
       ]
     },
     {
+      title: 'EMPLOYEE MANAGEMENT',
+      items: [
+        {
+          id: 'employee_management',
+          label: 'Employees & Workforce',
+          icon: UserCheck,
+          submenu: [
+            { id: 'employee_dashboard', label: 'Employee Dashboard' },
+            { id: 'employee_directory', label: 'Employee Directory' },
+            { id: 'employee_attendance', label: 'Attendance Management' },
+            { id: 'employee_tasks', label: 'Task Management' },
+            { id: 'employee_leaves', label: 'Leave Management' },
+            { id: 'employee_shifts', label: 'Shifts & Holidays' },
+            { id: 'employee_reports', label: 'Reports & Analytics' },
+          ]
+        }
+      ]
+    },
+    {
       title: 'PROMOTION',
       items: [
         { id: 'promo_dashboard', label: 'Promotion Dashboard', icon: LayoutDashboard },
@@ -446,7 +467,8 @@ export const AdminSidebar = () => {
                   activeTab === item.id ||
                   (item.submenu && item.submenu.some((sub) => sub.id === activeTab)) ||
                   (item.id === 'quotation_management' && typeof activeTab === 'string' && activeTab.startsWith('quotations')) ||
-                  (item.id === 'delivery_challans_menu' && typeof activeTab === 'string' && (activeTab.startsWith('delivery_challans') || activeTab.startsWith('delivery-challans')));
+                  (item.id === 'delivery_challans_menu' && typeof activeTab === 'string' && (activeTab.startsWith('delivery_challans') || activeTab.startsWith('delivery-challans'))) ||
+                  (item.id === 'employee_management' && typeof activeTab === 'string' && (activeTab.startsWith('employee') || activeTab.startsWith('employees')));
 
                 if (item.submenu) {
                   const isExpanded = expandedMenus[item.id] || searchQuery.length > 0;
