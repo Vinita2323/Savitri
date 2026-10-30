@@ -181,8 +181,9 @@ export const getEmployees = async (req, res) => {
     const query = {};
 
     // Scoped brand filter
-    if (brandId && brandId !== 'ALL') {
-      query.brandId = brandId;
+    const activeBrandId = (req.scope && !req.scope.isAll) ? req.scope.brandId : (brandId && brandId !== 'ALL' ? brandId : null);
+    if (activeBrandId) {
+      query.brandId = activeBrandId;
     }
 
     if (department && department !== 'ALL') {

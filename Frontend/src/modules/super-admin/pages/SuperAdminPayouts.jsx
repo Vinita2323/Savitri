@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SuperAdminHeader } from '../components/SuperAdminHeader';
+import { useSuperAdmin } from '../context/SuperAdminContext';
 import { superAdminService } from '../../../services/superAdminService';
 import { useDebounce } from '../../../hooks/useDebounce';
 import {
@@ -23,9 +24,10 @@ import {
   Building2,
 } from 'lucide-react';
 
-export const SuperAdminPayouts = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const initialRecipientType = searchParams.get('tab') || 'ALL';
+export const SuperAdminPayouts = ({ fixedRecipientType } = {}) => {
+  const [searchParams] = useSearchParams();
+  const { selectedBrandId } = useSuperAdmin();
+  const initialRecipientType = fixedRecipientType || searchParams.get('tab') || 'ALL';
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -62,13 +64,19 @@ export const SuperAdminPayouts = () => {
   const [actionRemarks, setActionRemarks] = useState('');
   const [actionError, setActionError] = useState('');
 
+  const [loadError, setLoadError] = useState('');
+  const requestSeq = React.useRef(0);
+
   const fetchPayouts = useCallback(
     async (isManual = false) => {
+      const seq = ++requestSeq.current; // only the latest request may update state
       if (isManual) setRefreshing(true);
       else setLoading(true);
+      setLoadError('');
 
       try {
         const res = await superAdminService.getPayouts({
+          brandId: selectedBrandId,
           page,
           recipientType,
           status,
@@ -77,20 +85,40 @@ export const SuperAdminPayouts = () => {
           endDate,
         });
 
+        if (seq !== requestSeq.current) return;
         if (res.success) {
           setPayouts(res.payouts || []);
           if (res.counts) setCounts(res.counts);
           setPages(res.pages || 1);
+        } else {
+          setLoadError(res.message || 'Could not load payout requests.');
         }
       } catch (err) {
-        console.error('Fetch payouts error:', err);
+        if (seq !== requestSeq.current) return;
+        setPayouts([]);
+        setLoadError(err?.response?.data?.message || err?.message || 'Could not load payout requests.');
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (seq === requestSeq.current) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
-    [page, recipientType, status, debouncedSearch, startDate, endDate]
+    [selectedBrandId, page, recipientType, status, debouncedSearch, startDate, endDate]
   );
+
+  // Brand or route-fixed recipient type changed: drop the previous records and restart from page 1
+  useEffect(() => {
+    setPayouts([]);
+    setPage(1);
+  }, [selectedBrandId]);
+
+  useEffect(() => {
+    if (fixedRecipientType) {
+      setRecipientType(fixedRecipientType);
+      setPage(1);
+    }
+  }, [fixedRecipientType]);
 
   useEffect(() => {
     fetchPayouts();
@@ -219,7 +247,7 @@ export const SuperAdminPayouts = () => {
         {/* Recipient Type Tabs & Status Filters */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
           <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200/80 shadow-xs">
-            {['ALL', 'SELLER', 'CAPTAIN'].map((tab) => (
+            {(fixedRecipientType ? [fixedRecipientType] : ['ALL', 'SELLER', 'CAPTAIN']).map((tab) => (
               <button
                 key={tab}
                 onClick={() => {
@@ -318,6 +346,19 @@ export const SuperAdminPayouts = () => {
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
                       Loading payout requests...
+                    </td>
+                  </tr>
+                ) : loadError ? (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-rose-600 font-medium">
+                      {loadError}
+                      <button
+                        type="button"
+                        onClick={() => fetchPayouts(true)}
+                        className="ml-3 px-3 py-1 rounded-lg border border-rose-200 bg-white text-rose-700 cursor-pointer"
+                      >
+                        Retry
+                      </button>
                     </td>
                   </tr>
                 ) : payouts.length === 0 ? (

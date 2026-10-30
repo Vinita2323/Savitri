@@ -23,11 +23,26 @@ import {
   createHoliday,
   getEmployeeDashboardSummary,
 } from '../controllers/employeeController.js';
+import { resolveBrandScope } from '../middleware/scopeMiddleware.js';
 
 const router = express.Router();
 
 // Role protection for all employee management endpoints
 router.use(protect('admin', 'super_admin', 'super-admin'));
+router.use(resolveBrandScope);
+// Controllers read brandId from query/body; pin both to the validated scope so a header-selected
+// brand can't be bypassed (or a different brand written) by omitting/forging brandId.
+router.use((req, res, next) => {
+  if (req.scope && !req.scope.isAll) {
+    Object.defineProperty(req, 'query', {
+      value: { ...req.query, brandId: req.scope.brandId },
+      writable: true,
+      configurable: true,
+    });
+    if (req.body && typeof req.body === 'object') req.body.brandId = req.scope.brandId;
+  }
+  next();
+});
 
 // 1. Dashboard Metrics
 router.get('/dashboard-summary', getEmployeeDashboardSummary);

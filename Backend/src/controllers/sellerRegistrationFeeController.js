@@ -7,6 +7,7 @@ import { uploadToCloudinary } from '../config/cloudinary.js';
 import { sendOtpSMS } from '../services/smsIndiaHubService.js';
 import { generateOtp } from '../utils/generateOtp.js';
 import { applyReferralCodeAtRegistration } from './referralController.js';
+import { validateBrandForRegistration } from '../utils/brandEligibility.js';
 
 // Helper: Normalize 10-digit phone
 const normalizePhone = (phone) => {
@@ -98,6 +99,19 @@ export const initiateRegistrationFeeOrder = async (req, res, next) => {
       });
     }
 
+    // Authoritative brand check: re-load the brand and re-compute distance server-side.
+    // Never trust the brand list or distance shown by the frontend.
+    const brandCheck = await validateBrandForRegistration({
+      brandId: req.body.brandId,
+      city,
+      lat,
+      lng,
+    });
+    if (!brandCheck.ok) {
+      return res.status(brandCheck.status).json({ success: false, message: brandCheck.message });
+    }
+    const validatedBrand = brandCheck.brand;
+
     // Check if seller already exists and is approved or already paid
     let existingSeller = await Seller.findOne({
       $or: [
@@ -128,6 +142,8 @@ export const initiateRegistrationFeeOrder = async (req, res, next) => {
         }
         if (businessName) existingSeller.businessName = businessName;
         if (ownerName) existingSeller.ownerName = ownerName;
+        existingSeller.brand = validatedBrand._id;
+        existingSeller.brandId = validatedBrand.brandId;
 
         const { otp, otpExpiry } = generateOtp();
         existingSeller.otp = otp;
@@ -224,14 +240,17 @@ export const initiateRegistrationFeeOrder = async (req, res, next) => {
       gstPhoto: processedGstPhoto,
       bankPassbookPhoto: processedPassbookPhoto,
       categories: Array.isArray(categories) ? categories : [],
+      brand: validatedBrand._id,
+      brandId: validatedBrand.brandId,
       warehouseLocation: {
         storeAddress: completeAddress,
         city,
         state,
         pincode,
+        locality: typeof req.body.locality === 'string' ? req.body.locality.trim().slice(0, 120) : '',
         location: {
           type: 'Point',
-          coordinates: (lng != null && lat != null) ? [parseFloat(lng), parseFloat(lat)] : [0, 0],
+          coordinates: [parseFloat(lng), parseFloat(lat)],
         },
       },
       otp,

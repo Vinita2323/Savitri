@@ -11,6 +11,37 @@ import { invalidateProductsCache } from './productController.js';
 import { invalidatePublicSellersCache } from '../routes/sellerRoutes.js';
 import SellerRegistrationFeeConfig from '../models/SellerRegistrationFeeConfig.model.js';
 import { hasRegistrationFeeCleared, isMembershipRequiredForSeller } from '../utils/sellerEligibility.js';
+import Brand from '../models/Brand.model.js';
+
+// Helper to ensure seller object always includes full associated brand details
+export const enrichSellerBrand = async (sellerDoc) => {
+  if (!sellerDoc) return null;
+  const sellerObj = typeof sellerDoc.toObject === 'function' ? sellerDoc.toObject() : { ...sellerDoc };
+
+  // If already populated Brand object with name
+  if (sellerObj.brand && typeof sellerObj.brand === 'object' && sellerObj.brand.name) {
+    return sellerObj;
+  }
+
+  let brandData = null;
+  if (sellerObj.brand) {
+    brandData = await Brand.findById(sellerObj.brand).lean();
+  }
+
+  if (!brandData && sellerObj.brandId) {
+    brandData = await Brand.findOne({
+      $or: [
+        { brandId: sellerObj.brandId },
+        { code: sellerObj.brandId },
+      ],
+    }).lean();
+  }
+
+  if (brandData) {
+    sellerObj.brand = brandData;
+  }
+  return sellerObj;
+};
 
 // Send / Resend OTP
 // purpose: 'register' (default) may create a stub seller; 'reset' requires an existing account
@@ -571,7 +602,7 @@ export const loginSeller = async (req, res, next) => {
       { $set: { membershipStatus: 'expired' } }
     );
 
-    const sellerSafe = seller.toObject();
+    const sellerSafe = await enrichSellerBrand(seller);
     delete sellerSafe.password;
     delete sellerSafe.otp;
     delete sellerSafe.otpExpiry;
@@ -596,7 +627,9 @@ export const loginSeller = async (req, res, next) => {
 // Get Seller Profile
 export const getSellerProfile = async (req, res, next) => {
   try {
-    const seller = await Seller.findById(req.user.id).select('-password -otp -otpExpiry');
+    const seller = await Seller.findById(req.user.id)
+      .select('-password -otp -otpExpiry')
+      .populate('brand');
     if (!seller) {
       return res.status(404).json({ success: false, message: 'Seller profile not found' });
     }
@@ -606,7 +639,7 @@ export const getSellerProfile = async (req, res, next) => {
       membershipStatus: { $in: ['active', 'pending_payment'] },
     }).populate('planId').sort({ createdAt: -1 });
 
-    const sellerObj = seller.toObject();
+    const sellerObj = await enrichSellerBrand(seller);
     sellerObj.membership = membership || null;
 
     res.status(200).json({
@@ -783,7 +816,7 @@ export const updateSellerProfile = async (req, res, next) => {
     invalidateProductsCache();
     invalidatePublicSellersCache();
 
-    const sellerSafe = seller.toObject();
+    const sellerSafe = await enrichSellerBrand(seller);
     delete sellerSafe.password;
     delete sellerSafe.otp;
     delete sellerSafe.otpExpiry;

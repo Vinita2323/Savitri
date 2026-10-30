@@ -1,5 +1,6 @@
 import express from 'express';
 import { protect } from '../middleware/authMiddleware.js';
+import { resolveBrandScope } from '../middleware/scopeMiddleware.js';
 import {
   getFinancialDashboardStats,
   getLedgerTransactions,
@@ -18,6 +19,11 @@ import {
   processRefund,
   getAuditLogs,
   getFinancialReports,
+  getSuperAdminStores,
+  getSuperAdminStoreById,
+  getSuperAdminInventory,
+  adjustSuperAdminInventoryStock,
+  getSuperAdminDeliveryPartners,
 } from '../controllers/superAdminFinancialController.js';
 
 const router = express.Router();
@@ -26,6 +32,11 @@ const router = express.Router();
 const superAdminAuth = protect('super_admin');
 // Payout & refund routes also accessible by admin role
 const payoutAuth = protect('admin', 'super_admin');
+
+// Attach brand & region scope resolution to all super-admin endpoints
+// Authenticate first so brand authorization can see the user; routes below add stricter role checks.
+router.use(protect('admin', 'super_admin'));
+router.use(resolveBrandScope);
 
 // Financial Dashboard (accessible by admin + super_admin)
 router.get('/dashboard/metrics', payoutAuth, getFinancialDashboardStats);
@@ -61,5 +72,12 @@ router.get('/reports', superAdminAuth, getFinancialReports);
 
 // Financial Audit Logs
 router.get('/audit-logs', superAdminAuth, getAuditLogs);
+
+// Operations & Inventory (Brand/Region Scoped)
+router.get('/stores', payoutAuth, getSuperAdminStores);
+router.get('/stores/:id', payoutAuth, getSuperAdminStoreById);
+router.get('/inventory', payoutAuth, getSuperAdminInventory);
+router.post('/inventory/adjust', superAdminAuth, adjustSuperAdminInventoryStock);
+router.get('/delivery-partners', payoutAuth, getSuperAdminDeliveryPartners);
 
 export default router;

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { SuperAdminHeader } from '../components/SuperAdminHeader';
+import { useSuperAdmin } from '../context/SuperAdminContext';
 import { superAdminService } from '../../../services/superAdminService';
 import { Percent, Search, Store, Edit3, X, Check, AlertCircle } from 'lucide-react';
 
 export const SuperAdminCommissions = () => {
+  const { selectedBrandId } = useSuperAdmin();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sellers, setSellers] = useState([]);
@@ -21,7 +23,7 @@ export const SuperAdminCommissions = () => {
     else setLoading(true);
 
     try {
-      const res = await superAdminService.getCommissions();
+      const res = await superAdminService.getCommissions({ brandId: selectedBrandId });
       if (res.success) {
         setSellers(res.sellers || []);
       }
@@ -31,7 +33,7 @@ export const SuperAdminCommissions = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [selectedBrandId]);
 
   useEffect(() => {
     fetchCommissions();

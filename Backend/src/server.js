@@ -17,6 +17,8 @@ import captainRoutes from './routes/captainRoutes.js';
 import adminAuthRoutes from './routes/adminAuthRoutes.js';
 import superAdminAuthRoutes from './routes/superAdminAuthRoutes.js';
 import superAdminRoutes from './routes/superAdminRoutes.js';
+import brandRoutes from './routes/brandRoutes.js';
+import publicBrandRoutes from './routes/publicBrandRoutes.js';
 import bannerRoutes from './routes/bannerRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
@@ -75,18 +77,31 @@ app.use(compression({
   }
 }));
 
-app.use(cors({
+const corsOptions = {
   // Reflect the request origin so credentialed admin cookie auth works
   // (origin cannot be "*" when credentials are enabled).
   origin: (origin, callback) => callback(null, origin || true),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'X-Brand-Id',
+    'X-Region-Id',
+    'x-brand-id',
+    'x-region-id',
+  ],
+  optionsSuccessStatus: 200,
   // Let browsers cache the preflight so every cart/wishlist/order mutation
   // (which carries a custom Authorization header) doesn't pay for a second
   // OPTIONS round trip on top of the actual request.
   maxAge: 86400,
-}));
+};
+
+app.use(cors(corsOptions));
 
 app.use(cookieParser());
 
@@ -137,6 +152,8 @@ const registerRoutes = (prefix = '') => {
   app.use(`${prefix}/captain`, captainRoutes);
   app.use(`${prefix}/auth/admin`, adminAuthRoutes);
   app.use(`${prefix}/auth/super-admin`, superAdminAuthRoutes);
+  app.use(`${prefix}/super-admin/brands`, brandRoutes);
+  app.use(`${prefix}/brands`, publicBrandRoutes);
   app.use(`${prefix}/super-admin`, superAdminRoutes);
   app.use(`${prefix}/banners`, bannerRoutes);
   app.use(`${prefix}/upload`, uploadRoutes);

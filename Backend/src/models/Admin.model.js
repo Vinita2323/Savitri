@@ -39,6 +39,11 @@ const adminSchema = new mongoose.Schema(
       enum: ['admin', 'super_admin'],
       default: 'admin',
     },
+    // Optional brand restriction for role 'admin'. Unset/empty or '*' = all brands.
+    authorizedBrands: {
+      type: [String],
+      default: undefined,
+    },
   },
   {
     timestamps: true,

@@ -363,6 +363,10 @@ export const getProformaInvoices = async (req, res, next) => {
       filter.paymentStatus = paymentStatus;
     }
 
+    if (req.scope && !req.scope.isAll && req.scope.city) {
+      filter['clientSnapshot.shippingAddress.city'] = new RegExp(`^${req.scope.city.trim()}$`, 'i');
+    }
+
     // Date range filter on issueDate
     if (startDate || endDate) {
       filter.issueDate = {};

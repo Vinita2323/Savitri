@@ -16,10 +16,13 @@ import {
   convertToInvoiceHandler,
 } from '../controllers/proformaInvoiceController.js';
 
+import { resolveBrandScope } from '../middleware/scopeMiddleware.js';
+
 const router = express.Router();
 
 // Require admin or super-admin role for all Proforma Invoice operations
 router.use(protect('admin', 'super_admin', 'super-admin'));
+router.use(resolveBrandScope);
 
 // Helper lookups
 router.get('/next-number', getNextProformaNumberHandler);

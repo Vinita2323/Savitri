@@ -7,11 +7,19 @@ import { generateNextQuotationNumber } from '../utils/quotationCalculations';
 
 const QuotationContext = createContext(null);
 
+const getQuoteKey = (suffix) => {
+  const brand =
+    typeof sessionStorage !== 'undefined'
+      ? sessionStorage.getItem('shippnex_super_admin_brand') || 'brand_fg'
+      : 'brand_fg';
+  return `savitri_mock_${suffix}_${brand}`;
+};
+
 export const QuotationProvider = ({ children }) => {
   // Load quotations from localStorage or fallback to initial mock data
   const [quotations, setQuotations] = useState(() => {
     try {
-      const saved = localStorage.getItem('savitri_mock_quotations');
+      const saved = localStorage.getItem(getQuoteKey('quotations'));
       return saved ? JSON.parse(saved) : INITIAL_QUOTATIONS;
     } catch (e) {
       return INITIAL_QUOTATIONS;
@@ -21,7 +29,7 @@ export const QuotationProvider = ({ children }) => {
   // Load quotation requests from localStorage or fallback
   const [quotationRequests, setQuotationRequests] = useState(() => {
     try {
-      const saved = localStorage.getItem('savitri_mock_quotation_requests');
+      const saved = localStorage.getItem(getQuoteKey('quotation_requests'));
       return saved ? JSON.parse(saved) : INITIAL_QUOTATION_REQUESTS;
     } catch (e) {
       return INITIAL_QUOTATION_REQUESTS;
@@ -40,13 +48,13 @@ export const QuotationProvider = ({ children }) => {
   // Save to localStorage on change
   useEffect(() => {
     try {
-      localStorage.setItem('savitri_mock_quotations', JSON.stringify(quotations));
+      localStorage.setItem(getQuoteKey('quotations'), JSON.stringify(quotations));
     } catch (e) {}
   }, [quotations]);
 
   useEffect(() => {
     try {
-      localStorage.setItem('savitri_mock_quotation_requests', JSON.stringify(quotationRequests));
+      localStorage.setItem(getQuoteKey('quotation_requests'), JSON.stringify(quotationRequests));
     } catch (e) {}
   }, [quotationRequests]);
 

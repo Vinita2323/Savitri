@@ -22,8 +22,11 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
+import { useSuperAdmin } from '../context/SuperAdminContext';
+
 export const SuperAdminDashboard = () => {
   const navigate = useNavigate();
+  const { selectedBrandId, selectedBrand } = useSuperAdmin();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState(null);
@@ -31,11 +34,14 @@ export const SuperAdminDashboard = () => {
 
   const fetchData = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true);
-    else setLoading(true);
+    else {
+      setLoading(true);
+      setData(null); // Prevent previous brand's data from flashing
+    }
     setError(null);
 
     try {
-      const res = await superAdminService.getDashboardMetrics();
+      const res = await superAdminService.getDashboardMetrics({ brandId: selectedBrandId });
       if (res.success) {
         setData(res);
       }
@@ -46,7 +52,7 @@ export const SuperAdminDashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [selectedBrandId]);
 
   useEffect(() => {
     fetchData();
