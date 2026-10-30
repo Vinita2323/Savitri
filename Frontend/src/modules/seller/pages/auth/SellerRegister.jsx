@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Store, MapPin, FileText, CheckCircle, Check, Loader2, Search, Navigation, AlertCircle, Crown, Zap, Star, CreditCard, Banknote, Wallet, Building2, Smartphone, UploadCloud, Image, X, FileCheck, Layers, Eye, EyeOff, Lock, ShieldCheck, RotateCcw, DollarSign, Sparkles, Gift } from 'lucide-react';
-import { authService, categoryService, sellerRegistrationFeeService, referralService } from '../../../../services/authService';
+import { authService, categoryService, sellerRegistrationFeeService, referralService, brandDiscoveryService } from '../../../../services/authService';
 import { MapService } from '../../../../services/MapService';
 import LocationSearchModal from '../../../../components/LocationSearchModal';
 import { loadRazorpaySdk } from '../../../../utils/razorpay';
@@ -154,9 +154,11 @@ const SellerRegister = () => {
     completeAddress: '',
     city: '',
     state: '',
+    locality: '',
     pincode: '',
     lat: null,
     lng: null,
+    brandId: '',
     serviceRadius: '5',
     gstNumber: '',
     panNumber: '',
@@ -166,6 +168,90 @@ const SellerRegister = () => {
     planId: '',
     referralCode: (refCodeFromUrl || (typeof window !== 'undefined' ? sessionStorage.getItem('seller_referral_code') : '') || '').trim().toUpperCase(),
   });
+
+  // ---- Location-based brand discovery ----
+  const DEFAULT_SUPPORTED_CITIES = [
+    { city: 'Indore', state: 'Madhya Pradesh' },
+    { city: 'Bhopal', state: 'Madhya Pradesh' },
+    { city: 'Jabalpur', state: 'Madhya Pradesh' },
+    { city: 'Ujjain', state: 'Madhya Pradesh' },
+  ];
+
+  const [supportedCities, setSupportedCities] = useState(DEFAULT_SUPPORTED_CITIES);
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
+  const [brandSearch, setBrandSearch] = useState({ status: 'idle', brands: [], error: '' });
+  const [brandRetry, setBrandRetry] = useState(0);
+
+  const effectiveCities = supportedCities.length > 0 ? supportedCities : DEFAULT_SUPPORTED_CITIES;
+
+  const findSupportedCity = (name) => {
+    const query = String(name || '').trim().toLowerCase();
+    if (!query) return null;
+    return effectiveCities.find((c) => c.city.toLowerCase() === query);
+  };
+
+  // Auto-detect city & state from Indian 6-digit PIN code
+  const resolveCityFromPincode = (pin) => {
+    const cleanPin = String(pin || '').trim();
+    if (!/^\d{6}$/.test(cleanPin)) return null;
+    const prefix3 = cleanPin.slice(0, 3);
+    if (prefix3 === '452' || prefix3 === '453') return { city: 'Indore', state: 'Madhya Pradesh' };
+    if (prefix3 === '462') return { city: 'Bhopal', state: 'Madhya Pradesh' };
+    if (prefix3 === '482') return { city: 'Jabalpur', state: 'Madhya Pradesh' };
+    if (prefix3 === '456') return { city: 'Ujjain', state: 'Madhya Pradesh' };
+    return null;
+  };
+
+  useEffect(() => {
+    brandDiscoveryService
+      .getCities()
+      .then((res) => {
+        if (Array.isArray(res?.cities) && res.cities.length > 0) {
+          setSupportedCities(res.cities);
+        } else {
+          setSupportedCities(DEFAULT_SUPPORTED_CITIES);
+        }
+      })
+      .catch(() => setSupportedCities(DEFAULT_SUPPORTED_CITIES));
+  }, []);
+
+  // Any change to city or coordinates invalidates the confirmed location / selected brand
+  useEffect(() => {
+    setLocationConfirmed(false);
+  }, [formData.lat, formData.lng]);
+
+  useEffect(() => {
+    setFormData((prev) => (prev.brandId ? { ...prev, brandId: '' } : prev));
+  }, [formData.city, formData.lat, formData.lng]);
+
+  useEffect(() => {
+    const supported = findSupportedCity(formData.city);
+    if (!supported || !locationConfirmed || !formData.lat || !formData.lng) {
+      setBrandSearch({ status: 'idle', brands: [], error: '' });
+      return undefined;
+    }
+    let cancelled = false;
+    setBrandSearch({ status: 'loading', brands: [], error: '' });
+    brandDiscoveryService
+      .getEligibleBrands({ city: supported.city, latitude: formData.lat, longitude: formData.lng })
+      .then((res) => {
+        if (!cancelled) setBrandSearch({ status: 'ready', brands: res?.brands || [], error: '' });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        const msg = err.response?.status === 429
+          ? 'Too many searches. Please wait a moment and retry.'
+          : err.response?.data?.message || 'Could not load brands. Please check your connection and retry.';
+        setBrandSearch({ status: 'error', brands: [], error: msg });
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.city, formData.lat, formData.lng, locationConfirmed, brandRetry, supportedCities]);
+
+  const selectedBrand = brandSearch.brands.find((b) => b.id === formData.brandId) || null;
+  const filteredCities = effectiveCities.filter((c) =>
+    c.city.toLowerCase().includes(String(formData.city || '').trim().toLowerCase())
+  );
 
   const validateReferralCode = async (code) => {
     const trimmed = String(code || '').trim().toUpperCase();
@@ -223,7 +309,32 @@ const SellerRegister = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+
+      // When pincode is entered, auto-detect city and state
+      if (name === 'pincode') {
+        const resolved = resolveCityFromPincode(value);
+        if (resolved) {
+          if (!updated.city || !findSupportedCity(updated.city)) {
+            updated.city = resolved.city;
+          }
+          if (!updated.state) {
+            updated.state = resolved.state;
+          }
+        }
+      }
+
+      // If user types city, auto-normalize casing if matches a supported city
+      if (name === 'city') {
+        const matched = findSupportedCity(value);
+        if (matched && value.trim().toLowerCase() === matched.city.toLowerCase() && value !== matched.city) {
+          updated.city = matched.city;
+        }
+      }
+
+      return updated;
+    });
   };
 
   const toggleCategory = (catName) => {
@@ -275,7 +386,7 @@ const SellerRegister = () => {
       setFormData(prev => ({
         ...prev,
         completeAddress: detailed.formattedAddress || detailed.address,
-        city: detailed.city || prev.city,
+        city: prev.city || findSupportedCity(detailed.city)?.city || '',
         state: detailed.state || prev.state,
         pincode: detailed.postalCode || detailed.pincode || prev.pincode,
         lat: detailed.latitude || detailed.lat,
@@ -295,7 +406,7 @@ const SellerRegister = () => {
     setFormData(prev => ({
       ...prev,
       completeAddress: loc.formattedAddress || loc.address,
-      city: loc.city || prev.city,
+      city: prev.city || findSupportedCity(loc.city)?.city || '',
       state: loc.state || prev.state,
       pincode: loc.postalCode || loc.pincode || prev.pincode,
       lat: loc.latitude || loc.lat,
@@ -544,6 +655,22 @@ const SellerRegister = () => {
         setErrorMessage('Please set warehouse location via GPS or map search. / कृपया जीपीएस या मानचित्र से वेयरहाउस स्थान सेट करें।');
         return;
       }
+      const supportedCity = findSupportedCity(formData.city);
+      if (!supportedCity) {
+        setErrorMessage('Please select a supported city from the list. / कृपया सूची से समर्थित शहर चुनें।');
+        return;
+      }
+      if (!locationConfirmed) {
+        setErrorMessage('Please confirm your business location before choosing a brand. / ब्रांड चुनने से पहले अपने व्यवसाय के स्थान की पुष्टि करें।');
+        return;
+      }
+      if (!selectedBrand) {
+        setErrorMessage('Please select a brand available at your business location. / कृपया अपने व्यवसाय स्थान पर उपलब्ध ब्रांड चुनें।');
+        return;
+      }
+      if (supportedCity.city !== formData.city) {
+        setFormData((prev) => ({ ...prev, city: supportedCity.city }));
+      }
       const radius = Number(formData.serviceRadius);
       if (!Number.isFinite(radius) || radius < 1) {
         setErrorMessage('Service radius must be at least 1 km. / सेवा दायरा कम से कम 1 किमी होना चाहिए।');
@@ -620,8 +747,10 @@ const SellerRegister = () => {
           city: formData.city,
           state: formData.state,
           pincode: formData.pincode,
+          locality: formData.locality,
           lat: formData.lat,
           lng: formData.lng,
+          brandId: formData.brandId,
           gstNumber: formData.gstNumber,
           panNumber: formData.panNumber,
           fssaiLicense: formData.fssaiLicense,
@@ -737,7 +866,7 @@ const SellerRegister = () => {
               </Link>
             </div>
           ) : (
-          <form onSubmit={step === 5 ? handleVerifyOtpSubmit : nextStep}>
+          <form onSubmit={step === 5 ? handleVerifyOtpSubmit : nextStep} autoComplete="off">
             {/* Step Indicators */}
             <div className="flex items-center justify-between mb-6 relative">
               <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-slate-100 -z-0"></div>
@@ -838,7 +967,16 @@ const SellerRegister = () => {
                     <label className="block text-xs font-semibold text-slate-700 mb-1 leading-snug">
                       Email Address <span className="font-normal text-slate-500">/ ईमेल पता</span> <span className="text-red-500">*</span>
                     </label>
-                    <input type="email" name="email" value={formData.email} onChange={handleInputChange} required className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-[#F7941D] font-medium text-xs transition-all placeholder:text-slate-400 placeholder:text-xs" placeholder="store@example.com / स्टोर@उदाहरण.कॉम" />
+                    <input
+                      type="email"
+                      name="email"
+                      autoComplete="off"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-[#F7941D] font-medium text-xs transition-all placeholder:text-slate-400 placeholder:text-xs"
+                      placeholder="store@example.com / स्टोर@उदाहरण.कॉम"
+                    />
                   </div>
 
                   {/* Password Field */}
@@ -850,6 +988,7 @@ const SellerRegister = () => {
                       <input
                         type={showPassword ? 'text' : 'password'}
                         name="password"
+                        autoComplete="new-password"
                         value={formData.password}
                         onChange={handleInputChange}
                         required
@@ -876,6 +1015,7 @@ const SellerRegister = () => {
                       <input
                         type={showConfirmPassword ? 'text' : 'password'}
                         name="confirmPassword"
+                        autoComplete="new-password"
                         value={formData.confirmPassword}
                         onChange={handleInputChange}
                         required
@@ -1025,7 +1165,35 @@ const SellerRegister = () => {
                     <label className="block text-xs font-semibold text-slate-700 mb-1 leading-snug">
                       City <span className="font-normal text-slate-500">/ शहर</span> <span className="text-red-500">*</span>
                     </label>
-                    <input type="text" name="city" value={formData.city} onChange={handleInputChange} required className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-[#F7941D] font-medium text-xs transition-all placeholder:text-slate-400 placeholder:text-xs" placeholder="City / शहर" />
+                    <input
+                      type="text"
+                      name="city"
+                      list="seller-supported-cities"
+                      autoComplete="off"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      onBlur={(e) => {
+                        const matched = findSupportedCity(e.target.value);
+                        if (matched && matched.city !== formData.city) {
+                          setFormData(prev => ({ ...prev, city: matched.city }));
+                        }
+                      }}
+                      required
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-[#F7941D] font-medium text-xs transition-all placeholder:text-slate-400 placeholder:text-xs"
+                      placeholder="Search city / शहर खोजें"
+                    />
+                    <datalist id="seller-supported-cities">
+                      {filteredCities.map((c) => <option key={c.city} value={c.city} />)}
+                    </datalist>
+                    {formData.city && !findSupportedCity(formData.city) && (
+                      <p className="text-[10.5px] text-amber-600 font-medium mt-1">Please enter or select a supported city (e.g. Indore, Bhopal). / कृपया समर्थित शहर चुनें।</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col justify-between">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 leading-snug">
+                      Locality / Area <span className="font-normal text-slate-500">/ इलाका</span>
+                    </label>
+                    <input type="text" name="locality" value={formData.locality} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-[#F7941D] font-medium text-xs transition-all placeholder:text-slate-400 placeholder:text-xs" placeholder="e.g. Vijay Nagar / जैसे: विजय नगर" />
                   </div>
                   <div className="flex flex-col justify-between">
                     <label className="block text-xs font-semibold text-slate-700 mb-1 leading-snug">
@@ -1045,6 +1213,98 @@ const SellerRegister = () => {
                     </label>
                     <input type="number" name="serviceRadius" value={formData.serviceRadius} onChange={handleInputChange} required min="1" className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-[#F7941D] font-medium text-xs transition-all placeholder:text-slate-400 placeholder:text-xs" placeholder="e.g. 5 / जैसे: 5" />
                   </div>
+                </div>
+
+                {/* Business location confirmation */}
+                {formData.lat && formData.lng && (
+                  <div className={`p-3 rounded-xl border text-xs flex items-center justify-between gap-2 ${locationConfirmed ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+                    <span className="font-medium">
+                      {locationConfirmed
+                        ? 'Business location confirmed ✓ / व्यवसाय स्थान की पुष्टि हो गई'
+                        : 'Is the pinned location your business address? / क्या पिन किया गया स्थान आपके व्यवसाय का पता है?'}
+                    </span>
+                    {!locationConfirmed && (
+                      <button
+                        type="button"
+                        onClick={() => setLocationConfirmed(true)}
+                        disabled={!findSupportedCity(formData.city)}
+                        className="shrink-0 px-3 py-1.5 bg-[#79B433] text-white rounded-lg font-bold text-xs border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Confirm / पुष्टि करें
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Eligible brands */}
+                <div className="space-y-2.5 pt-2 border-t border-slate-100">
+                  <h4 className="text-sm font-bold text-slate-800 m-0">
+                    Choose Your Brand <span className="font-semibold text-slate-500 text-xs">/ अपना ब्रांड चुनें</span> <span className="text-red-500">*</span>
+                  </h4>
+
+                  {brandSearch.status === 'idle' && (
+                    <p className="text-[11px] text-slate-500 font-medium m-0">
+                      Select a city, set and confirm your business location to see brands available near you. / शहर चुनें और अपने व्यवसाय स्थान की पुष्टि करें।
+                    </p>
+                  )}
+
+                  {brandSearch.status === 'loading' && (
+                    <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                      <Loader2 size={15} className="animate-spin" /> Finding brands near your location... / ब्रांड खोजे जा रहे हैं...
+                    </div>
+                  )}
+
+                  {brandSearch.status === 'error' && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2"><AlertCircle size={15} className="shrink-0" />{brandSearch.error}</span>
+                      <button type="button" onClick={() => setBrandRetry((n) => n + 1)} className="shrink-0 px-3 py-1.5 bg-white border border-red-200 rounded-lg font-bold cursor-pointer">
+                        Retry / पुनः प्रयास
+                      </button>
+                    </div>
+                  )}
+
+                  {brandSearch.status === 'ready' && brandSearch.brands.length === 0 && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-medium">
+                      No brands are currently accepting seller registrations at this location. Please verify your business address or contact support.
+                      <span className="block text-amber-700/80 mt-0.5">इस स्थान पर कोई ब्रांड वर्तमान में विक्रेता पंजीकरण स्वीकार नहीं कर रहा है। कृपया अपना पता जांचें या सहायता से संपर्क करें।</span>
+                    </div>
+                  )}
+
+                  {brandSearch.status === 'ready' && brandSearch.brands.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {brandSearch.brands.map((b) => {
+                        const isSel = formData.brandId === b.id;
+                        return (
+                          <div key={b.id} className={`p-3 rounded-xl border transition-all ${isSel ? 'border-[#79B433] bg-emerald-50/60 ring-2 ring-[#79B433]/30' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                            <div className="flex items-center gap-2.5">
+                              <img src={b.logo} alt={b.name} className="w-10 h-10 rounded-lg object-contain border border-slate-100 bg-white shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-slate-900 truncate m-0">{b.name}</p>
+                                <p className="text-[11px] text-slate-500 truncate m-0">{[b.locality, b.city].filter(Boolean).join(', ')}</p>
+                              </div>
+                            </div>
+                            <div className="mt-2 text-[11px] text-slate-600 space-y-0.5">
+                              <p className="m-0">Distance: <strong>{b.distanceKm} km</strong> · Radius: <strong>{b.operatingRadiusKm} km</strong></p>
+                              <p className="m-0 text-emerald-700 font-semibold">Eligible at your location ✓</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => { setErrorMessage(''); setFormData((prev) => ({ ...prev, brandId: isSel ? '' : b.id })); }}
+                              className={`mt-2 w-full py-1.5 rounded-lg text-xs font-bold border cursor-pointer ${isSel ? 'bg-[#79B433] text-white border-[#79B433]' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                            >
+                              {isSel ? 'Selected ✓ (tap to change) / चयनित' : 'Select Brand / ब्रांड चुनें'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {selectedBrand && (
+                    <p className="text-[11px] text-emerald-700 font-semibold m-0">
+                      Registering under: {selectedBrand.name} — {[selectedBrand.locality, selectedBrand.city].filter(Boolean).join(', ')}
+                    </p>
+                  )}
                 </div>
               </div>
             )}

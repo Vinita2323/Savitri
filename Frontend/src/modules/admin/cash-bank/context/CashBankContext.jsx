@@ -6,15 +6,21 @@ import {
 } from '../data/cashBankDemoData';
 import { generateId, maskAccountNumber } from '../utils/cashBankUtils';
 
-const STORAGE_KEY = 'savitri_cash_bank_data_v1';
+const getStorageKey = () => {
+  const brand =
+    typeof sessionStorage !== 'undefined'
+      ? sessionStorage.getItem('shippnex_super_admin_brand') || 'brand_fg'
+      : 'brand_fg';
+  return `savitri_cash_bank_data_${brand}`;
+};
 
 const CashBankContext = createContext(null);
 
 export const CashBankProvider = ({ children }) => {
-  // 1. Initialize State from localStorage or default demo data
+  // 1. Initialize State from localStorage per active brand scope
   const [accounts, setAccounts] = useState(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(getStorageKey());
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed.accounts) && parsed.accounts.length > 0) {
@@ -29,7 +35,7 @@ export const CashBankProvider = ({ children }) => {
 
   const [transactions, setTransactions] = useState(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(getStorageKey());
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed.transactions)) {
@@ -44,7 +50,7 @@ export const CashBankProvider = ({ children }) => {
 
   const [unlinkedTransactions, setUnlinkedTransactions] = useState(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(getStorageKey());
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed.unlinkedTransactions)) {
@@ -81,7 +87,7 @@ export const CashBankProvider = ({ children }) => {
         unlinkedTransactions,
         updatedAt: new Date().toISOString(),
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      localStorage.setItem(getStorageKey(), JSON.stringify(payload));
     } catch (e) {
       console.error('Failed to save cash and bank state to localStorage:', e);
     }
@@ -397,7 +403,7 @@ export const CashBankProvider = ({ children }) => {
 
   // 7. Reset Demo Data
   const resetDemoData = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(getStorageKey());
     setAccounts(INITIAL_ACCOUNTS);
     setTransactions(INITIAL_TRANSACTIONS);
     setUnlinkedTransactions(INITIAL_UNLINKED_TRANSACTIONS);

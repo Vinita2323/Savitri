@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bike,
@@ -32,8 +32,9 @@ import {
   Navigation
 } from 'lucide-react';
 import { SuperAdminHeader } from '../components/SuperAdminHeader';
+import { useSuperAdmin } from '../context/SuperAdminContext';
+import { superAdminService } from '../../../services/superAdminService';
 import {
-  DELIVERY_PARTNERS_MOCK,
   DELIVERY_PARTNER_BRANDS,
   DELIVERY_PARTNER_CITIES,
   formatINR,
@@ -41,8 +42,63 @@ import {
 
 const PAGE_SIZE = 8;
 
+// Maps a captain from GET /super-admin/delivery-partners onto the shape this page renders.
+// Defaults keep a record with missing fields from crashing the table or the detail drawer.
+const toPartnerRow = (c = {}, brandSlug = 'ALL') => {
+  const phone = String(c.phone || '');
+  const maskedPhone = phone.length >= 4 ? `+91 ${phone.slice(0, 2)}XXX XX${phone.slice(-3)}` : '—';
+  const verification =
+    c.status === 'Active' ? 'Verified' : c.status === 'Pending' ? 'Pending Verification' : 'Rejected';
+  return {
+    id: String(c.id || c._id || c.captainId || ''),
+    fullName: c.name || c.fullName || 'Unnamed partner',
+    maskedPhone,
+    email: c.email || '—',
+    emergencyContact: '—',
+    brandSlug,
+    brandName: c.brandName || '—',
+    city: c.city || '—',
+    serviceArea: c.serviceArea || c.city || '—',
+    hub: '—',
+    vehicleType: c.vehicleType || '—',
+    vehicleModel: '—',
+    vehicleNumber: c.vehicleNumber || '—',
+    fuelType: '—',
+    drivingLicense: '—',
+    joinedDate: c.registeredAt ? String(c.registeredAt).slice(0, 10) : '—',
+    rating: Number(c.rating) || 0,
+    availabilityStatus: c.isOnline ? 'Online / Available' : 'Offline',
+    verificationStatus: verification,
+    accountStatus: c.status || 'Pending',
+    completedDeliveries: Number(c.completedDeliveries) || 0,
+    todayDeliveries: Number(c.todayDeliveries) || 0,
+    weekDeliveries: 0,
+    ongoingDeliveries: 0,
+    cancelledDeliveries: 0,
+    documentStatus: { aadhaar: '—', pan: '—', drivingLicense: '—', rcBook: '—', insurance: '—' },
+    earningsSummary: {
+      totalEarnings: Number(c.walletBalance) || 0,
+      clearedPayouts: 0,
+      pendingSettlement: 0,
+      lastPayoutDate: '—',
+      settlementCycle: '—',
+    },
+    codSummary: {
+      cashInHand: Number(c.outstandingCash) || 0,
+      cashDeposited: Number(c.cashCollected) || 0,
+      lastDepositDate: '—',
+      depositStatus: '—',
+    },
+    deliveryHistory: [],
+  };
+};
+
 export const SuperAdminDeliveryPartners = () => {
-  const [partnerList] = useState(DELIVERY_PARTNERS_MOCK);
+  const { selectedBrandId } = useSuperAdmin();
+  const [partnerList, setPartnerList] = useState([]);
+  const [partnersLoading, setPartnersLoading] = useState(true);
+  const [partnersError, setPartnersError] = useState('');
+  const [partnersReload, setPartnersReload] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('ALL');
   const [selectedCity, setSelectedCity] = useState('ALL');
@@ -53,6 +109,43 @@ export const SuperAdminDeliveryPartners = () => {
   const [endDate, setEndDate] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Sync selectedBrand with global brand switcher and fetch live captains
+  useEffect(() => {
+    let slug = 'ALL';
+    if (selectedBrandId === 'brand_fg') slug = 'fashion-gallary';
+    else if (selectedBrandId === 'brand_fh') slug = 'fashion-hub';
+    else if (selectedBrandId === 'brand_fa') slug = 'fashion-adda';
+    else if (selectedBrandId === 'brand_uj') slug = 'savitri-retail';
+    else if (selectedBrandId === 'ALL') slug = 'ALL';
+    else slug = selectedBrandId;
+
+    setSelectedBrand(slug);
+    setCurrentPage(1);
+
+    // Clear previous brand's rows and ignore late responses for a previous brand
+    let cancelled = false;
+    setPartnerList([]);
+    setPartnersLoading(true);
+    setPartnersError('');
+
+    superAdminService.getDeliveryPartners({ brandId: selectedBrandId })
+      .then((res) => {
+        if (cancelled) return;
+        if (res?.success && Array.isArray(res.captains)) {
+          setPartnerList(res.captains.map((c) => toPartnerRow(c, slug)));
+        } else {
+          setPartnersError(res?.message || 'Could not load delivery partners.');
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setPartnersError(err?.response?.data?.message || err?.message || 'Could not load delivery partners.');
+      })
+      .finally(() => {
+        if (!cancelled) setPartnersLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedBrandId, partnersReload]);
 
   // Active drawer state
   const [activePartner, setActivePartner] = useState(null);
@@ -562,7 +655,25 @@ export const SuperAdminDeliveryPartners = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                {paginatedPartners.length === 0 ? (
+                {partnersLoading ? (
+                  <tr>
+                    <td colSpan={10} className="py-12 text-center text-slate-500 text-sm font-semibold">
+                      Loading delivery partners...
+                    </td>
+                  </tr>
+                ) : partnersError ? (
+                  <tr>
+                    <td colSpan={10} className="py-12 text-center text-rose-600 text-sm font-semibold">
+                      {partnersError}
+                      <button
+                        onClick={() => setPartnersReload((n) => n + 1)}
+                        className="ml-3 px-3 py-1 rounded-lg border border-rose-200 bg-white text-rose-700 cursor-pointer"
+                      >
+                        Retry
+                      </button>
+                    </td>
+                  </tr>
+                ) : paginatedPartners.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="py-12 text-center text-slate-400">
                       <Bike size={36} className="mx-auto mb-2 text-slate-300" />

@@ -13,11 +13,13 @@ import {
   updateDeliveryStatus,
   cancelDeliveryChallan,
 } from '../controllers/deliveryChallanController.js';
+import { resolveBrandScope } from '../middleware/scopeMiddleware.js';
 
 const router = express.Router();
 
 // Apply admin and super-admin authentication to all delivery challan routes
 router.use(protect('admin', 'super_admin', 'super-admin'));
+router.use(resolveBrandScope);
 
 // Helper / Lookup endpoints
 router.get('/next-number', getNextChallanNumber);

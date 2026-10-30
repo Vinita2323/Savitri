@@ -22,8 +22,8 @@ export const superAdminService = {
   },
 
   // Financial Dashboard Live Metrics
-  getDashboardMetrics: async () => {
-    const response = await API.get('/super-admin/dashboard/metrics');
+  getDashboardMetrics: async (params = {}) => {
+    const response = await API.get('/super-admin/dashboard/metrics', { params });
     return response.data;
   },
 
@@ -65,9 +65,27 @@ export const superAdminService = {
     return response.data;
   },
 
+  // Brands & Multi-Region Management
+  getBrands: async () => {
+    const response = await API.get('/super-admin/brands');
+    return response.data;
+  },
+  getBrandById: async (id) => {
+    const response = await API.get(`/super-admin/brands/${id}`);
+    return response.data;
+  },
+  createBrand: async (payload) => {
+    const response = await API.post('/super-admin/brands', payload);
+    return response.data;
+  },
+  updateBrand: async (id, payload) => {
+    const response = await API.put(`/super-admin/brands/${id}`, payload);
+    return response.data;
+  },
+
   // Commission Management
-  getCommissions: async () => {
-    const response = await API.get('/super-admin/commissions');
+  getCommissions: async (params = {}) => {
+    const response = await API.get('/super-admin/commissions', { params });
     return response.data;
   },
   updateSellerCommission: async (sellerId, payload) => {
@@ -76,8 +94,8 @@ export const superAdminService = {
   },
 
   // Financial Adjustments
-  getFinancialAdjustments: async () => {
-    const response = await API.get('/super-admin/financial-adjustments');
+  getFinancialAdjustments: async (params = {}) => {
+    const response = await API.get('/super-admin/financial-adjustments', { params });
     return response.data;
   },
   createFinancialAdjustment: async (payload) => {
@@ -86,8 +104,8 @@ export const superAdminService = {
   },
 
   // Refunds
-  getRefunds: async () => {
-    const response = await API.get('/super-admin/refunds');
+  getRefunds: async (params = {}) => {
+    const response = await API.get('/super-admin/refunds', { params });
     return response.data;
   },
   processRefund: async (id, payload) => {
@@ -104,6 +122,58 @@ export const superAdminService = {
   // Audit Logs
   getAuditLogs: async (params = {}) => {
     const response = await API.get('/super-admin/audit-logs', { params });
+    return response.data;
+  },
+
+  // Stores & Sellers (Scoped)
+  getStores: async (params = {}) => {
+    const response = await API.get('/super-admin/stores', { params });
+    return response.data;
+  },
+  getStoreById: async (id, params = {}) => {
+    const response = await API.get(`/super-admin/stores/${id}`, { params });
+    return response.data;
+  },
+
+  // Inventory Control (Scoped)
+  getInventory: async (params = {}) => {
+    const response = await API.get('/super-admin/inventory', { params });
+    return response.data;
+  },
+  adjustInventoryStock: async (payload) => {
+    const response = await API.post('/super-admin/inventory/adjust', payload);
+    return response.data;
+  },
+
+  // Delivery Partners & Captains (Scoped)
+  getDeliveryPartners: async (params = {}) => {
+    const response = await API.get('/super-admin/delivery-partners', { params });
+    return response.data;
+  },
+
+  // Business Brands Management
+  getBrands: async (params = {}) => {
+    const response = await API.get('/super-admin/brands', { params });
+    return response.data;
+  },
+  getBrandById: async (id) => {
+    const response = await API.get(`/super-admin/brands/${id}`);
+    return response.data;
+  },
+  createBrand: async (payload) => {
+    const response = await API.post('/super-admin/brands', payload);
+    return response.data;
+  },
+  updateBrand: async (id, payload) => {
+    const response = await API.put(`/super-admin/brands/${id}`, payload);
+    return response.data;
+  },
+  toggleBrandStatus: async (id, status) => {
+    const response = await API.patch(`/super-admin/brands/${id}/status`, { status });
+    return response.data;
+  },
+  deleteBrand: async (id) => {
+    const response = await API.delete(`/super-admin/brands/${id}`);
     return response.data;
   },
 };

@@ -56,6 +56,7 @@ const Settings = () => {
   const [membership, setMembership] = useState(null);
   const [membershipHistory, setMembershipHistory] = useState([]);
   const [pendingRequest, setPendingRequest] = useState(null);
+  const [brand, setBrand] = useState(null);
 
   const [availableCategories, setAvailableCategories] = useState(defaultStoreCategories);
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -147,6 +148,14 @@ const Settings = () => {
     } else {
       setSelectedCategories([]);
     }
+
+    if (s.brand && typeof s.brand === 'object') {
+      setBrand(s.brand);
+    } else if (s.brandId) {
+      setBrand({ brandId: s.brandId, name: s.brandName || s.brandId });
+    } else {
+      setBrand(null);
+    }
     return true;
   };
 
@@ -182,7 +191,13 @@ const Settings = () => {
     try {
       const cached = localStorage.getItem('shippnex_seller_data');
       if (!cached) return false;
-      return applySellerToForm(JSON.parse(cached));
+      const parsed = JSON.parse(cached);
+      if (parsed.brand && typeof parsed.brand === 'object') {
+        setBrand(parsed.brand);
+      } else if (parsed.brandId) {
+        setBrand({ brandId: parsed.brandId, name: parsed.brandName || parsed.brandId });
+      }
+      return applySellerToForm(parsed);
     } catch {
       return false;
     }
@@ -246,6 +261,9 @@ const Settings = () => {
 
       if (profileRes?.seller) {
         applySellerToForm(profileRes.seller);
+        if (profileRes.seller.brand && typeof profileRes.seller.brand === 'object') {
+          setBrand(profileRes.seller.brand);
+        }
       } else if (!applyCachedSellerFallback()) {
         setErrorMsg(
           profileError?.response?.data?.message ||
@@ -621,6 +639,28 @@ const Settings = () => {
                 </span>
               </div>
             </div>
+
+            {/* Associated Brand Network In Left Card */}
+            {brand && (
+              <div className="pt-2.5 border-t border-white/20 space-y-1">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-white/80 flex items-center gap-1 font-medium">
+                    <Building2 size={12} /> Associated Brand
+                  </span>
+                  {brand.code && (
+                    <span className="font-bold text-white bg-black/25 px-2 py-0.5 rounded-full text-[10px] tracking-wide">
+                      {brand.code}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs font-bold text-white truncate">{brand.name || brand.brandId}</p>
+                {(brand.city || brand.operatingRadiusKm) && (
+                  <p className="text-[10px] text-white/80 truncate">
+                    {brand.city}{brand.operatingRadiusKm ? ` • ${brand.operatingRadiusKm} km coverage` : ''}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -645,16 +685,29 @@ const Settings = () => {
                           </div>
                         )}
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{formData.fullName || 'Seller Profile'}</h2>
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                             <ShieldCheck size={13} /> Verified Merchant
                           </span>
                         </div>
-                        <p className="text-sm font-medium text-slate-600 flex items-center gap-1.5">
-                          <Store size={14} className="text-[#ff7526]" /> {formData.storeName || 'Store Name Not Set'}
-                        </p>
+                        <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                          <p className="text-sm font-medium text-slate-600 flex items-center gap-1.5">
+                            <Store size={14} className="text-[#ff7526]" /> {formData.storeName || 'Store Name Not Set'}
+                          </p>
+                          {brand && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-orange-100/90 text-orange-900 border border-orange-200 shadow-2xs">
+                              <Building2 size={13} className="text-[#ff7526]" />
+                              <span>Brand: {brand.name || brand.brandId}</span>
+                              {brand.code && (
+                                <span className="bg-white/90 text-[#ff7526] px-1.5 py-0.2 rounded text-[10px] font-mono font-bold">
+                                  {brand.code}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-3 text-xs text-slate-500 pt-0.5 flex-wrap">
                           <span className="inline-flex items-center gap-1 font-semibold text-slate-700">
                             <Phone size={13} className="text-slate-400" /> +91 {formData.mobile || '—'}
@@ -678,6 +731,76 @@ const Settings = () => {
                       </span>
                     </div>
                   </div>
+
+                  {/* Associated Brand Network Card */}
+                  {brand && (
+                    <div className="p-5 rounded-2xl bg-gradient-to-r from-orange-50/70 via-amber-50/40 to-slate-50 border border-orange-200/90 shadow-2xs space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-orange-200/60">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#ff7526] to-amber-600 text-white flex items-center justify-center font-bold text-lg shadow-sm shrink-0 overflow-hidden">
+                            {brand?.logo ? (
+                              <img src={brand.logo} alt={brand.name} className="w-full h-full object-contain p-1" />
+                            ) : (
+                              <Building2 size={24} />
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[10px] font-bold text-[#ff7526] uppercase tracking-wider">Associated Brand Network</span>
+                              {brand?.code && (
+                                <span className="bg-orange-200/80 text-orange-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                  {brand.code}
+                                </span>
+                              )}
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200">
+                                <CheckCircle2 size={11} /> {brand?.status || 'Active Franchise'}
+                              </span>
+                            </div>
+                            <h3 className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">
+                              {brand?.name || 'Default Brand Association'}
+                            </h3>
+                            <p className="text-xs text-slate-600 mt-0.5">
+                              This store is officially licensed and mapped to the business operations of <strong className="font-semibold text-slate-800">{brand?.name}</strong>.
+                            </p>
+                          </div>
+                        </div>
+
+                        {brand?.brandId && (
+                          <div className="text-left sm:text-right">
+                            <span className="text-[10px] font-semibold text-slate-400 block uppercase">Brand Identifier</span>
+                            <span className="text-xs font-bold font-mono text-slate-700 block">{brand.brandId}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="bg-white/90 p-3 rounded-xl border border-orange-100/80 shadow-2xs">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Territory / City</span>
+                          <span className="text-xs font-bold text-slate-800 mt-0.5 block truncate">
+                            {brand?.city || formData.city || 'Regional'}{brand?.state ? `, ${brand.state}` : ''}
+                          </span>
+                        </div>
+                        <div className="bg-white/90 p-3 rounded-xl border border-orange-100/80 shadow-2xs">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Coverage Radius</span>
+                          <span className="text-xs font-bold text-slate-800 mt-0.5 block">
+                            {brand?.operatingRadiusKm || formData.serviceRadius || 5} KM Coverage
+                          </span>
+                        </div>
+                        <div className="bg-white/90 p-3 rounded-xl border border-orange-100/80 shadow-2xs">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Brand Category</span>
+                          <span className="text-xs font-bold text-slate-800 mt-0.5 block truncate">
+                            {brand?.category || formData.businessType || 'Retail Store'}
+                          </span>
+                        </div>
+                        <div className="bg-white/90 p-3 rounded-xl border border-orange-100/80 shadow-2xs">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Franchise Status</span>
+                          <span className="text-xs font-bold text-emerald-700 mt-0.5 block">
+                            {brand?.complianceStatus || 'Verified & Active'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Profile Form Fields Grid */}
                   <div className="space-y-4">
@@ -771,7 +894,16 @@ const Settings = () => {
                       Quick Profile Summary
                     </h3>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                      {/* Brand Card */}
+                      <div className="p-3.5 bg-orange-50/50 rounded-xl border border-orange-200/70">
+                        <div className="flex items-center gap-2 text-orange-700 text-xs font-semibold mb-1">
+                          <Building2 size={14} className="text-[#ff7526]" /> Associated Brand
+                        </div>
+                        <p className="font-bold text-slate-900 text-sm truncate">{brand?.name || 'Default Brand'}</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5 truncate">{brand?.code || '—'} • {brand?.city || formData.city || 'Regional'}</p>
+                      </div>
+
                       {/* Store Card */}
                       <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
                         <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold mb-1">
@@ -811,6 +943,34 @@ const Settings = () => {
               {/* TAB 2: STORE DETAILS */}
               {activeTab === 'store' && (
                 <div className="space-y-6">
+                  {/* Associated Brand Banner for Store */}
+                  {brand && (
+                    <div className="p-4 bg-orange-50/70 border border-orange-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-10 h-10 rounded-xl bg-[#ff7526] text-white flex items-center justify-center font-bold text-sm shadow-2xs shrink-0">
+                          <Building2 size={20} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-orange-700 uppercase tracking-wider">Authorized Brand Partnership</span>
+                            {brand.code && (
+                              <span className="bg-orange-200/80 text-orange-900 text-[10px] font-extrabold px-2 py-0.2 rounded-full font-mono uppercase">
+                                {brand.code}
+                              </span>
+                            )}
+                          </div>
+                          <h4 className="text-sm font-bold text-slate-900 mt-0.5">{brand.name}</h4>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Store is registered and geo-scoped within {brand.city || formData.city} ({brand.operatingRadiusKm || formData.serviceRadius || 5} km radius)
+                          </p>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-full border border-emerald-200 self-start sm:self-center shrink-0">
+                        <CheckCircle2 size={13} /> Scoped Franchise
+                      </span>
+                    </div>
+                  )}
+
                   {/* Store Name */}
                   <div className="space-y-1.5">
                     <label className="block text-sm font-medium text-slate-700">Store / Business Name</label>
@@ -959,7 +1119,19 @@ const Settings = () => {
               {/* TAB 3: STORE BRANDING */}
               {activeTab === 'branding' && (
                 <div className="space-y-5">
-                  <h3 className="text-lg font-semibold text-slate-900 pb-3 border-b border-slate-100">Store Branding & Customization</h3>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900">Store Branding & Customization</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {brand ? `Store visual identity operated under ${brand.name}` : 'Manage your store brand identity'}
+                      </p>
+                    </div>
+                    {brand && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-orange-50 text-orange-800 border border-orange-200 shadow-2xs self-start sm:self-auto">
+                        <Building2 size={14} className="text-[#ff7526]" /> Parent Brand: {brand.name} ({brand.code || brand.city})
+                      </span>
+                    )}
+                  </div>
                   
                   <div className="space-y-1.5">
                     <label className="block text-sm font-medium text-slate-700">Store Tagline</label>

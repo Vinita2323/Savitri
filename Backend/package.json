@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node api.js && node src/server.js",
     "dev": "node api.js && nodemon src/server.js",
+    "test": "node --test tests/",
     "seed:membership": "node src/seeders/membershipSeed.js"
   },
   "keywords": [],

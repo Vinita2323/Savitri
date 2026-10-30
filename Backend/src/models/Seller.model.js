@@ -116,7 +116,11 @@ const sellerSchema = new mongoose.Schema(
     registrationFeePaidAt: {
       type: Date,
     },
+    // Brand this seller registered under (validated server-side against brand coverage)
+    brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null, index: true },
+    brandId: { type: String, trim: true, default: '', index: true },
     warehouseLocation: {
+      locality: String,
       location: {
         type: { type: String, enum: ['Point'], default: 'Point' },
         coordinates: { type: [Number], default: [0, 0] },

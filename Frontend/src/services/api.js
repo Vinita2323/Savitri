@@ -108,15 +108,45 @@ API.interceptors.request.use(
     if (token && token !== 'null' && token !== 'undefined' && token.trim()) {
       config.headers.Authorization = `Bearer ${token.trim()}`;
     }
+
+    // Attach Brand / Region Scoping headers for Super Admin requests
+    const activeBrandId =
+      typeof sessionStorage !== 'undefined'
+        ? sessionStorage.getItem('shippnex_super_admin_brand')
+        : null;
+    if (activeBrandId) {
+      config.headers['X-Brand-Id'] = activeBrandId;
+      config.headers['X-Region-Id'] = activeBrandId;
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
 );
 
+// A Super Admin response for a brand that is no longer selected must never reach page state.
+// The request carried X-Brand-Id; if the active brand changed while it was in flight, the
+// response is dropped (the promise intentionally never settles) and the page's refetch for the
+// new brand is the only one that can update state.
+const isStaleBrandResponse = (config) => {
+  if (typeof window === 'undefined' || !window.location.pathname.startsWith('/super-admin')) return false;
+  const url = config?.url || '';
+  if (url.includes('/super-admin/brands') || url.includes('/auth/')) return false;
+  const sent = config?.headers?.['X-Brand-Id'];
+  if (!sent) return false;
+  try {
+    const current = sessionStorage.getItem('shippnex_super_admin_brand');
+    return Boolean(current) && current !== sent;
+  } catch {
+    return false;
+  }
+};
+
 // Response interceptor to handle 401 Unauthorized globally per role
 API.interceptors.response.use(
-  (response) => response,
+  (response) => (isStaleBrandResponse(response.config) ? new Promise(() => {}) : response),
   (error) => {
+    if (isStaleBrandResponse(error?.config)) return new Promise(() => {});
     if (error.response && error.response.status === 401) {
       const currentPath = (typeof window !== 'undefined' && window.location && window.location.pathname) ? window.location.pathname : '';
 

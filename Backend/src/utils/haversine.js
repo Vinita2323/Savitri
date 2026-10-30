@@ -13,7 +13,8 @@
 /** Typical city road distance ≈ crow-flies × this factor (matches FareSummary UI). */
 export const ROAD_DISTANCE_FACTOR = 1.25;
 
-export const haversineDistance = (lat1, lng1, lat2, lng2) => {
+/** Unrounded great-circle distance in km (use for threshold comparisons). */
+export const haversineDistanceRaw = (lat1, lng1, lat2, lng2) => {
   const R = 6371; // Earth radius in km
 
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -29,10 +30,11 @@ export const haversineDistance = (lat1, lng1, lat2, lng2) => {
       Math.sin(dLng / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const distance = R * c;
-
-  return Math.round(distance * 100) / 100; // 2 decimal places
+  return R * c;
 };
+
+export const haversineDistance = (lat1, lng1, lat2, lng2) =>
+  Math.round(haversineDistanceRaw(lat1, lng1, lat2, lng2) * 100) / 100; // 2 decimal places
 
 /**
  * Estimate billable road distance from coordinates.

@@ -6,6 +6,7 @@ import User from '../models/User.model.js';
 import Order from '../models/Order.model.js';
 import SellerNotification from '../models/SellerNotification.model.js';
 import DeliveryPricing from '../models/DeliveryPricing.model.js';
+import { sellerScopeFilter } from '../middleware/scopeMiddleware.js';
 
 // Helper: Atomic inventory stock adjuster (reuses existing project pattern)
 const adjustPosStock = async (items, direction = -1) => {
@@ -68,12 +69,16 @@ const generateOrderId = async () => {
   return `ORD-${timestamp}-${randomNum}`;
 };
 
-// 1. Get Available Stores / Warehouses
 export const getPosStores = async (req, res) => {
   try {
-    const sellers = await Seller.find({
+    const scopeQuery = {
       $or: [{ status: 'approved' }, { accountStatus: 'approved' }],
-    })
+    };
+    if (req.scope && !req.scope.isAll) {
+      scopeQuery.$and = [sellerScopeFilter(req.scope)];
+    }
+
+    const sellers = await Seller.find(scopeQuery)
       .select('_id businessName phone ownerName storeLogo warehouseLocation city address state')
       .lean();
 
@@ -784,7 +789,16 @@ export const getPosHistory = async (req, res) => {
       query['payment.method'] = paymentMethod;
     }
 
-    if (storeId && mongoose.Types.ObjectId.isValid(storeId)) {
+    if (req.scope && !req.scope.isAll) {
+      // Always constrain to the selected brand's stores; an explicit storeId may only narrow it.
+      const matchingSellers = await Seller.find(sellerScopeFilter(req.scope)).select('_id').lean();
+      const scopedIds = matchingSellers.map((s) => String(s._id));
+      if (storeId && mongoose.Types.ObjectId.isValid(storeId)) {
+        query['store.storeId'] = scopedIds.includes(String(storeId)) ? storeId : { $in: [] };
+      } else {
+        query['store.storeId'] = { $in: scopedIds };
+      }
+    } else if (storeId && mongoose.Types.ObjectId.isValid(storeId)) {
       query['store.storeId'] = storeId;
     }
 

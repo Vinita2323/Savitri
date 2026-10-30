@@ -1,15 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { SuperAdminHeader } from '../components/SuperAdminHeader';
 import { useSuperAdmin } from '../context/SuperAdminContext';
-import { brandSlugFromName, PAYOUT_BRANDS } from '../data/brandSellersMock';
-import {
-  CENTRAL_LEDGER_TRANSACTIONS,
-  LEDGER_CATEGORIES,
-  LEDGER_DEMO_NOTE,
-  LEDGER_LAST_SYNCED,
-} from '../data/centralLedgerMock';
-import { catalogOwns, catalogSlugsFor } from '../data/switchBrandScope';
+import { superAdminService } from '../../../services/superAdminService';
 import {
   Search,
   Download,
@@ -24,6 +16,8 @@ import {
   Undo2,
   Clock3,
   CheckCircle2,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 
 const PAGE_SIZE = 10;
@@ -36,6 +30,22 @@ const SUMMARY_ICONS = {
   pending: Clock3,
 };
 
+// Ledger enums as stored in MongoDB (PlatformLedger) <-> labels shown in the UI
+const CATEGORY_LABELS = {
+  CUSTOMER_PAYMENT: 'Customer Payment',
+  SELLER_EARNING: 'Seller Earning',
+  CAPTAIN_EARNING: 'Captain Earning',
+  SELLER_PAYOUT: 'Seller Payout',
+  CAPTAIN_PAYOUT: 'Captain Payout',
+  PLATFORM_COMMISSION: 'Platform Commission',
+  REFUND: 'Refund',
+  FINANCIAL_ADJUSTMENT: 'Financial Adjustment',
+  MEMBERSHIP_FEE: 'Membership Fee',
+  REGISTRATION_FEE: 'Registration Fee',
+};
+const STATUS_LABELS = { SUCCESS: 'Completed', PENDING: 'Pending', FAILED: 'Failed', REVERSED: 'Reversed' };
+const STATUS_VALUES = { Completed: 'SUCCESS', Pending: 'PENDING', Failed: 'FAILED', Reversed: 'REVERSED' };
+
 const formatINR = (value) =>
   new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -45,17 +55,15 @@ const formatINR = (value) =>
   }).format(Number(value) || 0);
 
 const formatWhen = (iso) => {
-  try {
-    return new Date(iso).toLocaleString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 const dayKey = (iso) => {
@@ -81,7 +89,6 @@ const selectClass =
 
 const EMPTY_FILTERS = {
   search: '',
-  brand: 'ALL',
   category: 'ALL',
   type: 'ALL',
   status: 'ALL',
@@ -90,21 +97,47 @@ const EMPTY_FILTERS = {
   endDate: '',
 };
 
-export const SuperAdminTransactions = () => {
-  const { selectedBrand } = useSuperAdmin();
+// Maps one PlatformLedger document (GET /super-admin/transactions) onto the row shape rendered below.
+const toLedgerRow = (t = {}, brandName = '') => {
+  const meta = t.metadata || {};
+  const status = STATUS_LABELS[t.status] || t.status || '—';
+  return {
+    id: String(t._id || t.transactionId),
+    transactionId: t.transactionId || '—',
+    createdAt: t.createdAt,
+    brand: brandName,
+    category: CATEGORY_LABELS[t.category] || t.category || '—',
+    partyName: t.entityName || t.entityType || 'Platform',
+    partyId: t.entityId || '—',
+    amount: Number(t.amount) || 0,
+    type: t.type === 'DEBIT' ? 'Debit' : 'Credit',
+    referenceId: t.referenceId || '—',
+    paymentMethod: meta.paymentMethod || meta.method || '—',
+    gatewayRef: meta.gatewayRef || meta.gatewayRefundId || meta.razorpayPaymentId || '—',
+    status,
+    remarks: t.description || meta.remarks || '—',
+    commission: meta.commission ?? meta.commissionAmount ?? null,
+    sellerPayable: meta.sellerPayable ?? meta.sellerEarning ?? null,
+    timeline: [{ label: status, at: t.createdAt }],
+  };
+};
+
+export const SuperAdminTransactions = ({ fixedCategory, pageTitle } = {}) => {
+  const { selectedBrand, selectedBrandId } = useSuperAdmin();
   const brandName = selectedBrand?.name || 'this brand';
-  const scopedNames = useMemo(() => {
-    const slugs = new Set(catalogSlugsFor(selectedBrand?.id));
-    return PAYOUT_BRANDS.filter((brand) => slugs.has(brand.slug)).map((brand) => brand.name);
-  }, [selectedBrand?.id]);
-  const scopedTransactions = useMemo(
-    () => CENTRAL_LEDGER_TRANSACTIONS.filter((txn) => catalogOwns(brandSlugFromName(txn.brand), selectedBrand?.id)),
-    [selectedBrand?.id]
-  );
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
   const [selectedTxn, setSelectedTxn] = useState(null);
   const [notice, setNotice] = useState('');
+
+  const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [pages, setPages] = useState(1);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [reload, setReload] = useState(0);
+  const [lastSynced, setLastSynced] = useState(null);
 
   const setFilter = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -113,112 +146,88 @@ export const SuperAdminTransactions = () => {
 
   const handlePeriodChange = (period) => {
     if (period === 'ALL') {
-      setFilters((prev) => ({
-        ...prev,
-        period: 'ALL',
-        startDate: '',
-        endDate: '',
-      }));
+      setFilters((prev) => ({ ...prev, period: 'ALL', startDate: '', endDate: '' }));
       setPage(1);
       return;
     }
-
     const today = new Date();
-    const endStr = dayKey(today);
     const start = new Date(today);
-
-    if (period === 'weekly') {
-      start.setDate(today.getDate() - 7);
-    } else if (period === 'monthly') {
-      start.setMonth(today.getMonth() - 1);
-    } else if (period === 'quarterly') {
-      start.setMonth(today.getMonth() - 3);
-    } else if (period === 'half_yearly') {
-      start.setMonth(today.getMonth() - 6);
-    } else if (period === 'yearly') {
-      start.setFullYear(today.getFullYear() - 1);
-    }
-
-    const startStr = dayKey(start);
-    setFilters((prev) => ({
-      ...prev,
-      period,
-      startDate: startStr,
-      endDate: endStr,
-    }));
+    if (period === 'weekly') start.setDate(today.getDate() - 7);
+    else if (period === 'monthly') start.setMonth(today.getMonth() - 1);
+    else if (period === 'quarterly') start.setMonth(today.getMonth() - 3);
+    else if (period === 'half_yearly') start.setMonth(today.getMonth() - 6);
+    else if (period === 'yearly') start.setFullYear(today.getFullYear() - 1);
+    setFilters((prev) => ({ ...prev, period, startDate: dayKey(start), endDate: dayKey(today) }));
     setPage(1);
   };
 
   const handleDateChange = (key, value) => {
     setFilters((prev) => {
       const next = { ...prev, [key]: value };
-      if (!next.startDate && !next.endDate) {
-        next.period = 'ALL';
-      } else {
-        next.period = 'custom';
-      }
+      next.period = !next.startDate && !next.endDate ? 'ALL' : 'custom';
       return next;
     });
     setPage(1);
   };
 
-  const filtered = useMemo(() => {
-    const q = filters.search.trim().toLowerCase();
-    return scopedTransactions.filter((txn) => {
-      if (filters.brand !== 'ALL' && txn.brand !== filters.brand) return false;
-      if (filters.category !== 'ALL' && txn.category !== filters.category) return false;
-      if (filters.type !== 'ALL' && txn.type !== filters.type) return false;
-      if (filters.status !== 'ALL' && txn.status !== filters.status) return false;
-      const day = dayKey(txn.createdAt);
-      if (filters.startDate && day < filters.startDate) return false;
-      if (filters.endDate && day > filters.endDate) return false;
-      if (!filters.startDate && !filters.endDate && filters.period && filters.period !== 'ALL' && filters.period !== 'custom') {
-        const today = new Date();
-        const txnDate = new Date(txn.createdAt);
-        const diffDays = (today - txnDate) / (1000 * 60 * 60 * 24);
-        if (filters.period === 'weekly' && diffDays > 7) return false;
-        if (filters.period === 'monthly' && diffDays > 30) return false;
-        if (filters.period === 'quarterly' && diffDays > 91) return false;
-        if (filters.period === 'half_yearly' && diffDays > 182) return false;
-        if (filters.period === 'yearly' && diffDays > 365) return false;
-      }
-      if (!q) return true;
-      const haystack = [
-        txn.transactionId,
-        txn.referenceId,
-        txn.gatewayRef,
-        txn.partyName,
-        txn.partyId,
-        txn.brand,
-      ]
-        .join(' ')
-        .toLowerCase();
-      return haystack.includes(q);
-    }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }, [filters, scopedTransactions]);
-
+  // Brand switch: reset filters/paging and drop the previous brand's records immediately.
   useEffect(() => {
     setFilters(EMPTY_FILTERS);
     setPage(1);
-  }, [selectedBrand?.id]);
+    setRows([]);
+    setSummary(null);
+    setError('');
+    setLoading(true);
+  }, [selectedBrandId]);
 
-  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, pages);
-  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
+  // Live ledger fetch. Scope, filters, search and paging are all applied by the backend.
   useEffect(() => {
-    if (page !== safePage) setPage(safePage);
-  }, [page, safePage]);
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const params = {
+          brandId: selectedBrandId,
+          page,
+          limit: PAGE_SIZE,
+          category: fixedCategory || filters.category,
+          type: filters.type === 'ALL' ? 'ALL' : filters.type.toUpperCase(),
+          status: filters.status === 'ALL' ? 'ALL' : STATUS_VALUES[filters.status],
+          search: filters.search.trim() || undefined,
+          startDate: filters.startDate || undefined,
+          endDate: filters.endDate || undefined,
+        };
+        const res = await superAdminService.getTransactions(params);
+        if (cancelled) return;
+        if (!res?.success) throw new Error(res?.message || 'Could not load transactions.');
+        const label = res.scope?.brandName || brandName;
+        setRows((res.transactions || []).map((t) => toLedgerRow(t, label)));
+        setTotal(res.total || 0);
+        setPages(res.pages || 1);
+        setSummary(res.summary || null);
+        setLastSynced(new Date());
+      } catch (err) {
+        if (cancelled) return;
+        setRows([]);
+        setSummary(null);
+        setError(err?.response?.data?.message || err?.message || 'Could not load transactions.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, filters.search ? 350 : 0); // debounce typing only
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBrandId, page, filters, reload, fixedCategory]);
 
   useEffect(() => {
     if (!notice) return undefined;
     const timer = setTimeout(() => setNotice(''), 2800);
     return () => clearTimeout(timer);
   }, [notice]);
-
-  const handleLiveSync = () => {
-    setNotice('Demo sync complete. Static ledger refreshed — no API was called.');
-  };
 
   const handleExportCSV = () => {
     const headers = [
@@ -235,7 +244,7 @@ export const SuperAdminTransactions = () => {
       'Status',
       'Remarks',
     ];
-    const rows = filtered.map((t) =>
+    const lines = rows.map((t) =>
       [
         t.transactionId,
         formatWhen(t.createdAt),
@@ -253,8 +262,8 @@ export const SuperAdminTransactions = () => {
         .map(csvCell)
         .join(',')
     );
-    const csv = [headers.map(csvCell).join(','), ...rows].join('\n');
-    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const csv = [headers.map(csvCell).join(','), ...lines].join('\n');
+    const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -263,70 +272,48 @@ export const SuperAdminTransactions = () => {
     URL.revokeObjectURL(url);
   };
 
-  const brandCards = useMemo(() => {
-    const sum = (predicate) =>
-      scopedTransactions.filter(predicate).reduce((total, txn) => total + Number(txn.amount || 0), 0);
-    return [
-      {
-        id: 'collections',
-        label: 'Total Collections',
-        hint: brandName,
-        amount: sum((txn) => ['Customer Payment', 'COD Collection', 'Subscription Payment'].includes(txn.category)),
-      },
-      {
-        id: 'commission',
-        label: 'Platform Commission',
-        hint: brandName,
-        amount: sum((txn) => txn.category === 'Platform Commission'),
-      },
-      {
-        id: 'sellerPayouts',
-        label: 'Seller Payouts',
-        hint: brandName,
-        amount: sum((txn) => txn.category === 'Seller Payout'),
-      },
-      {
-        id: 'refunds',
-        label: 'Refunds',
-        hint: brandName,
-        amount: sum((txn) => txn.category === 'Refund'),
-      },
-      {
-        id: 'pending',
-        label: 'Pending Settlements',
-        hint: brandName,
-        amount: sum((txn) => txn.status === 'Pending'),
-      },
-    ];
-  }, [scopedTransactions, brandName]);
+  const brandCards = useMemo(
+    () => [
+      { id: 'collections', label: 'Total Collections', amount: summary?.collections },
+      { id: 'commission', label: 'Platform Commission', amount: summary?.commission },
+      { id: 'sellerPayouts', label: 'Seller Payouts', amount: summary?.sellerPayouts },
+      { id: 'refunds', label: 'Refunds', amount: summary?.refunds },
+      { id: 'pending', label: 'Pending Settlements', amount: summary?.pending },
+    ],
+    [summary]
+  );
 
-  const resetFilters = () => {
-    setFilters(EMPTY_FILTERS);
-    setPage(1);
-  };
+  const safePage = Math.min(page, pages);
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f8fafc] font-sans text-slate-800">
       <SuperAdminHeader
-        title={`Seller Payments — ${brandName}`}
+        title={`${pageTitle || 'Seller Payments'} — ${brandName}`}
         subtitle={`Money movements for ${brandName} only. Change the brand in the sidebar to see another brand.`}
-        onRefresh={handleLiveSync}
-        refreshing={false}
+        onRefresh={() => {
+          setReload((n) => n + 1);
+          setNotice(`Ledger refreshed for ${brandName}.`);
+        }}
+        refreshing={loading}
         titleClassName="m-0 text-xl font-semibold tracking-tight text-[#1A2E0A] sm:text-2xl"
         subtitleClassName="m-0 mt-0.5 text-sm font-normal text-slate-500"
       />
 
       <div className="mx-auto w-full max-w-[1400px] flex-1 space-y-5 p-4 sm:p-6">
-        <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="m-0 text-sm font-semibold text-amber-800">{LEDGER_DEMO_NOTE}</p>
+        <div className="flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="m-0 text-sm font-semibold text-emerald-800">
+            Live data from the platform ledger (MongoDB) — {brandName}.
+          </p>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-normal text-slate-500">
-              Last Synced <span className="text-slate-800">{LEDGER_LAST_SYNCED}</span>
+              Last Synced <span className="text-slate-800">{lastSynced ? formatWhen(lastSynced) : '—'}</span>
             </span>
             <button
               type="button"
               onClick={handleExportCSV}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50"
+              disabled={rows.length === 0}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              title="Exports the rows currently shown"
             >
               <Download size={14} className="text-[#F7941D]" />
               Export CSV
@@ -352,15 +339,17 @@ export const SuperAdminTransactions = () => {
                     <Icon size={15} />
                   </span>
                 </div>
-                <p className="m-0 mt-2 font-mono text-2xl font-medium text-[#1A2E0A]">{formatINR(card.amount)}</p>
-                <p className="m-0 mt-1 text-sm font-medium text-slate-500">{card.hint}</p>
+                <p className="m-0 mt-2 font-mono text-2xl font-medium text-[#1A2E0A]">
+                  {card.amount == null ? '—' : formatINR(card.amount)}
+                </p>
+                <p className="m-0 mt-1 text-sm font-medium text-slate-500">{brandName}</p>
               </div>
             );
           })}
         </div>
 
         <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
             <div className="relative sm:col-span-2 xl:col-span-1">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -371,25 +360,16 @@ export const SuperAdminTransactions = () => {
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#F7941D]"
               />
             </div>
-            <select className={selectClass} value={filters.brand} onChange={(e) => setFilter('brand', e.target.value)}>
-              <option value="ALL">{brandName}</option>
-              {scopedNames.length > 1
-                ? scopedNames.map((brand) => (
-                    <option key={brand} value={brand}>
-                      {brand}
-                    </option>
-                  ))
-                : null}
-            </select>
             <select
               className={selectClass}
-              value={filters.category}
+              value={fixedCategory || filters.category}
+              disabled={Boolean(fixedCategory)}
               onChange={(e) => setFilter('category', e.target.value)}
             >
               <option value="ALL">All Categories</option>
-              {LEDGER_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
+              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
                 </option>
               ))}
             </select>
@@ -437,12 +417,15 @@ export const SuperAdminTransactions = () => {
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
             <span className="font-medium text-slate-500">
-              Showing <span className="font-medium text-slate-900">{pageRows.length}</span> of{' '}
-              <span className="font-medium text-slate-900">{filtered.length}</span> demo entries
+              Showing <span className="font-medium text-slate-900">{rows.length}</span> of{' '}
+              <span className="font-medium text-slate-900">{total}</span> entries
             </span>
             <button
               type="button"
-              onClick={resetFilters}
+              onClick={() => {
+                setFilters(EMPTY_FILTERS);
+                setPage(1);
+              }}
               className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100"
             >
               <RotateCcw size={13} />
@@ -476,30 +459,48 @@ export const SuperAdminTransactions = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {pageRows.length === 0 ? (
+                {loading ? (
                   <tr>
                     <td colSpan={11} className="px-4 py-14 text-center">
-                      <p className="m-0 text-sm font-medium text-slate-700">No matching demo transactions</p>
+                      <p className="m-0 inline-flex items-center gap-2 text-sm font-medium text-slate-600">
+                        <Loader2 size={16} className="animate-spin" /> Loading transactions...
+                      </p>
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan={11} className="px-4 py-14 text-center">
+                      <p className="m-0 inline-flex items-center gap-2 text-sm font-medium text-rose-700">
+                        <AlertCircle size={16} /> {error}
+                      </p>
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => setReload((n) => n + 1)}
+                          className="cursor-pointer rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-700"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={11} className="px-4 py-14 text-center">
+                      <p className="m-0 text-sm font-medium text-slate-700">No transactions found</p>
                       <p className="m-0 mt-1 text-sm font-medium text-slate-400">
-                        Adjust search or filters, or reset to see the sample ledger.
+                        There are no ledger entries for {brandName} with the current filters.
                       </p>
                     </td>
                   </tr>
                 ) : (
-                  pageRows.map((txn) => (
+                  rows.map((txn) => (
                     <tr key={txn.id} className="transition-colors hover:bg-slate-50/70">
                       <td className="px-4 py-3.5 font-mono font-normal text-[#F7941D]">{txn.transactionId}</td>
                       <td className="whitespace-nowrap px-4 py-3.5 font-mono text-sm text-slate-500">
                         {formatWhen(txn.createdAt)}
                       </td>
-                      <td className="px-4 py-3.5">
-                        <Link
-                          to={`/super-admin/brands/${brandSlugFromName(txn.brand)}/seller-payouts`}
-                          className="font-normal text-[#1A2E0A] underline decoration-[#F7941D]/40 underline-offset-2 hover:text-[#F7941D]"
-                        >
-                          {brandName}
-                        </Link>
-                      </td>
+                      <td className="px-4 py-3.5 font-normal text-[#1A2E0A]">{txn.brand}</td>
                       <td className="px-4 py-3.5">
                         <span className="rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-sm font-normal text-slate-700">
                           {txn.category}
@@ -552,7 +553,7 @@ export const SuperAdminTransactions = () => {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                disabled={safePage <= 1}
+                disabled={safePage <= 1 || loading}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-normal text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -561,7 +562,7 @@ export const SuperAdminTransactions = () => {
               </button>
               <button
                 type="button"
-                disabled={safePage >= pages}
+                disabled={safePage >= pages || loading}
                 onClick={() => setPage((p) => p + 1)}
                 className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-normal text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -584,7 +585,7 @@ export const SuperAdminTransactions = () => {
           <aside className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-slate-100 px-5 py-4">
               <div>
-                <p className="m-0 text-sm font-medium uppercase tracking-wider text-[#F7941D]">Demo ledger entry</p>
+                <p className="m-0 text-sm font-medium uppercase tracking-wider text-[#F7941D]">Ledger entry</p>
                 <h2 className="m-0 text-xl font-medium text-[#1A2E0A]">{selectedTxn.transactionId}</h2>
                 <p className="m-0 mt-1 text-sm font-medium text-slate-500">{formatWhen(selectedTxn.createdAt)}</p>
               </div>

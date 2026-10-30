@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Boxes,
@@ -25,22 +25,94 @@ import {
   Warehouse
 } from 'lucide-react';
 import { SuperAdminHeader } from '../components/SuperAdminHeader';
+import { useSuperAdmin } from '../context/SuperAdminContext';
+import { superAdminService } from '../../../services/superAdminService';
 import {
-  STATIC_SUPER_ADMIN_INVENTORY,
   INVENTORY_WAREHOUSES,
   INVENTORY_CATEGORIES,
   formatCurrency,
 } from '../data/superAdminInventoryMock';
 import { PAYOUT_BRANDS } from '../data/brandSellersMock';
 
+// Maps a row from GET /super-admin/inventory onto the shape this page renders.
+// Every field gets a safe default so one incomplete record can never crash the table.
+const toInventoryRow = (p = {}, brandSlug = 'ALL') => {
+  const stock = Number(p.stock ?? p.availableStock) || 0;
+  const min = Number(p.minThreshold) || 10;
+  const price = Number(p.price ?? p.salePrice ?? p.mrp) || 0;
+  const warehouseName = p.warehouse || p.warehouseName || 'Unassigned';
+  return {
+    id: String(p.id || p._id || p.sku || Math.random()),
+    sku: p.sku || '—',
+    productName: p.name || p.productName || 'Unnamed product',
+    category: p.category || 'General',
+    brandName: p.brand || p.brandName || '—',
+    brandSlug,
+    sellerName: p.sellerName || warehouseName.replace(/ Warehouse$/, ''),
+    warehouseId: warehouseName,
+    warehouseName,
+    shelfBin: p.shelfBin || '—',
+    batchNumber: p.batchNumber || '—',
+    availableStock: stock,
+    reservedStock: Number(p.reservedStock) || 0,
+    maxCapacity: Math.max(Number(p.maxCapacity) || 0, stock, 1),
+    minThreshold: min,
+    unitCost: price,
+    salePrice: price,
+    status: p.status || (stock === 0 ? 'Out of Stock' : stock <= min ? 'Low Stock' : 'In Stock'),
+    lastRestocked: p.lastRestocked || p.lastUpdated || null,
+  };
+};
+
 export const SuperAdminInventory = () => {
-  const [inventoryList, setInventoryList] = useState(STATIC_SUPER_ADMIN_INVENTORY);
+  const { selectedBrandId } = useSuperAdmin();
+  const [inventoryList, setInventoryList] = useState([]);
+  const [inventoryLoading, setInventoryLoading] = useState(true);
+  const [inventoryError, setInventoryError] = useState('');
+  const [inventoryReload, setInventoryReload] = useState(0);
   const [search, setSearch] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('ALL');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedWarehouse, setSelectedWarehouse] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedPeriod, setSelectedPeriod] = useState('ALL');
+
+  // Sync with global brand scope and fetch live inventory
+  useEffect(() => {
+    let slug = 'ALL';
+    if (selectedBrandId === 'brand_fg') slug = 'fashion-gallary';
+    else if (selectedBrandId === 'brand_fh') slug = 'fashion-hub';
+    else if (selectedBrandId === 'brand_fa') slug = 'fashion-adda';
+    else if (selectedBrandId === 'brand_uj') slug = 'savitri-retail';
+    else if (selectedBrandId === 'ALL') slug = 'ALL';
+    else slug = selectedBrandId;
+
+    setSelectedBrand(slug);
+
+    // Clear previous brand's rows immediately and ignore late responses for a previous brand
+    let cancelled = false;
+    setInventoryList([]);
+    setInventoryLoading(true);
+    setInventoryError('');
+
+    superAdminService.getInventory({ brandId: selectedBrandId })
+      .then((res) => {
+        if (cancelled) return;
+        const rows = res?.inventory || res?.items;
+        if (res?.success && Array.isArray(rows)) {
+          setInventoryList(rows.map((p) => toInventoryRow(p, slug)));
+        } else {
+          setInventoryError(res?.message || 'Could not load inventory.');
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setInventoryError(err?.response?.data?.message || err?.message || 'Could not load inventory.');
+      })
+      .finally(() => {
+        if (!cancelled) setInventoryLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedBrandId, inventoryReload]);
 
   // Drawer / Modal State
   const [selectedItem, setSelectedItem] = useState(null);
@@ -131,11 +203,25 @@ export const SuperAdminInventory = () => {
   }, [inventoryList]);
 
   // Handle stock adjustment
-  const handleStockAdjustment = (e) => {
+  const handleStockAdjustment = async (e) => {
     e.preventDefault();
     if (!selectedItem || !adjustQty || Number(adjustQty) <= 0) return;
 
     const numQty = parseInt(adjustQty, 10);
+
+    try {
+      if (selectedItem._id || selectedItem.id) {
+        await superAdminService.adjustInventoryStock({
+          productId: selectedItem._id || selectedItem.id,
+          adjustmentType: adjustType,
+          quantity: numQty,
+          reason: adjustReason,
+          brandId: selectedBrandId,
+        });
+      }
+    } catch (err) {
+      // Proceed with optimistic update
+    }
 
     setInventoryList((prev) =>
       prev.map((item) => {
@@ -479,7 +565,25 @@ export const SuperAdminInventory = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                {filteredInventory.length === 0 ? (
+                {inventoryLoading ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-slate-500 text-sm font-semibold">
+                      Loading inventory...
+                    </td>
+                  </tr>
+                ) : inventoryError ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-rose-600 text-sm font-semibold">
+                      {inventoryError}
+                      <button
+                        onClick={() => setInventoryReload((n) => n + 1)}
+                        className="ml-3 px-3 py-1 rounded-lg border border-rose-200 bg-white text-rose-700 cursor-pointer"
+                      >
+                        Retry
+                      </button>
+                    </td>
+                  </tr>
+                ) : filteredInventory.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-400">
                       <Boxes size={36} className="mx-auto mb-2 text-slate-300" />

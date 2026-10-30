@@ -15,10 +15,13 @@ import {
   getPosDashboardSummary,
 } from '../controllers/posController.js';
 
+import { resolveBrandScope } from '../middleware/scopeMiddleware.js';
+
 const router = express.Router();
 
 // Protect: Super Admin and Admin only
 router.use(protect('admin', 'super_admin', 'super-admin'));
+router.use(resolveBrandScope);
 
 // Store & Inventory
 router.get('/stores', getPosStores);

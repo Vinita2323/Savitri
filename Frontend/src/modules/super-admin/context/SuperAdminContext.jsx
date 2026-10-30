@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
@@ -33,68 +33,36 @@ export const SuperAdminProvider = ({ children }) => {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // UI-only brand list for Super Admin switcher (not wired to financial APIs)
-  const [brands, setBrands] = useState([
-    {
-      id: 'brand_fg',
-      name: 'Fashion Gallary',
-      shortName: 'Fashion Gallary',
-      code: 'FG-IND',
-      city: 'Indore',
-      state: 'Madhya Pradesh',
-      address: '12 MG Road, Near Rajwada',
-      contact: '9876543210',
-      email: 'ops@fashiongallary.in',
-      gst: '23AABCF1234A1Z5',
-      pan: 'AABCF1234A',
-      category: 'Apparel & Fashion',
-      website: 'https://fashiongallary.in',
-      status: 'Active',
-      logo: '/LogoSavitri.png',
-    },
-    {
-      id: 'brand_fh',
-      name: 'Fashion Hub',
-      shortName: 'Fashion Hub',
-      code: 'FH-BPL',
-      city: 'Bhopal',
-      state: 'Madhya Pradesh',
-      address: '45 New Market, TT Nagar',
-      contact: '9876501234',
-      email: 'hello@fashionhub.in',
-      gst: '23AABCF5678B1Z2',
-      pan: 'AABCF5678B',
-      category: 'Apparel & Fashion',
-      website: '',
-      status: 'Active',
-      logo: '/LogoSavitri.png',
-    },
-    {
-      id: 'brand_fa',
-      name: 'Fashion Adda',
-      shortName: 'Fashion Adda',
-      code: 'FA-JBP',
-      city: 'Jabalpur',
-      state: 'Madhya Pradesh',
-      address: '88 Civil Lines',
-      contact: '9123456780',
-      email: 'care@fashionadda.in',
-      gst: '23AABCF9012C1Z9',
-      pan: 'AABCF9012C',
-      category: 'Apparel & Fashion',
-      website: '',
-      status: 'Active',
-      logo: '/LogoSavitri.png',
-    },
-  ]);
+  // Consolidated scope object for Super Admin platform view
+  const ALL_BRANDS_SCOPE = useMemo(() => ({
+    id: 'ALL',
+    brandId: 'ALL',
+    name: 'All Brands & Regions (Consolidated)',
+    shortName: 'All Regions',
+    code: 'ALL-MP',
+    city: 'All MP Hubs',
+    state: 'Madhya Pradesh',
+    address: 'Centralized Platform Oversight',
+    contact: '1800-SAVITRI',
+    email: 'treasury@savitri.com',
+    gst: 'CENTRALIZED',
+    pan: 'CENTRALIZED',
+    category: 'Consolidated Treasury',
+    website: '',
+    status: 'Active',
+    logo: '/LogoSavitri.png',
+  }), []);
+
+  const [brands, setBrands] = useState([]);
 
   const [selectedBrandId, setSelectedBrandIdState] = useState(() => {
     try {
-      return sessionStorage.getItem('shippnex_super_admin_brand') || 'brand_fg';
+      return sessionStorage.getItem('shippnex_super_admin_brand') || 'ALL';
     } catch {
-      return 'brand_fg';
+      return 'ALL';
     }
   });
+
   const setSelectedBrandId = useCallback((id) => {
     setSelectedBrandIdState(id);
     try {
@@ -103,60 +71,144 @@ export const SuperAdminProvider = ({ children }) => {
       /* ignore private-mode storage failures */
     }
   }, []);
-  const selectedBrand = brands.find((b) => b.id === selectedBrandId) || brands[0] || null;
 
-  const createBrand = useCallback((payload) => {
-    const code = String(payload.code || '').trim().toUpperCase();
-    const name = String(payload.name || '').trim();
-    const city = String(payload.city || '').trim();
-    const state = String(payload.state || '').trim();
-    const address = String(payload.address || '').trim();
-    const contact = String(payload.contact || '').replace(/\D/g, '').slice(-10);
-    const email = String(payload.email || '').trim().toLowerCase();
-    const gst = String(payload.gst || '').trim().toUpperCase();
-    const pan = String(payload.pan || '').trim().toUpperCase();
-    const category = String(payload.category || '').trim();
-    const website = String(payload.website || '').trim();
-    const status = payload.status === 'Inactive' ? 'Inactive' : 'Active';
-    const logo = payload.logo || '/LogoSavitri.png';
-    const description = String(payload.description || '').trim();
+  const isAllScope = selectedBrandId === 'ALL';
+  const selectedBrand = useMemo(() => {
+    if (selectedBrandId === 'ALL') return ALL_BRANDS_SCOPE;
+    const found = brands.find(
+      (b) => (b.id === selectedBrandId || b.brandId === selectedBrandId) && b.status === 'Active'
+    );
+    if (found) return found;
 
-    if (!name || !code || !city || !state || !address || !contact || !email || !gst || !pan || !category) {
-      return { ok: false, message: 'Please fill all required brand and compliance fields.' };
+    // Fallback to first ACTIVE brand if available
+    const firstActive = brands.find((b) => b.status === 'Active');
+    return firstActive || ALL_BRANDS_SCOPE;
+  }, [selectedBrandId, brands, ALL_BRANDS_SCOPE]);
+
+  // Auto-fallback: If selected brand becomes inactive or doesn't exist,
+  // switch scope to the first active brand, or 'ALL' if all brands are deactivated.
+  useEffect(() => {
+    if (selectedBrandId === 'ALL') return;
+    if (!brands || brands.length === 0) return;
+
+    const currentBrand = brands.find((b) => b.id === selectedBrandId || b.brandId === selectedBrandId);
+    if (!currentBrand || currentBrand.status !== 'Active') {
+      const firstActive = brands.find((b) => b.status === 'Active');
+      const fallbackId = firstActive ? (firstActive.brandId || firstActive.id) : 'ALL';
+      setSelectedBrandIdState(fallbackId);
+      try {
+        sessionStorage.setItem('shippnex_super_admin_brand', fallbackId);
+      } catch {}
     }
-    if (!/^\d{10}$/.test(contact)) {
-      return { ok: false, message: 'Enter a valid 10-digit contact number.' };
+  }, [brands, selectedBrandId]);
+
+  // Fetch live brands from backend
+  const fetchBrands = useCallback(async () => {
+    try {
+      const res = await API.get('/super-admin/brands');
+      if (res.data?.success && Array.isArray(res.data.brands)) {
+        const formatted = res.data.brands.map((b) => ({
+          ...b,
+          id: b.brandId || b._id,
+          shortName: b.shortName || b.name,
+        }));
+        setBrands(formatted);
+      }
+    } catch (err) {
+      // Backend unavailable: keep the last known brand list (empty on first load => consolidated scope)
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return { ok: false, message: 'Enter a valid business email.' };
+  }, []);
+
+  useEffect(() => {
+    fetchBrands();
+  }, [fetchBrands]);
+
+  const createBrand = useCallback(async (payload) => {
+    try {
+      const res = await API.post('/super-admin/brands', payload);
+      if (res.data?.success && res.data.brand) {
+        const created = {
+          ...res.data.brand,
+          id: res.data.brand.brandId || res.data.brand._id,
+          shortName: res.data.brand.shortName || res.data.brand.name,
+        };
+        setBrands((prev) => [created, ...prev.filter((b) => b.brandId !== created.brandId)]);
+        fetchBrands();
+        return { ok: true, brand: created };
+      }
+      return { ok: false, message: res.data?.message || 'Could not create brand.' };
+    } catch (err) {
+      const message = err.response?.data?.message || err.message || 'Failed to register brand in database.';
+      return { ok: false, message };
     }
-    if (brands.some((b) => b.code.toUpperCase() === code)) {
-      return { ok: false, message: 'Brand code already exists in this list.' };
+  }, [fetchBrands]);
+
+  const updateBrand = useCallback(async (id, payload) => {
+    try {
+      const res = await API.put(`/super-admin/brands/${id}`, payload);
+      if (res.data?.success && res.data.brand) {
+        fetchBrands();
+        return { ok: true, brand: res.data.brand };
+      }
+      return { ok: false, message: res.data?.message || 'Could not update brand.' };
+    } catch (err) {
+      const message = err.response?.data?.message || err.message || 'Failed to update brand.';
+      return { ok: false, message };
     }
-    const shortName = String(payload.shortName || name).trim() || name;
-    const id = `brand_${Date.now()}`;
-    const next = {
-      id,
-      name,
-      shortName,
-      code,
-      city,
-      state,
-      address,
-      contact,
-      email,
-      gst,
-      pan,
-      category,
-      website,
-      status,
-      logo,
-      description,
-    };
-    setBrands((prev) => [next, ...prev]);
-    setSelectedBrandId(id);
-    return { ok: true, brand: next };
-  }, [brands]);
+  }, [fetchBrands]);
+
+  const toggleBrandStatus = useCallback(async (id, status) => {
+    // 1. Optimistically update local brands list immediately
+    setBrands((prev) =>
+      prev.map((b) => (b.id === id || b.brandId === id ? { ...b, status } : b))
+    );
+
+    // 2. If deactivating the currently selected brand, immediately switch scope
+    if (status !== 'Active') {
+      setSelectedBrandIdState((prevSelected) => {
+        if (prevSelected === id) {
+          const nextActive = brands.find(
+            (b) => b.id !== id && b.brandId !== id && b.status === 'Active'
+          );
+          const fallback = nextActive ? (nextActive.brandId || nextActive.id) : 'ALL';
+          try {
+            sessionStorage.setItem('shippnex_super_admin_brand', fallback);
+          } catch {}
+          return fallback;
+        }
+        return prevSelected;
+      });
+    }
+
+    // 3. Persist update to MongoDB backend
+    try {
+      const res = await API.patch(`/super-admin/brands/${id}/status`, { status });
+      if (res.data?.success) {
+        fetchBrands();
+        return { ok: true, brand: res.data.brand };
+      }
+      fetchBrands();
+      return { ok: false, message: res.data?.message || 'Could not update brand status.' };
+    } catch (err) {
+      fetchBrands();
+      const message = err.response?.data?.message || err.message || 'Failed to toggle brand status.';
+      return { ok: false, message };
+    }
+  }, [brands, fetchBrands]);
+
+  const deleteBrand = useCallback(async (id) => {
+    try {
+      const res = await API.delete(`/super-admin/brands/${id}`);
+      if (res.data?.success) {
+        fetchBrands();
+        return { ok: true, message: res.data.message };
+      }
+      return { ok: false, message: res.data?.message || 'Could not delete brand.' };
+    } catch (err) {
+      const message = err.response?.data?.message || err.message || 'Failed to delete brand.';
+      return { ok: false, message };
+    }
+  }, [fetchBrands]);
 
   useEffect(() => {
     let cancelled = false;
@@ -258,7 +310,12 @@ export const SuperAdminProvider = ({ children }) => {
         selectedBrandId,
         setSelectedBrandId,
         selectedBrand,
+        isAllScope,
+        fetchBrands,
         createBrand,
+        updateBrand,
+        toggleBrandStatus,
+        deleteBrand,
       }}
     >
       {children}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Store,
@@ -29,86 +29,129 @@ import {
   Info,
   ArrowLeft,
   Layers,
-  Sparkles
+  Sparkles,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { SuperAdminHeader } from '../components/SuperAdminHeader';
-import {
-  STORE_BRANDS,
-  BRAND_STORES,
-  STORE_CITIES,
-  formatCurrencyINR,
-} from '../data/brandStoresMock';
+import { useSuperAdmin } from '../context/SuperAdminContext';
+import { superAdminService } from '../../../services/superAdminService';
 
 const PAGE_SIZE = 8;
+
+const formatCurrencyINR = (amount) => {
+  const val = Number(amount) || 0;
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(val);
+};
 
 export const SuperAdminStores = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const {
+    selectedBrandId,
+    setSelectedBrandId,
+    selectedBrand: currentScopeBrand,
+    brands,
+  } = useSuperAdmin();
 
-  // Selected brand from URL query or state
-  const initialBrand = searchParams.get('brand') || 'ALL';
-  const [selectedBrand, setSelectedBrand] = useState(initialBrand);
+  // Component state
+  const [stores, setStores] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [scopeStats, setScopeStats] = useState({ total: 0, active: 0, pending: 0, inactive: 0 });
+  const [brandCounts, setBrandCounts] = useState({});
+
+  // Filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('ALL');
   const [selectedVerification, setSelectedVerification] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedPeriod, setSelectedPeriod] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Drawer modal state for store details
   const [activeStore, setActiveStore] = useState(null);
 
-  // Brand selection helper
-  const handleSelectBrand = (brandSlug) => {
-    setSelectedBrand(brandSlug);
-    setCurrentPage(1);
-    if (brandSlug === 'ALL') {
-      searchParams.delete('brand');
-    } else {
-      searchParams.set('brand', brandSlug);
-    }
-    setSearchParams(searchParams, { replace: true });
-  };
+  // Fetch live stores from backend with race-condition prevention
+  const fetchStores = useCallback(async () => {
+    let isMounted = true;
+    setLoading(true);
+    setError(null);
 
-  // Reset all filters
-  const handleResetFilters = () => {
-    setSelectedBrand('ALL');
-    setSearchQuery('');
-    setSelectedCity('ALL');
-    setSelectedVerification('ALL');
-    setSelectedStatus('ALL');
-    setSelectedPeriod('ALL');
-    setCurrentPage(1);
-    searchParams.delete('brand');
-    setSearchParams(searchParams, { replace: true });
-  };
+    try {
+      const res = await superAdminService.getStores({
+        brandId: selectedBrandId,
+        search: searchQuery.trim() || undefined,
+        status: selectedStatus !== 'ALL' ? selectedStatus : undefined,
+        page: 1,
+        limit: 100,
+      });
 
-  // Brand-level breakdown statistics for top cards
-  const brandBreakdown = useMemo(() => {
-    const statsMap = {};
-    STORE_BRANDS.forEach((brand) => {
-      const stores = BRAND_STORES.filter((s) => s.brandSlug === brand.slug);
-      statsMap[brand.slug] = {
-        name: brand.name,
-        code: brand.code,
-        color: brand.color,
-        total: stores.length,
-        active: stores.filter((s) => s.storeStatus === 'Active').length,
-        pending: stores.filter((s) => s.verificationStatus === 'Pending' || s.verificationStatus === 'Under Review').length,
-        inactive: stores.filter((s) => s.storeStatus === 'Inactive' || s.storeStatus === 'Suspended').length,
-      };
-    });
-    return statsMap;
-  }, []);
+      if (!isMounted) return;
 
-  // Filtered stores
-  const filteredStores = useMemo(() => {
-    return BRAND_STORES.filter((store) => {
-      // Brand filter
-      if (selectedBrand !== 'ALL' && store.brandSlug !== selectedBrand) {
-        return false;
+      if (res?.success) {
+        const fetchedStores = res.stores || [];
+        setStores(fetchedStores);
+
+        if (res.stats) {
+          setScopeStats(res.stats);
+        } else {
+          setScopeStats({
+            total: res.total !== undefined ? res.total : fetchedStores.length,
+            active: fetchedStores.filter((s) => s.storeStatus === 'Active').length,
+            pending: fetchedStores.filter(
+              (s) => s.verificationStatus === 'Pending' || s.verificationStatus === 'Under Review'
+            ).length,
+            inactive: fetchedStores.filter((s) => s.storeStatus === 'Inactive').length,
+          });
+        }
+
+        if (res.brandCounts) {
+          setBrandCounts(res.brandCounts);
+        }
+      } else {
+        setError(res?.message || 'Failed to retrieve store records from MongoDB.');
       }
+    } catch (err) {
+      if (!isMounted) return;
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        'Error connecting to MongoDB backend. Please check network and retry.';
+      setError(msg);
+    } finally {
+      if (!isMounted) return;
+      setLoading(false);
+    }
 
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedBrandId, searchQuery, selectedStatus]);
+
+  useEffect(() => {
+    fetchStores();
+    setCurrentPage(1);
+  }, [fetchStores]);
+
+  // Extract unique cities from live stores and registered brands
+  const availableCities = useMemo(() => {
+    const citySet = new Set();
+    stores.forEach((s) => {
+      if (s.city) citySet.add(s.city);
+    });
+    brands.forEach((b) => {
+      if (b.city) citySet.add(b.city);
+    });
+    return Array.from(citySet).sort();
+  }, [stores, brands]);
+
+  // Client-side filtering for city, verification, and registration period
+  const filteredStores = useMemo(() => {
+    return stores.filter((store) => {
       // City filter
       if (selectedCity !== 'ALL' && store.city !== selectedCity) {
         return false;
@@ -119,14 +162,9 @@ export const SuperAdminStores = () => {
         return false;
       }
 
-      // Store Status filter
-      if (selectedStatus !== 'ALL' && store.storeStatus !== selectedStatus) {
-        return false;
-      }
-
       // Period filter (based on registeredAt)
       if (selectedPeriod !== 'ALL') {
-        if (!store.registeredAt) return false;
+        if (!store.registeredAt || store.registeredAt === 'N/A') return false;
         const today = new Date();
         const rDate = new Date(store.registeredAt);
         const diffDays = (today - rDate) / (1000 * 60 * 60 * 24);
@@ -138,35 +176,18 @@ export const SuperAdminStores = () => {
         if (selectedPeriod === 'yearly' && diffDays > 365) return false;
       }
 
-      // Search Query filter (store name, seller name, store ID)
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matchesName = store.storeName.toLowerCase().includes(q);
-        const matchesSeller = store.sellerName.toLowerCase().includes(q);
-        const matchesId = store.storeId.toLowerCase().includes(q) || store.sellerId.toLowerCase().includes(q);
-        const matchesCity = store.city.toLowerCase().includes(q);
-        if (!matchesName && !matchesSeller && !matchesId && !matchesCity) {
-          return false;
-        }
-      }
-
       return true;
     });
-  }, [selectedBrand, selectedCity, selectedVerification, selectedStatus, selectedPeriod, searchQuery]);
+  }, [stores, selectedCity, selectedVerification, selectedPeriod]);
 
-  // Current scope KPI stats based on selected brand
-  const scopeStats = useMemo(() => {
-    const list = selectedBrand === 'ALL'
-      ? BRAND_STORES
-      : BRAND_STORES.filter((s) => s.brandSlug === selectedBrand);
+  // Total stores across all registered brands for the portfolio card
+  const totalPortfolioStores = useMemo(() => {
+    return Object.values(brandCounts).reduce((acc, curr) => acc + (curr.total || 0), 0);
+  }, [brandCounts]);
 
-    return {
-      total: list.length,
-      active: list.filter((s) => s.storeStatus === 'Active').length,
-      pending: list.filter((s) => s.verificationStatus === 'Pending' || s.verificationStatus === 'Under Review').length,
-      inactive: list.filter((s) => s.storeStatus === 'Inactive' || s.storeStatus === 'Suspended').length,
-    };
-  }, [selectedBrand]);
+  const activePortfolioStores = useMemo(() => {
+    return Object.values(brandCounts).reduce((acc, curr) => acc + (curr.active || 0), 0);
+  }, [brandCounts]);
 
   // Pagination calculation
   const totalPages = Math.max(1, Math.ceil(filteredStores.length / PAGE_SIZE));
@@ -176,10 +197,23 @@ export const SuperAdminStores = () => {
     return filteredStores.slice(start, start + PAGE_SIZE);
   }, [filteredStores, validPage]);
 
-  // Active brand metadata
-  const currentBrandObj = STORE_BRANDS.find((b) => b.slug === selectedBrand);
+  // Reset all filters
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setSelectedCity('ALL');
+    setSelectedVerification('ALL');
+    setSelectedStatus('ALL');
+    setSelectedPeriod('ALL');
+    setCurrentPage(1);
+  };
 
-  // CSV Export
+  // Switch brand scope
+  const handleSelectBrand = (brandId) => {
+    setSelectedBrandId(brandId);
+    setCurrentPage(1);
+  };
+
+  // CSV Export of live filtered data
   const handleExportCSV = () => {
     if (filteredStores.length === 0) {
       alert('No store records available to export.');
@@ -206,29 +240,30 @@ export const SuperAdminStores = () => {
 
     const rows = filteredStores.map((s) => [
       s.storeId,
-      `"${s.storeName.replace(/"/g, '""')}"`,
-      `"${s.sellerName.replace(/"/g, '""')}"`,
+      `"${(s.storeName || '').replace(/"/g, '""')}"`,
+      `"${(s.sellerName || '').replace(/"/g, '""')}"`,
       s.sellerId,
       s.brandName,
       s.city,
-      `"${s.address.replace(/"/g, '""')}"`,
+      `"${(s.address || '').replace(/"/g, '""')}"`,
       s.email,
       `"${s.phone}"`,
-      s.productCount,
-      s.totalOrders,
-      s.salesSummary.totalRevenue,
-      s.registeredAt,
+      s.productCount || 0,
+      s.totalOrders || 0,
+      s.salesSummary?.totalRevenue || 0,
+      s.registeredAt || 'N/A',
       s.verificationStatus,
       s.storeStatus,
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const csvContent =
+      'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
     link.setAttribute(
       'download',
-      `Savitri_Stores_Report_${selectedBrand}_${new Date().toISOString().slice(0, 10)}.csv`
+      `Savitri_Stores_Report_${selectedBrandId}_${new Date().toISOString().slice(0, 10)}.csv`
     );
     document.body.appendChild(link);
     link.click();
@@ -236,11 +271,11 @@ export const SuperAdminStores = () => {
   };
 
   return (
-    <div className="min-h-full bg-[#f8fafc] font-sans text-slate-800">
+    <div className="min-h-full bg-[#f8fafc] font-sans text-slate-800 pb-20">
       {/* Super Admin Top Header */}
       <SuperAdminHeader
         title="Stores & Sellers"
-        subtitle="Brand-wise multi-merchant catalog, store verification status, order performance, and account oversight."
+        subtitle="Live MongoDB multi-merchant catalog, store verification status, order performance, and account oversight."
         subtitleClassName="m-0 mt-0.5 max-w-3xl text-xs font-medium text-slate-500"
       />
 
@@ -253,15 +288,23 @@ export const SuperAdminStores = () => {
             </Link>
             <span>/</span>
             <span className="text-slate-600">Stores & Sellers</span>
-            {currentBrandObj && (
-              <>
-                <span>/</span>
-                <span className="font-bold text-[#F7941D]">{currentBrandObj.name}</span>
-              </>
-            )}
+            <span>/</span>
+            <span className="font-bold text-[#79B433]">
+              {selectedBrandId === 'ALL' ? 'All Regions (Consolidated)' : currentScopeBrand?.name || selectedBrandId}
+            </span>
           </nav>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={fetchStores}
+              disabled={loading}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50"
+              title="Refresh store records from MongoDB"
+            >
+              <RefreshCw size={13} className={loading ? 'animate-spin text-[#79B433]' : 'text-slate-500'} />
+              <span>{loading ? 'Refreshing...' : 'Live Refresh'}</span>
+            </button>
+
             <button
               onClick={handleExportCSV}
               className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all"
@@ -271,16 +314,20 @@ export const SuperAdminStores = () => {
           </div>
         </div>
 
-        {/* Read-Only Demo Notice */}
-        <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-2.5 text-xs text-amber-900 shadow-2xs">
+        {/* Live Brand Scope Indicator Banner */}
+        <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-2.5 text-xs text-emerald-900 shadow-2xs">
           <div className="flex items-center gap-2 font-medium">
-            <Info size={15} className="text-amber-700 shrink-0" />
+            <ShieldCheck size={16} className="text-emerald-700 shrink-0" />
             <span>
-              <strong>Read-Only Monitoring Interface:</strong> Displaying simulated merchant stores and seller registrations across registered treasury brands. No mutation or approval actions permitted.
+              <strong>Live Database Scope:</strong> Scoped to{' '}
+              <span className="font-bold underline">
+                {selectedBrandId === 'ALL' ? 'All Regions (Consolidated Portfolio)' : currentScopeBrand?.name || selectedBrandId}
+              </span>
+              . Only authorized merchant stores registered under this entity are displayed.
             </span>
           </div>
-          <span className="text-[10.5px] font-mono font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-300">
-            STATIC AUDIT
+          <span className="text-[10.5px] font-mono font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-300 shrink-0">
+            MONGODB SYNCED
           </span>
         </div>
 
@@ -290,7 +337,7 @@ export const SuperAdminStores = () => {
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5 m-0">
               <Building2 size={14} className="text-[#F7941D]" /> Brand Overview & Selector
             </h3>
-            <span className="text-xs text-slate-400 font-medium">Click a brand card to filter all store records</span>
+            <span className="text-xs text-slate-400 font-medium">Click a brand card to scope stores</span>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -298,38 +345,55 @@ export const SuperAdminStores = () => {
             <div
               onClick={() => handleSelectBrand('ALL')}
               className={`cursor-pointer rounded-2xl border p-4 shadow-xs transition-all duration-200 hover:shadow-md ${
-                selectedBrand === 'ALL'
+                selectedBrandId === 'ALL'
                   ? 'border-[#1A2E0A] bg-[#1A2E0A] text-white shadow-sm ring-2 ring-[#1A2E0A]/20'
                   : 'border-slate-200 bg-white text-slate-800 hover:border-slate-300'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className={`text-xs font-black uppercase tracking-wider ${selectedBrand === 'ALL' ? 'text-teal-200' : 'text-slate-500'}`}>
+                <span
+                  className={`text-xs font-black uppercase tracking-wider ${
+                    selectedBrandId === 'ALL' ? 'text-teal-200' : 'text-slate-500'
+                  }`}
+                >
                   All Brands
                 </span>
-                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${selectedBrand === 'ALL' ? 'bg-teal-900/60 text-teal-300' : 'bg-slate-100 text-slate-600'}`}>
+                <span
+                  className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+                    selectedBrandId === 'ALL'
+                      ? 'bg-teal-900/60 text-teal-300'
+                      : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
                   PORTFOLIO
                 </span>
               </div>
               <div className="mt-3">
-                <div className="text-2xl font-black">{BRAND_STORES.length} Stores</div>
-                <div className={`mt-1 flex items-center gap-3 text-[11px] font-medium ${selectedBrand === 'ALL' ? 'text-teal-200/80' : 'text-slate-500'}`}>
-                  <span>{BRAND_STORES.filter((s) => s.storeStatus === 'Active').length} Active</span>
+                <div className="text-2xl font-black">
+                  {totalPortfolioStores > 0 ? totalPortfolioStores : stores.length} Stores
+                </div>
+                <div
+                  className={`mt-1 flex items-center gap-2 text-[11px] font-medium ${
+                    selectedBrandId === 'ALL' ? 'text-teal-200/80' : 'text-slate-500'
+                  }`}
+                >
+                  <span>{activePortfolioStores} Active</span>
                   <span>•</span>
-                  <span>{BRAND_STORES.filter((s) => s.verificationStatus === 'Pending' || s.verificationStatus === 'Under Review').length} Pending</span>
+                  <span>All MP Hubs</span>
                 </div>
               </div>
             </div>
 
-            {/* Individual Brand Cards */}
-            {STORE_BRANDS.map((b) => {
-              const bStat = brandBreakdown[b.slug];
-              const isSelected = selectedBrand === b.slug;
+            {/* Individual Live Brand Cards */}
+            {brands.map((b) => {
+              const bId = b.brandId || b.id;
+              const countInfo = brandCounts[bId] || { total: 0, active: 0, pending: 0 };
+              const isSelected = selectedBrandId === bId;
 
               return (
                 <div
-                  key={b.slug}
-                  onClick={() => handleSelectBrand(b.slug)}
+                  key={bId}
+                  onClick={() => handleSelectBrand(bId)}
                   className={`cursor-pointer rounded-2xl border p-4 shadow-xs transition-all duration-200 hover:shadow-md ${
                     isSelected
                       ? 'border-[#1A2E0A] bg-[#1A2E0A] text-white shadow-sm ring-2 ring-[#1A2E0A]/20'
@@ -337,23 +401,36 @@ export const SuperAdminStores = () => {
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={`text-xs font-black uppercase tracking-wider ${isSelected ? 'text-teal-200' : 'text-slate-700'}`}>
-                      {b.name}
+                    <span
+                      className={`text-xs font-black uppercase tracking-wider truncate mr-1 ${
+                        isSelected ? 'text-teal-200' : 'text-slate-700'
+                      }`}
+                      title={b.name}
+                    >
+                      {b.shortName || b.name}
                     </span>
-                    <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${isSelected ? 'bg-teal-900/60 text-teal-300' : 'bg-slate-100 text-slate-600'}`}>
+                    <span
+                      className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                        isSelected
+                          ? 'bg-teal-900/60 text-teal-300'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
                       {b.code}
                     </span>
                   </div>
                   <div className="mt-3">
-                    <div className="text-2xl font-black">{bStat.total} Stores</div>
-                    <div className={`mt-1 flex items-center gap-2 text-[11px] font-medium ${isSelected ? 'text-teal-200/80' : 'text-slate-500'}`}>
+                    <div className="text-2xl font-black">{countInfo.total} Stores</div>
+                    <div
+                      className={`mt-1 flex items-center gap-2 text-[11px] font-medium ${
+                        isSelected ? 'text-teal-200/80' : 'text-slate-500'
+                      }`}
+                    >
                       <span className={isSelected ? 'text-emerald-300' : 'text-emerald-600'}>
-                        {bStat.active} Active
+                        {countInfo.active} Active
                       </span>
                       <span>•</span>
-                      <span className={isSelected ? 'text-amber-300' : 'text-amber-600'}>
-                        {bStat.pending} Pending
-                      </span>
+                      <span className="truncate">{b.city}</span>
                     </div>
                   </div>
                 </div>
@@ -375,7 +452,9 @@ export const SuperAdminStores = () => {
             <div className="mt-3">
               <h3 className="text-2xl font-black text-slate-900 tracking-tight">{scopeStats.total}</h3>
               <p className="mt-1 text-xs text-slate-500 font-medium">
-                {selectedBrand === 'ALL' ? 'Across all 4 brands' : `Registered under ${currentBrandObj?.name}`}
+                {selectedBrandId === 'ALL'
+                  ? 'Across all platform brands'
+                  : `Registered under ${currentScopeBrand?.name || selectedBrandId}`}
               </p>
             </div>
           </div>
@@ -404,7 +483,7 @@ export const SuperAdminStores = () => {
             </div>
             <div className="mt-3">
               <h3 className="text-2xl font-black text-amber-900 tracking-tight">{scopeStats.pending}</h3>
-              <p className="mt-1 text-xs text-amber-600 font-medium">KYC or profile documents awaiting review</p>
+              <p className="mt-1 text-xs text-amber-600 font-medium">KYC or registration pending approval</p>
             </div>
           </div>
 
@@ -418,7 +497,7 @@ export const SuperAdminStores = () => {
             </div>
             <div className="mt-3">
               <h3 className="text-2xl font-black text-slate-800 tracking-tight">{scopeStats.inactive}</h3>
-              <p className="mt-1 text-xs text-slate-500 font-medium">Paused, offboarded, or suspended accounts</p>
+              <p className="mt-1 text-xs text-slate-500 font-medium">Paused or suspended merchant accounts</p>
             </div>
           </div>
         </div>
@@ -437,23 +516,26 @@ export const SuperAdminStores = () => {
                   setCurrentPage(1);
                 }}
                 placeholder="Search store name, seller name, or store ID..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-xs font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-[#F7941D] focus:bg-white"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-xs font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-[#79B433] focus:bg-white"
               />
             </div>
 
             {/* Brand Dropdown */}
             <div>
               <select
-                value={selectedBrand}
+                value={selectedBrandId}
                 onChange={(e) => handleSelectBrand(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-medium text-slate-700 outline-none transition-all focus:border-[#F7941D] focus:bg-white cursor-pointer"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-medium text-slate-700 outline-none transition-all focus:border-[#79B433] focus:bg-white cursor-pointer"
               >
-                <option value="ALL">All Brands (4)</option>
-                {STORE_BRANDS.map((b) => (
-                  <option key={b.slug} value={b.slug}>
-                    {b.name}
-                  </option>
-                ))}
+                <option value="ALL">All Brands (Consolidated)</option>
+                {brands.map((b) => {
+                  const bId = b.brandId || b.id;
+                  return (
+                    <option key={bId} value={bId}>
+                      {b.name} ({b.city})
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -465,10 +547,10 @@ export const SuperAdminStores = () => {
                   setSelectedCity(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-medium text-slate-700 outline-none transition-all focus:border-[#F7941D] focus:bg-white cursor-pointer"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-medium text-slate-700 outline-none transition-all focus:border-[#79B433] focus:bg-white cursor-pointer"
               >
                 <option value="ALL">All Cities</option>
-                {STORE_CITIES.map((c) => (
+                {availableCities.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>
@@ -484,7 +566,7 @@ export const SuperAdminStores = () => {
                   setSelectedVerification(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-medium text-slate-700 outline-none transition-all focus:border-[#F7941D] focus:bg-white cursor-pointer"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-medium text-slate-700 outline-none transition-all focus:border-[#79B433] focus:bg-white cursor-pointer"
               >
                 <option value="ALL">All Verification Statuses</option>
                 <option value="Verified">Verified</option>
@@ -501,16 +583,16 @@ export const SuperAdminStores = () => {
                   setSelectedPeriod(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-medium text-slate-700 outline-none transition-all focus:border-[#F7941D] focus:bg-white cursor-pointer"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-medium text-slate-700 outline-none transition-all focus:border-[#79B433] focus:bg-white cursor-pointer"
                 aria-label="Filter by registration period"
                 title="Filter by registration period"
               >
                 <option value="ALL">All Time</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
-                <option value="half_yearly">Half-Yearly</option>
-                <option value="yearly">Yearly</option>
+                <option value="weekly">Weekly (Last 7 Days)</option>
+                <option value="monthly">Monthly (Last 30 Days)</option>
+                <option value="quarterly">Quarterly (Last 90 Days)</option>
+                <option value="half_yearly">Half-Yearly (Last 180 Days)</option>
+                <option value="yearly">Yearly (Last 365 Days)</option>
               </select>
             </div>
           </div>
@@ -518,7 +600,9 @@ export const SuperAdminStores = () => {
           {/* Secondary Row: Store Status Filter & Reset */}
           <div className="flex flex-wrap items-center justify-between border-t border-slate-100 pt-3 gap-2">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-2">Store Status:</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-2">
+                Store Status:
+              </span>
               {['ALL', 'Active', 'Inactive'].map((status) => (
                 <button
                   key={status}
@@ -538,7 +622,11 @@ export const SuperAdminStores = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              {(selectedBrand !== 'ALL' || selectedCity !== 'ALL' || selectedVerification !== 'ALL' || selectedStatus !== 'ALL' || selectedPeriod !== 'ALL' || searchQuery.trim()) && (
+              {(selectedCity !== 'ALL' ||
+                selectedVerification !== 'ALL' ||
+                selectedStatus !== 'ALL' ||
+                selectedPeriod !== 'ALL' ||
+                searchQuery.trim()) && (
                 <button
                   onClick={handleResetFilters}
                   className="flex items-center gap-1 text-xs font-bold text-[#F7941D] hover:underline bg-transparent border-none cursor-pointer"
@@ -553,41 +641,78 @@ export const SuperAdminStores = () => {
           </div>
         </div>
 
-        {/* Stores Table */}
+        {/* Stores Table Container */}
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-xs font-sans">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-black uppercase tracking-wider text-slate-500">
-                  <th className="py-4 px-4">Store ID</th>
-                  <th className="py-4 px-4">Store & Seller</th>
-                  <th className="py-4 px-4">Brand</th>
-                  <th className="py-4 px-4">City / Location</th>
-                  <th className="py-4 px-4 text-center">Listed Products</th>
-                  <th className="py-4 px-4 text-center">Total Orders</th>
-                  <th className="py-4 px-4">Registered Date</th>
-                  <th className="py-4 px-4">Verification</th>
-                  <th className="py-4 px-4">Status</th>
-                  <th className="py-4 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                {paginatedStores.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="py-12 text-center text-slate-400">
-                      <Store size={36} className="mx-auto mb-2 text-slate-300" />
-                      <p className="font-bold text-sm text-slate-600">No stores found matching your filters.</p>
-                      <button
-                        onClick={handleResetFilters}
-                        className="mt-2 text-xs font-bold text-[#F7941D] hover:underline bg-transparent border-none cursor-pointer"
-                      >
-                        Reset all filters
-                      </button>
-                    </td>
-                  </tr>
+          {loading ? (
+            <div className="py-24 flex flex-col items-center justify-center gap-3">
+              <Loader2 size={32} className="animate-spin text-[#79B433]" />
+              <p className="text-xs font-semibold text-slate-500">Retrieving store records from MongoDB...</p>
+            </div>
+          ) : error ? (
+            <div className="p-12 text-center bg-rose-50/50">
+              <AlertCircle size={36} className="mx-auto mb-2 text-rose-500" />
+              <h4 className="text-sm font-bold text-rose-800">{error}</h4>
+              <p className="text-xs text-rose-600 mt-1">
+                Could not load stores for {currentScopeBrand?.name || selectedBrandId}.
+              </p>
+              <button
+                onClick={fetchStores}
+                className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-all shadow-xs border-none"
+              >
+                <RefreshCw size={12} /> Retry Request
+              </button>
+            </div>
+          ) : filteredStores.length === 0 ? (
+            <div className="p-16 text-center">
+              <Store size={44} className="mx-auto mb-3 text-slate-300" />
+              <h4 className="text-base font-bold text-slate-800 m-0">
+                {stores.length === 0
+                  ? 'No stores have been registered under this brand yet.'
+                  : 'No stores match your current filters.'}
+              </h4>
+              <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                {stores.length === 0
+                  ? `There are currently 0 seller accounts associated with ${currentScopeBrand?.name || selectedBrandId} in MongoDB.`
+                  : 'Try adjusting your search query, status, or city filter to view matching stores.'}
+              </p>
+              <div className="mt-4 flex items-center justify-center gap-2">
+                {stores.length > 0 ? (
+                  <button
+                    onClick={handleResetFilters}
+                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 cursor-pointer shadow-xs"
+                  >
+                    Reset Filters
+                  </button>
                 ) : (
-                  paginatedStores.map((store) => (
-                    <tr key={store.storeId} className="transition-colors hover:bg-slate-50/70">
+                  <button
+                    onClick={() => handleSelectBrand('ALL')}
+                    className="px-4 py-2 rounded-xl border-none bg-[#79B433] hover:bg-[#689A2B] text-xs font-bold text-white cursor-pointer shadow-xs"
+                  >
+                    View All Brands (Consolidated)
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left text-xs font-sans">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                    <th className="py-4 px-4">Store ID</th>
+                    <th className="py-4 px-4">Store & Seller</th>
+                    <th className="py-4 px-4">Brand</th>
+                    <th className="py-4 px-4">City / Location</th>
+                    <th className="py-4 px-4 text-center">Listed Products</th>
+                    <th className="py-4 px-4 text-center">Total Orders</th>
+                    <th className="py-4 px-4">Registered Date</th>
+                    <th className="py-4 px-4">Verification</th>
+                    <th className="py-4 px-4">Status</th>
+                    <th className="py-4 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                  {paginatedStores.map((store) => (
+                    <tr key={store.storeId || store._id} className="transition-colors hover:bg-slate-50/70">
                       {/* Store ID */}
                       <td className="py-3.5 px-4 font-mono font-bold text-[#F7941D]">
                         {store.storeId}
@@ -598,7 +723,7 @@ export const SuperAdminStores = () => {
                         <div className="flex flex-col">
                           <span className="font-bold text-slate-900 text-sm">{store.storeName}</span>
                           <span className="text-[11px] text-slate-500 mt-0.5">
-                            Seller: <span className="font-medium text-slate-700">{store.sellerName}</span> ({store.sellerId})
+                            Seller: <span className="font-medium text-slate-700">{store.sellerName}</span> ({store.sellerId?.slice(-6)})
                           </span>
                         </div>
                       </td>
@@ -620,12 +745,12 @@ export const SuperAdminStores = () => {
 
                       {/* Listed Products */}
                       <td className="py-3.5 px-4 text-center font-bold text-slate-900">
-                        {store.productCount}
+                        {store.productCount || 0}
                       </td>
 
                       {/* Total Orders */}
                       <td className="py-3.5 px-4 text-center font-bold text-slate-900">
-                        {store.totalOrders}
+                        {store.totalOrders || 0}
                       </td>
 
                       {/* Registration Date */}
@@ -679,14 +804,14 @@ export const SuperAdminStores = () => {
                         </button>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Pagination Bar */}
-          {totalPages > 1 && (
+          {!loading && !error && totalPages > 1 && (
             <div className="flex flex-wrap items-center justify-between border-t border-slate-100 px-5 py-3.5 text-xs text-slate-600">
               <div>
                 Showing{' '}
@@ -754,7 +879,7 @@ export const SuperAdminStores = () => {
                     {activeStore.storeName}
                   </h3>
                   <p className="text-xs text-slate-500 m-0 mt-0.5 font-medium">
-                    Operated by {activeStore.sellerName} ({activeStore.sellerId})
+                    Operated by {activeStore.sellerName} ({activeStore.sellerId?.slice(-6)})
                   </p>
                 </div>
                 <button
@@ -768,13 +893,15 @@ export const SuperAdminStores = () => {
 
               {/* Drawer Scrollable Content */}
               <div className="p-6 space-y-6 flex-1 text-xs font-sans">
-                {/* Demo Notice Banner */}
-                <div className="rounded-xl border border-blue-200 bg-blue-50/80 p-3 flex items-start gap-2.5 text-blue-900">
-                  <ShieldCheck size={16} className="text-blue-600 shrink-0 mt-0.5" />
+                {/* Live Verification Notice Banner */}
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 flex items-start gap-2.5 text-emerald-900">
+                  <ShieldCheck size={16} className="text-emerald-600 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="block text-[11px] uppercase tracking-wider">Static Demo Record • Read-Only</strong>
-                    <span className="text-blue-800 text-[11px]">
-                      This profile is maintained for platform oversight. Live edits, payouts, or KYC decisions are managed via standard admin channels.
+                    <strong className="block text-[11px] uppercase tracking-wider">
+                      Live MongoDB Record • Scoped
+                    </strong>
+                    <span className="text-emerald-800 text-[11px]">
+                      Authenticated merchant storefront registered under {activeStore.brandName} ({activeStore.city}).
                     </span>
                   </div>
                 </div>
@@ -828,20 +955,22 @@ export const SuperAdminStores = () => {
                       <span className="text-slate-500 flex items-center gap-1.5">
                         <Mail size={13} className="text-slate-400" /> Email Address
                       </span>
-                      <span className="font-semibold text-slate-800">{activeStore.email}</span>
+                      <span className="font-semibold text-slate-800">{activeStore.email || 'N/A'}</span>
                     </div>
                     <div className="p-3 flex items-center justify-between">
                       <span className="text-slate-500 flex items-center gap-1.5">
                         <Phone size={13} className="text-slate-400" /> Phone Number
                       </span>
-                      <span className="font-semibold text-slate-800 font-mono">{activeStore.phone}</span>
+                      <span className="font-semibold text-slate-800 font-mono">{activeStore.phone || 'N/A'}</span>
                     </div>
                     <div className="p-3 flex items-start justify-between gap-3">
                       <span className="text-slate-500 flex items-center gap-1.5 shrink-0">
                         <MapPin size={13} className="text-slate-400" /> Store Address
                       </span>
                       <span className="font-semibold text-slate-800 text-right">
-                        {activeStore.address}, {activeStore.city}, {activeStore.state} - {activeStore.pincode}
+                        {activeStore.address ? `${activeStore.address}, ` : ''}
+                        {activeStore.city}, {activeStore.state}
+                        {activeStore.pincode ? ` - ${activeStore.pincode}` : ''}
                       </span>
                     </div>
                     <div className="p-3 flex items-center justify-between">
@@ -857,29 +986,19 @@ export const SuperAdminStores = () => {
                 <div className="space-y-2">
                   <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-900 m-0 flex items-center justify-between">
                     <span>Inventory & Product Catalog</span>
-                    <span className="text-slate-500 font-semibold">{activeStore.productCount} Total Products</span>
+                    <span className="text-slate-500 font-semibold">{activeStore.productCount || 0} Total Products</span>
                   </h4>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="p-3 rounded-xl border border-emerald-100 bg-emerald-50/50">
-                      <span className="text-[10px] text-emerald-700 font-bold block">IN STOCK</span>
-                      <span className="text-lg font-black text-emerald-900">{activeStore.inventorySummary.inStock} SKUs</span>
-                    </div>
-                    <div className="p-3 rounded-xl border border-amber-100 bg-amber-50/50">
-                      <span className="text-[10px] text-amber-700 font-bold block">LOW STOCK</span>
-                      <span className="text-lg font-black text-amber-900">{activeStore.inventorySummary.lowStock} SKUs</span>
-                    </div>
-                    <div className="p-3 rounded-xl border border-rose-100 bg-rose-50/50">
-                      <span className="text-[10px] text-rose-700 font-bold block">OUT OF STOCK</span>
-                      <span className="text-lg font-black text-rose-900">{activeStore.inventorySummary.outOfStock} SKUs</span>
-                    </div>
-                  </div>
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 flex justify-between items-center text-xs">
                     <span className="text-slate-600 font-medium">Total Physical Units in Stock</span>
-                    <span className="font-bold text-slate-900">{activeStore.inventorySummary.totalUnits.toLocaleString('en-IN')} Units</span>
+                    <span className="font-bold text-slate-900">
+                      {(activeStore.inventorySummary?.totalUnits || 0).toLocaleString('en-IN')} Units
+                    </span>
                   </div>
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 flex justify-between items-center text-xs">
                     <span className="text-slate-600 font-medium">Estimated Inventory Valuation</span>
-                    <span className="font-bold text-emerald-700">{formatCurrencyINR(activeStore.inventorySummary.valuation)}</span>
+                    <span className="font-bold text-emerald-700">
+                      {formatCurrencyINR(activeStore.inventorySummary?.valuation || 0)}
+                    </span>
                   </div>
                 </div>
 
@@ -887,51 +1006,26 @@ export const SuperAdminStores = () => {
                 <div className="space-y-2">
                   <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-900 m-0 flex items-center justify-between">
                     <span>Sales & Orders Summary</span>
-                    <span className="text-slate-500 font-semibold">{activeStore.totalOrders} Orders Total</span>
+                    <span className="text-slate-500 font-semibold">{activeStore.totalOrders || 0} Orders Total</span>
                   </h4>
                   <div className="rounded-xl border border-slate-200 divide-y divide-slate-100 bg-white">
                     <div className="p-3 flex justify-between items-center">
                       <span className="text-slate-500">Gross Sales Volume</span>
                       <span className="font-black text-slate-900 text-sm">
-                        {formatCurrencyINR(activeStore.salesSummary.totalRevenue)}
+                        {formatCurrencyINR(activeStore.salesSummary?.totalRevenue || 0)}
                       </span>
                     </div>
                     <div className="p-3 flex justify-between items-center">
                       <span className="text-slate-500">Completed Deliveries</span>
-                      <span className="font-bold text-emerald-700">{activeStore.salesSummary.completedOrders} Orders</span>
-                    </div>
-                    <div className="p-3 flex justify-between items-center">
-                      <span className="text-slate-500">Pending / In-Transit</span>
-                      <span className="font-bold text-amber-700">{activeStore.salesSummary.pendingOrders} Orders</span>
+                      <span className="font-bold text-emerald-700">
+                        {activeStore.salesSummary?.completedOrders || 0} Orders
+                      </span>
                     </div>
                     <div className="p-3 flex justify-between items-center">
                       <span className="text-slate-500">Average Order Value (AOV)</span>
-                      <span className="font-bold text-slate-800">{formatCurrencyINR(activeStore.salesSummary.avgOrderValue)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Purchase History Summary */}
-                <div className="space-y-2">
-                  <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-900 m-0">
-                    Purchase & Restock History
-                  </h4>
-                  <div className="rounded-xl border border-slate-200 divide-y divide-slate-100 bg-white">
-                    <div className="p-3 flex justify-between items-center">
-                      <span className="text-slate-500">Total Inward Invoices</span>
-                      <span className="font-bold text-slate-800">{activeStore.purchaseSummary.totalPurchases} Invoices</span>
-                    </div>
-                    <div className="p-3 flex justify-between items-center">
-                      <span className="text-slate-500">Cumulative Spend</span>
-                      <span className="font-bold text-slate-900">{formatCurrencyINR(activeStore.purchaseSummary.totalSpend)}</span>
-                    </div>
-                    <div className="p-3 flex justify-between items-center">
-                      <span className="text-slate-500">Primary Wholesale Supplier</span>
-                      <span className="font-semibold text-slate-800">{activeStore.purchaseSummary.primarySupplier}</span>
-                    </div>
-                    <div className="p-3 flex justify-between items-center">
-                      <span className="text-slate-500">Last Restock Date</span>
-                      <span className="font-medium text-slate-700">{activeStore.purchaseSummary.lastPurchaseDate}</span>
+                      <span className="font-bold text-slate-800">
+                        {formatCurrencyINR(activeStore.salesSummary?.avgOrderValue || 0)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -944,19 +1038,21 @@ export const SuperAdminStores = () => {
                   <div className="rounded-xl border border-slate-200 divide-y divide-slate-100 bg-white">
                     <div className="p-3 flex justify-between items-center">
                       <span className="text-slate-500">Total Cleared Payouts</span>
-                      <span className="font-black text-emerald-700">{formatCurrencyINR(activeStore.payoutSummary.totalPaid)}</span>
+                      <span className="font-black text-emerald-700">
+                        {formatCurrencyINR(activeStore.payoutSummary?.totalPaid || 0)}
+                      </span>
                     </div>
                     <div className="p-3 flex justify-between items-center">
                       <span className="text-slate-500">Pending Settlement</span>
-                      <span className="font-bold text-amber-700">{formatCurrencyINR(activeStore.payoutSummary.pendingAmount)}</span>
-                    </div>
-                    <div className="p-3 flex justify-between items-center">
-                      <span className="text-slate-500">Last Payout Date</span>
-                      <span className="font-medium text-slate-700">{activeStore.payoutSummary.lastPayoutDate}</span>
+                      <span className="font-bold text-amber-700">
+                        {formatCurrencyINR(activeStore.payoutSummary?.pendingAmount || 0)}
+                      </span>
                     </div>
                     <div className="p-3 flex justify-between items-center">
                       <span className="text-slate-500">Payout Status</span>
-                      <span className="font-bold text-slate-800">{activeStore.payoutSummary.payoutStatus}</span>
+                      <span className="font-bold text-slate-800">
+                        {activeStore.payoutSummary?.payoutStatus || 'Settled'}
+                      </span>
                     </div>
                   </div>
                 </div>

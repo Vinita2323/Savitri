@@ -343,6 +343,10 @@ export const getDeliveryChallans = async (req, res, next) => {
       filter.orderNumber = { $regex: orderNumber.trim(), $options: 'i' };
     }
 
+    if (req.scope && !req.scope.isAll && req.scope.city) {
+      filter['clientSnapshot.shippingAddress.city'] = new RegExp(`^${req.scope.city.trim()}$`, 'i');
+    }
+
     if (startDate || endDate) {
       filter.challanDate = {};
       if (startDate) {

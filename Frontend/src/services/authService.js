@@ -1389,6 +1389,17 @@ export const profileEditRequestService = {
   },
 };
 
+export const brandDiscoveryService = {
+  getCities: async () => {
+    const response = await API.get('/brands/cities');
+    return response.data;
+  },
+  getEligibleBrands: async ({ city, latitude, longitude }) => {
+    const response = await API.get('/brands/eligible', { params: { city, latitude, longitude } });
+    return response.data;
+  },
+};
+
 export const sellerRegistrationFeeService = {
   // Public & Seller Methods
   getPublicFeeConfig: async () => {

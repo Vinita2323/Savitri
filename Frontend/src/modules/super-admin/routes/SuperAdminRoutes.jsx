@@ -9,20 +9,16 @@ import PageSkeleton from '../../../components/PageSkeleton';
 const SuperAdminLogin = lazy(() => import('../pages/SuperAdminLogin').then(m => ({ default: m.SuperAdminLogin })));
 const SuperAdminDashboard = lazy(() => import('../pages/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
 const SuperAdminTransactions = lazy(() => import('../pages/SuperAdminTransactions').then(m => ({ default: m.SuperAdminTransactions })));
-const SuperAdminPayments = lazy(() => import('../pages/SuperAdminPayments').then(m => ({ default: m.SuperAdminPayments })));
+const SuperAdminPayouts = lazy(() => import('../pages/SuperAdminPayouts').then(m => ({ default: m.SuperAdminPayouts })));
 const SuperAdminSellerSettlements = lazy(() => import('../pages/SuperAdminSellerSettlements').then(m => ({ default: m.SuperAdminSellerSettlements })));
-const SuperAdminSellerPayoutData = lazy(() => import('../pages/SuperAdminSellerPayoutData'));
-const SuperAdminCaptainPayoutData = lazy(() => import('../pages/SuperAdminCaptainPayoutData'));
 const SuperAdminRefunds = lazy(() => import('../pages/SuperAdminRefunds').then(m => ({ default: m.SuperAdminRefunds })));
 const SuperAdminCommissions = lazy(() => import('../pages/SuperAdminCommissions').then(m => ({ default: m.SuperAdminCommissions })));
 const SuperAdminReports = lazy(() => import('../pages/SuperAdminReports').then(m => ({ default: m.SuperAdminReports })));
-const BrandSellerPayouts = lazy(() => import('../pages/BrandSellerPayouts'));
-const BrandSellerDetail = lazy(() => import('../pages/BrandSellerDetail'));
-const BrandCustomerPayments = lazy(() => import('../pages/BrandCustomerPayments'));
-const CustomerPurchaseHistory = lazy(() => import('../pages/CustomerPurchaseHistory'));
 const SuperAdminInventory = lazy(() => import('../pages/SuperAdminInventory'));
 const SuperAdminStores = lazy(() => import('../pages/SuperAdminStores'));
 const SuperAdminDeliveryPartners = lazy(() => import('../pages/SuperAdminDeliveryPartners'));
+const SuperAdminBrands = lazy(() => import('../pages/SuperAdminBrands'));
+const CreateBrandPage = lazy(() => import('../pages/CreateBrandPage'));
 
 // Quotation Management Module Pages
 import { QuotationProvider } from '../../admin/quotations/context/QuotationContext';
@@ -161,14 +157,16 @@ const SuperAdminRoutesContent = () => {
           <Route path="/dashboard" element={<SuperAdminDashboard />} />
           <Route path="/cash-bank" element={<CashBankPage />} />
           <Route path="/transactions" element={<SuperAdminTransactions />} />
-          <Route path="/brands/:brandSlug/seller-payouts" element={<BrandSellerPayouts />} />
-          <Route path="/brands/:brandSlug/seller-payouts/:sellerId" element={<BrandSellerDetail />} />
-          <Route path="/payments" element={<SuperAdminPayments />} />
-          <Route path="/payments/brands/:brandSlug" element={<BrandCustomerPayments />} />
-          <Route path="/payments/brands/:brandSlug/customers/:customerId" element={<CustomerPurchaseHistory />} />
+          <Route path="/brands/:brandSlug/seller-payouts" element={<Navigate to="/super-admin/payouts/sellers" replace />} />
+          <Route path="/brands/:brandSlug/seller-payouts/:sellerId" element={<Navigate to="/super-admin/payouts/sellers" replace />} />
+          <Route path="/payments" element={<SuperAdminTransactions fixedCategory="CUSTOMER_PAYMENT" pageTitle="Customer Payments" />} />
+          <Route path="/payments/brands/*" element={<Navigate to="/super-admin/payments" replace />} />
           <Route path="/seller-settlements" element={<SuperAdminSellerSettlements />} />
           <Route path="/stores" element={<SuperAdminStores />} />
           <Route path="/brands/:brandSlug/stores" element={<SuperAdminStores />} />
+          <Route path="/brands" element={<SuperAdminBrands />} />
+          <Route path="/brands/create" element={<CreateBrandPage />} />
+          <Route path="/brands/edit/:id" element={<CreateBrandPage />} />
           <Route path="/inventory" element={<SuperAdminInventory />} />
           <Route path="/delivery-partners" element={<SuperAdminDeliveryPartners />} />
           
@@ -210,8 +208,8 @@ const SuperAdminRoutesContent = () => {
 
           <Route path="/captain-settlements" element={<Navigate to="/super-admin/dashboard" replace />} />
           <Route path="/payouts" element={<Navigate to="/super-admin/payouts/sellers" replace />} />
-          <Route path="/payouts/sellers" element={<SuperAdminSellerPayoutData />} />
-          <Route path="/payouts/captains" element={<SuperAdminCaptainPayoutData />} />
+          <Route path="/payouts/sellers" element={<SuperAdminPayouts key="sellers" fixedRecipientType="SELLER" />} />
+          <Route path="/payouts/captains" element={<SuperAdminPayouts key="captains" fixedRecipientType="CAPTAIN" />} />
           <Route path="/refunds" element={<SuperAdminRefunds />} />
           <Route path="/commissions" element={<SuperAdminCommissions />} />
           <Route path="/financial-adjustments" element={<Navigate to="/super-admin/dashboard" replace />} />
