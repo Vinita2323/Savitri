@@ -1,6 +1,6 @@
 import Brand from '../models/Brand.model.js';
 import Seller from '../models/Seller.model.js';
-import { ensureBaselineBrands } from '../middleware/scopeMiddleware.js';
+import { ensureBaselineBrands, canAccessAllBrands, isBrandAuthorizedForUser } from '../middleware/scopeMiddleware.js';
 import { findEligibleBrands, listRegistrationCities, parseLatLng } from '../utils/brandEligibility.js';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -29,6 +29,11 @@ export const getAllBrands = async (req, res, next) => {
         { code: { $regex: q, $options: 'i' } },
         { city: { $regex: q, $options: 'i' } },
       ];
+    }
+
+    // Brand-restricted admins only see the brands they are assigned to.
+    if (!(await canAccessAllBrands(req.user))) {
+      filter.brandId = { $in: Array.isArray(req.user?.authorizedBrands) ? req.user.authorizedBrands : [] };
     }
 
     const brands = await Brand.find(filter)
@@ -119,7 +124,7 @@ export const getBrandById = async (req, res, next) => {
       $or: [{ brandId: id }, { code: id.toUpperCase() }, ...(isMongoId ? [{ _id: id }] : [])],
     });
 
-    if (!brand) {
+    if (!brand || !(await isBrandAuthorizedForUser(req.user, brand.brandId))) {
       return res.status(404).json({
         success: false,
         message: 'Brand not found',

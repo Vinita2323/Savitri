@@ -19,7 +19,7 @@ router.get('/current', getCurrentCommissionRates);
 // Admin Management Routes (Protected: strictly admin & super_admin)
 // ----------------------------------------------------------------------------
 router.get('/admin/commission-settings', protect(['admin', 'super_admin']), getCommissionSettings);
-router.put('/admin/commission-settings', protect(['admin', 'super_admin']), updateCommissionSettings);
+router.put('/admin/commission-settings', protect('super_admin'), updateCommissionSettings);
 router.get('/admin/commission-reports', protect(['admin', 'super_admin']), getCommissionReports);
 
 export default router;

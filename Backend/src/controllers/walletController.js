@@ -286,6 +286,23 @@ export const updateWithdrawalStatus = async (req, res, next) => {
     withdrawal.processedAt = new Date();
     await withdrawal.save();
 
+    // Mirror into the unified PayoutRequest so the Super Admin payout pages stay consistent.
+    // (Refund was handled above; the unified reject path skips refunding when the withdrawal is REJECTED.)
+    try {
+      const unified = await PayoutRequest.findOne({ payoutId: withdrawal.withdrawalId });
+      const target = { APPROVED: 'APPROVED', COMPLETED: 'PAID', REJECTED: 'REJECTED' }[status];
+      if (unified && target && !['PAID', 'REJECTED'].includes(unified.status) && unified.status !== target) {
+        unified.status = target;
+        if (adminRemark) unified.remarks = adminRemark;
+        if (target === 'APPROVED') { unified.approvedAmount = unified.requestedAmount; unified.approvedAt = new Date(); }
+        if (target === 'PAID') { unified.paidAt = new Date(); unified.processedAt = new Date(); unified.paymentReference = unified.paymentReference || 'LEGACY-' + withdrawal.withdrawalId; }
+        if (target === 'REJECTED') { unified.rejectionReason = adminRemark || 'Rejected by Admin'; unified.rejectedAt = new Date(); }
+        await unified.save();
+      }
+    } catch (mirrorErr) {
+      console.warn('[Wallet] Could not mirror withdrawal status to PayoutRequest:', mirrorErr.message);
+    }
+
     res.status(200).json({
       success: true,
       message: `Withdrawal request #${withdrawal.withdrawalId} updated to ${status}`,

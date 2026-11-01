@@ -1,3 +1,4 @@
+import { protect } from '../middleware/authMiddleware.js';
 import express from 'express';
 import mongoose from 'mongoose';
 import Seller from '../models/Seller.model.js';
@@ -7,6 +8,7 @@ const router = express.Router();
 
 import { getEligibleSellersForLocation, isValidCoordinate } from '../utils/sellerLocationHelper.js';
 import { haversineDistance } from '../utils/haversine.js';
+import { resolveBrandScope } from '../middleware/scopeMiddleware.js';
 import { deleteSeller } from '../controllers/adminController.js';
 import { evaluateSellerStorefrontEligibility } from '../utils/sellerEligibility.js';
 
@@ -231,6 +233,6 @@ router.get('/:id', async (req, res) => {
 // @desc    Delete single seller
 // @route   DELETE /api/sellers/:id
 // @access  Private/Admin
-router.delete('/:id', deleteSeller);
+router.delete('/:id', protect('admin', 'super_admin'), resolveBrandScope, deleteSeller);
 
 export default router;

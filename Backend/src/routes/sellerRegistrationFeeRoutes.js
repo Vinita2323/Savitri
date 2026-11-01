@@ -26,9 +26,9 @@ router.post('/webhook', handleRegistrationFeeWebhook);
 // ----------------------------------------------------------------------------
 // Admin Management Routes (Protected by role='admin')
 // ----------------------------------------------------------------------------
-router.get('/admin', protect('admin'), adminGetFeeConfig);
-router.put('/admin', protect('admin'), adminUpdateFeeConfig);
-router.get('/admin/payments', protect('admin'), adminGetFeePayments);
-router.get('/admin/payments/:id', protect('admin'), adminGetFeePaymentById);
+router.get('/admin', protect('admin', 'super_admin'), adminGetFeeConfig);
+router.put('/admin', protect('admin', 'super_admin'), adminUpdateFeeConfig);
+router.get('/admin/payments', protect('admin', 'super_admin'), adminGetFeePayments);
+router.get('/admin/payments/:id', protect('admin', 'super_admin'), adminGetFeePaymentById);
 
 export default router;

@@ -8,8 +8,8 @@ const router = express.Router();
 router.get('/', getBanners);
 
 // Protected routes for Admin CMS to manage banners
-router.post('/', protect('admin'), createBanner);
-router.put('/:id', protect('admin'), updateBanner);
-router.delete('/:id', protect('admin'), deleteBanner);
+router.post('/', protect('admin', 'super_admin'), createBanner);
+router.put('/:id', protect('admin', 'super_admin'), updateBanner);
+router.delete('/:id', protect('admin', 'super_admin'), deleteBanner);
 
 export default router;

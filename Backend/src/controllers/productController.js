@@ -11,6 +11,7 @@ import path from 'path';
 import { getEligibleSellersForLocation, isValidCoordinate } from '../utils/sellerLocationHelper.js';
 import { evaluateSellerStorefrontEligibility, evaluateProductSellerEligibility } from '../utils/sellerEligibility.js';
 import { getEffectiveStock, syncRootStockFromVariants } from '../utils/productStock.js';
+import { canAccessProduct, canAccessSellerId } from '../utils/accessControl.js';
 
 // High-speed In-memory Cache for Products listing
 const productsCache = new Map();
@@ -100,6 +101,20 @@ const processImageWithCache = async (imgStr, folder = 'products', cache = new Ma
 // @access  Private/Admin
 export const createProduct = async (req, res) => {
   try {
+    // Ownership: a seller can only create products for themselves; an admin only for sellers in scope.
+    if (req.user?.role === 'seller') {
+      const me = await Seller.findById(req.user.id).select('businessName').lean();
+      if (!me) return res.status(404).json({ success: false, message: 'Seller not found' });
+      req.body.sellerId = String(req.user.id);
+      req.body.seller = me.businessName || req.body.seller;
+    } else if (req.body.sellerId) {
+      if (!(await canAccessSellerId(req, req.body.sellerId))) {
+        return res.status(404).json({ success: false, message: 'Seller not found' });
+      }
+    } else if (req.scope && !req.scope.isAll) {
+      return res.status(403).json({ success: false, message: 'A sellerId is required when working within a single brand scope' });
+    }
+
     const {
       name,
       category,
@@ -508,7 +523,7 @@ export const updateProduct = async (req, res) => {
   try {
     const product = await findProductByIdOrSku(req.params.id);
 
-    if (!product) {
+    if (!product || !(await canAccessProduct(req, product))) {
       return res.status(404).json({
         success: false,
         message: 'Product not found'
@@ -516,6 +531,16 @@ export const updateProduct = async (req, res) => {
     }
 
     const updateData = { ...req.body };
+    // Ownership fields cannot be reassigned by sellers.
+    if (req.user?.role === 'seller') {
+      delete updateData.sellerId;
+      delete updateData.seller;
+      delete updateData.seller_id;
+    } else if (updateData.sellerId && String(updateData.sellerId) !== String(product.sellerId)) {
+      if (!(await canAccessSellerId(req, updateData.sellerId))) {
+        return res.status(404).json({ success: false, message: 'Seller not found' });
+      }
+    }
     if (updateData.mainImage) {
       updateData.mainImage = await processImage(updateData.mainImage, 'products/main');
     }
@@ -591,7 +616,7 @@ export const deleteProduct = async (req, res) => {
   try {
     const product = await findProductByIdOrSku(req.params.id);
 
-    if (!product) {
+    if (!product || !(await canAccessProduct(req, product))) {
       return res.status(404).json({
         success: false,
         message: 'Product not found'

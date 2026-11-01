@@ -16,7 +16,7 @@ import CaptainCashSettlement from '../models/CaptainCashSettlement.model.js';
 import Product from '../models/Product.model.js';
 import User from '../models/User.model.js';
 import Brand from '../models/Brand.model.js';
-import { getCityRegex, getScopedSellerIds, getScopedCaptainIds, sellerScopeFilter, sellerInScope } from '../middleware/scopeMiddleware.js';
+import { getCityRegex, getScopedSellerIds, getScopedCaptainIds, sellerScopeFilter, sellerInScope, captainInScope, captainScopeFilter } from '../middleware/scopeMiddleware.js';
 
 // Helper: Log financial audit entry
 const logAudit = async ({
@@ -95,10 +95,7 @@ export const getFinancialDashboardStats = async (req, res, next) => {
       sellerMatch['warehouseLocation.city'] = cityRegex;
     }
 
-    const captainMatch = {};
-    if (!scope.isAll && cityRegex) {
-      captainMatch['city'] = cityRegex;
-    }
+    const captainMatch = scope.isAll ? {} : captainScopeFilter(scope);
 
     const payoutMatch = { status: { $in: ['PENDING', 'APPROVED', 'PROCESSING'] } };
     const completedPayoutMatch = { status: 'PAID' };
@@ -645,7 +642,7 @@ export const getPayoutRequestById = async (req, res, next) => {
         }
       } else if (payout.recipientType === 'CAPTAIN') {
         const c = await Captain.findById(payout.recipientId).lean();
-        if (c?.city && !getCityRegex(scope.city).test(c.city)) {
+        if (!c || !captainInScope(scope, c)) {
           return res.status(403).json({ success: false, message: 'Forbidden: Recipient outside your authorized regional scope.' });
         }
       }
@@ -721,7 +718,7 @@ export const approvePayout = async (req, res, next) => {
         }
       } else if (payout.recipientType === 'CAPTAIN') {
         const c = await Captain.findById(payout.recipientId).lean();
-        if (c?.city && !getCityRegex(scope.city).test(c.city)) {
+        if (!c || !captainInScope(scope, c)) {
           return res.status(403).json({ success: false, message: 'Action forbidden: Recipient outside your authorized regional scope.' });
         }
       }
@@ -782,6 +779,9 @@ export const rejectPayout = async (req, res, next) => {
         message: 'Cannot reject an already completed/paid payout',
       });
     }
+    if (payout.status === 'REJECTED') {
+      return res.status(400).json({ success: false, message: 'This payout is already rejected' });
+    }
 
     // Verify scope authorization
     if (!scope.isAll) {
@@ -792,7 +792,7 @@ export const rejectPayout = async (req, res, next) => {
         }
       } else if (payout.recipientType === 'CAPTAIN') {
         const c = await Captain.findById(payout.recipientId).lean();
-        if (c?.city && !getCityRegex(scope.city).test(c.city)) {
+        if (!c || !captainInScope(scope, c)) {
           return res.status(403).json({ success: false, message: 'Action forbidden: Recipient outside your authorized regional scope.' });
         }
       }
@@ -804,7 +804,8 @@ export const rejectPayout = async (req, res, next) => {
     // Restore unreserved balance
     if (payout.recipientType === 'SELLER') {
       const seller = await Seller.findById(payout.recipientId);
-      if (seller) {
+      const legacy = await WithdrawalRequest.findOne({ withdrawalId: payout.payoutId }).select('status').lean();
+      if (seller && legacy?.status !== 'REJECTED') {
         seller.walletBalance = Number(((seller.walletBalance || 0) + refundAmt).toFixed(2));
         seller.pendingBalance = Math.max(0, Number(((seller.pendingBalance || 0) - refundAmt).toFixed(2)));
         await seller.save();
@@ -884,7 +885,7 @@ export const processPayout = async (req, res, next) => {
         }
       } else if (payout.recipientType === 'CAPTAIN') {
         const c = await Captain.findById(payout.recipientId).lean();
-        if (c?.city && !getCityRegex(scope.city).test(c.city)) {
+        if (!c || !captainInScope(scope, c)) {
           return res.status(403).json({ success: false, message: 'Action forbidden: Recipient outside your authorized regional scope.' });
         }
       }
@@ -934,6 +935,15 @@ export const processPayout = async (req, res, next) => {
       }
     } catch (_) {}
 
+    // Brand of the recipient for ledger scoping (the active scope may be consolidated 'ALL')
+    let ledgerBrandId = scope.isAll ? '' : scope.brandId;
+    let ledgerCity = scope.city;
+    if (scope.isAll && payout.recipientType === 'SELLER') {
+      const rs = await Seller.findById(payout.recipientId).select('brandId warehouseLocation.city').lean().catch(() => null);
+      ledgerBrandId = rs?.brandId || '';
+      ledgerCity = rs?.warehouseLocation?.city || '';
+    }
+
     // Central platform ledger entry
     const ledgerTxnId = `TXN-LED-PAY-${Date.now().toString().slice(-6)}`;
     await PlatformLedger.create({
@@ -954,8 +964,8 @@ export const processPayout = async (req, res, next) => {
       metadata: {
         paymentReference,
         paymentMethod,
-        brandId: scope.brandId,
-        city: scope.city,
+        brandId: ledgerBrandId,
+        city: ledgerCity,
       },
     });
 
@@ -1074,10 +1084,7 @@ export const getCaptainSettlements = async (req, res, next) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
 
-    const query = {};
-    if (!scope.isAll && scope.city) {
-      query.city = getCityRegex(scope.city);
-    }
+    const query = captainScopeFilter(scope);
 
     const [captains, total] = await Promise.all([
       Captain.find(query)
@@ -1268,7 +1275,7 @@ export const createFinancialAdjustment = async (req, res, next) => {
 
       // Verify regional scope
       if (!scope.isAll && scope.city) {
-        if (captain.city && !getCityRegex(scope.city).test(captain.city)) {
+        if (!captainInScope(scope, captain)) {
           return res.status(403).json({ success: false, message: 'Forbidden: Captain outside authorized regional scope.' });
         }
       }
@@ -1605,8 +1612,7 @@ export const getFinancialReports = async (req, res, next) => {
     }
 
     if (reportType === 'captain-settlements') {
-      const query = {};
-      if (!scope.isAll && scope.city) query.city = getCityRegex(scope.city);
+      const query = captainScopeFilter(scope);
       const captains = await Captain.find(query).select('name phone vehicleType city walletBalance cashCollected createdAt').lean();
       return res.status(200).json({ success: true, reportType, captains });
     }
@@ -2068,8 +2074,8 @@ export const getSuperAdminDeliveryPartners = async (req, res, next) => {
     const { search = '', status = 'ALL', page = 1, limit = 20 } = req.query;
 
     const query = {};
-    if (!scope.isAll && scope.city) {
-      query.city = getCityRegex(scope.city);
+    if (!scope.isAll) {
+      query.$and = [captainScopeFilter(scope)];
     }
     if (status && status !== 'ALL') {
       query.status = status.toLowerCase();

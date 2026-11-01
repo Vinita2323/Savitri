@@ -39,6 +39,19 @@ const adminSchema = new mongoose.Schema(
       enum: ['admin', 'super_admin'],
       default: 'admin',
     },
+    // Account state enforced on every authenticated request (documents created before this
+    // field existed have no value and are treated as 'active').
+    status: {
+      type: String,
+      enum: ['active', 'inactive', 'suspended'],
+      default: 'active',
+    },
+    // Incremented to revoke every previously issued token for this account
+    // (password change, forced logout). Tokens without the claim are treated as version 0.
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
     // Optional brand restriction for role 'admin'. Unset/empty or '*' = all brands.
     authorizedBrands: {
       type: [String],

@@ -1,4 +1,5 @@
 import Admin from '../models/Admin.model.js';
+import { isAdminAccountActive } from '../middleware/authMiddleware.js';
 import { generateToken } from '../utils/generateToken.js';
 import {
   ADMIN_REMEMBER_TTL,
@@ -13,7 +14,7 @@ export const superAdminLogin = async (req, res, next) => {
   try {
     const { email, password, rememberMe = false } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
       return res.status(400).json({
         success: false,
         message: 'Please provide both email and password',
@@ -45,12 +46,20 @@ export const superAdminLogin = async (req, res, next) => {
       });
     }
 
+    if (!isAdminAccountActive(admin)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Account is inactive or suspended',
+      });
+    }
+
     const remember = Boolean(rememberMe);
     const token = generateToken(
       {
         id: admin._id,
         email: admin.email,
         role: 'super_admin',
+        tokenVersion: admin.tokenVersion || 0,
         rememberMe: remember,
       },
       remember ? ADMIN_REMEMBER_TTL : ADMIN_SESSION_TTL

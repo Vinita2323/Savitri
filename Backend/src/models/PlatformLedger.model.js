@@ -104,6 +104,17 @@ const platformLedgerSchema = new mongoose.Schema(
   }
 );
 
+// Real time: every new ledger row pings connected admin dashboards.
+platformLedgerSchema.pre('save', function () {
+  this.$locals.wasNew = this.isNew;
+});
+platformLedgerSchema.post('save', function (doc) {
+  if (!this.$locals?.wasNew) return;
+  import('../socket/socket.js')
+    .then((m) => m.emitFinanceUpdate({ category: doc.category }))
+    .catch(() => {});
+});
+
 platformLedgerSchema.index({ category: 1, createdAt: -1 });
 platformLedgerSchema.index({ entityType: 1, entityId: 1, createdAt: -1 });
 platformLedgerSchema.index({ entityType: 1, createdAt: -1 });

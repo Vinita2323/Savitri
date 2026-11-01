@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { SuperAdminHeader } from '../components/SuperAdminHeader';
 import { useSuperAdmin } from '../context/SuperAdminContext';
 import { superAdminService } from '../../../services/superAdminService';
+import { subscribeLedgerChanges } from '../../../services/financeSocket';
 import {
   Search,
   Download,
@@ -138,6 +139,7 @@ export const SuperAdminTransactions = ({ fixedCategory, pageTitle } = {}) => {
   const [error, setError] = useState('');
   const [reload, setReload] = useState(0);
   const [lastSynced, setLastSynced] = useState(null);
+  const [liveConnected, setLiveConnected] = useState(false);
 
   const setFilter = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -223,6 +225,25 @@ export const SuperAdminTransactions = ({ fixedCategory, pageTitle } = {}) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBrandId, page, filters, reload, fixedCategory]);
 
+  // Real time: refetch when the backend reports a ledger change (new payment, settlement, payout, refund...),
+  // plus a 30s safety poll while the tab is visible in case the socket is unavailable.
+  useEffect(() => {
+    let debounce;
+    const bump = () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => setReload((n) => n + 1), 400);
+    };
+    const unsubscribe = subscribeLedgerChanges(bump, setLiveConnected);
+    const poll = setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') bump();
+    }, 30000);
+    return () => {
+      clearTimeout(debounce);
+      clearInterval(poll);
+      unsubscribe();
+    };
+  }, []);
+
   useEffect(() => {
     if (!notice) return undefined;
     const timer = setTimeout(() => setNotice(''), 2800);
@@ -302,7 +323,7 @@ export const SuperAdminTransactions = ({ fixedCategory, pageTitle } = {}) => {
       <div className="mx-auto w-full max-w-[1400px] flex-1 space-y-5 p-4 sm:p-6">
         <div className="flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="m-0 text-sm font-semibold text-emerald-800">
-            Live data from the platform ledger (MongoDB) — {brandName}.
+            Live data from the platform ledger (MongoDB) — {brandName}. {liveConnected ? 'Real-time updates on.' : 'Auto-refreshing every 30s.'}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-normal text-slate-500">

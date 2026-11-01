@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CaptainBottomNav from '../components/CaptainBottomNav';
 import { captainService } from '../../../services/authService';
+import { subscribeRealtime } from '../../../services/financeSocket';
 
 const CaptainWallet = () => {
   const navigate = useNavigate();
@@ -15,9 +16,20 @@ const CaptainWallet = () => {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [txnLoading, setTxnLoading] = useState(false);
 
+  const filterRef = React.useRef('All');
+  useEffect(() => {
+    filterRef.current = filterType;
+  }, [filterType]);
+
   useEffect(() => {
     fetchWallet();
     fetchTransactions('All');
+    // Real time: payout approved / paid / rejected by the Super Admin refreshes balance and history
+    const unsubscribe = subscribeRealtime('captain', ['payout:updated'], () => {
+      fetchWallet();
+      fetchTransactions(filterRef.current);
+    });
+    return unsubscribe;
   }, []);
 
   const fetchWallet = async () => {

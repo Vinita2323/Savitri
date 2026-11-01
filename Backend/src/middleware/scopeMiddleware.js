@@ -2,6 +2,7 @@ import Brand from '../models/Brand.model.js';
 import Seller from '../models/Seller.model.js';
 import Captain from '../models/Captain.model.js';
 import Admin from '../models/Admin.model.js';
+import SellerNotification from '../models/SellerNotification.model.js';
 
 const escapeRegex = (v) => String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -164,7 +165,14 @@ export const resolveBrandScope = async (req, res, next) => {
       req.headers['x-region-id'] ||
       (req.body && req.body.brandId);
 
-    const scopeParam = typeof rawId === 'string' ? rawId.trim() : '';
+    let scopeParam = typeof rawId === 'string' ? rawId.trim() : '';
+
+    // A brand-restricted admin who names no brand is pinned to their only assigned brand
+    // (never silently widened). With several assigned brands the brand must be explicit.
+    if (!scopeParam) {
+      const only = await singleAssignedBrand(req.user);
+      if (only) scopeParam = only;
+    }
 
     // If scope is explicitly 'ALL', 'all', or empty/unspecified
     if (!scopeParam || scopeParam.toUpperCase() === 'ALL' || scopeParam === '*') {
@@ -256,18 +264,40 @@ export const getCityRegex = (city) => {
  * super_admin: every brand. admin: every brand unless the Admin document defines a non-empty
  * authorizedBrands list ('*' = all). Any other role is denied.
  */
-export const isBrandAuthorizedForUser = async (user, brandId) => {
-  if (!user) return false;
-  const role = String(user.role || '').replace('-', '_');
-  if (role === 'super_admin') return true;
-  if (role !== 'admin') return false;
+// When ADMIN_BRANDS_FAIL_CLOSED=true an admin with no assigned brands has NO brand access.
+// Default stays fail-open only because existing admin documents carry no brand list and there
+// is no API yet to assign one; enable the flag after assigning brands to every admin.
+const brandsFailClosed = () => String(process.env.ADMIN_BRANDS_FAIL_CLOSED || '').toLowerCase() === 'true';
+
+const loadAdminBrandList = async (user) => {
   let list = Array.isArray(user.authorizedBrands) ? user.authorizedBrands : null;
   if (!list && user.id) {
     const admin = await Admin.findById(user.id).select('authorizedBrands').lean().catch(() => null);
     list = Array.isArray(admin?.authorizedBrands) ? admin.authorizedBrands : null;
   }
-  if (!list || list.length === 0 || list.includes('*')) return true;
+  return list;
+};
+
+export const isBrandAuthorizedForUser = async (user, brandId) => {
+  if (!user) return false;
+  const role = String(user.role || '').trim().toLowerCase().replace(/-/g, '_');
+  if (role === 'super_admin') return true;
+  if (role !== 'admin') return false;
+  const list = await loadAdminBrandList(user);
+  if (list?.includes('*')) return true;
+  if (!list || list.length === 0) return !brandsFailClosed();
   return brandId !== 'ALL' && list.includes(brandId);
+};
+
+/** True for super_admin and for admins authorised for consolidated (all-brand) data. */
+export const canAccessAllBrands = (user) => isBrandAuthorizedForUser(user, 'ALL');
+
+/** Brand slug when a restricted admin has exactly one assigned brand, else null. */
+const singleAssignedBrand = async (user) => {
+  if (!user || String(user.role || '').replace(/-/g, '_') !== 'admin') return null;
+  const list = await loadAdminBrandList(user);
+  if (list && list.length === 1 && list[0] !== '*') return list[0];
+  return null;
 };
 
 /** Mongo filter selecting the sellers (stores) that belong to a scope. {} for consolidated scope. */
@@ -310,8 +340,63 @@ export const getScopedSellerIds = async (scope) => {
 // Helper: Get all Captain IDs in the scoped region
 export const getScopedCaptainIds = async (scope) => {
   if (!scope || scope.isAll || !scope.city) return null;
-  const captains = await Captain.find({
-    city: getCityRegex(scope.city),
-  }).select('_id phone name').lean();
+  const captains = await Captain.find(captainScopeFilter(scope)).select('_id phone name').lean();
   return captains.map((c) => c._id);
+};
+
+/**
+ * Orders belonging to a brand = orders routed to a seller of that brand (SellerNotification link).
+ * Returns null for consolidated scope (no restriction). Fails closed: orders never routed to a
+ * seller are invisible to brand-scoped users.
+ */
+export const getScopedOrderIds = async (scope) => {
+  if (!scope || scope.isAll) return null;
+  const sellerIds = await getScopedSellerIds(scope);
+  if (!sellerIds || sellerIds.length === 0) return [];
+  return SellerNotification.distinct('order', { sellerId: { $in: sellerIds } });
+};
+
+/** Mongo filter for Order documents in scope ({} for consolidated scope). */
+export const orderScopeFilter = async (scope) => {
+  const ids = await getScopedOrderIds(scope);
+  return ids === null ? {} : { _id: { $in: ids } };
+};
+
+export const orderInScope = async (scope, orderOrId) => {
+  if (!scope || scope.isAll) return true;
+  const id = String(orderOrId?._id || orderOrId || '');
+  if (!id) return false;
+  const ids = await getScopedOrderIds(scope);
+  return ids.some((x) => String(x) === id);
+};
+
+/** Captains are scoped by operating city (the only brand attribute they carry). */
+export const captainInScope = (scope, captain) => {
+  if (!scope || scope.isAll) return true;
+  if (!captain || !scope.city) return false;
+  // Operating city comes from the captain's own declared data: profile city, else working-area city.
+  // A captain with neither is NOT attributed to any brand (visible only in consolidated scope).
+  const city = captain.city || captain.workingArea?.city || '';
+  return Boolean(city) && getCityRegex(scope.city).test(city);
+};
+
+/** Mongo filter selecting captains in scope ({} for consolidated scope). */
+export const captainScopeFilter = (scope) => {
+  if (!scope || scope.isAll) return {};
+  if (!scope.city) return { _id: { $in: [] } };
+  const re = getCityRegex(scope.city);
+  return {
+    $or: [
+      { city: re },
+      { $and: [{ $or: [{ city: { $exists: false } }, { city: '' }, { city: null }] }, { 'workingArea.city': re }] },
+    ],
+  };
+};
+
+/** Brand-scoped users: customers who placed an order routed to a seller of the scoped brand. */
+export const getScopedUserIds = async (scope) => {
+  const orderIds = await getScopedOrderIds(scope);
+  if (orderIds === null) return null;
+  const Order = (await import('../models/Order.model.js')).default;
+  return Order.distinct('user', { _id: { $in: orderIds } });
 };

@@ -13,6 +13,8 @@ import PlatformLedger from '../models/PlatformLedger.model.js';
 import RefundRequest from '../models/RefundRequest.model.js';
 import { invalidateUserOrdersCache } from './orderController.js';
 import { creditUserWallet } from '../utils/userWalletHelper.js';
+import { canAccessReturn } from '../utils/accessControl.js';
+import { getScopedSellerIds } from '../middleware/scopeMiddleware.js';
 
 // Helper: Generate OTP & Return ID
 const generateReturnOtp = () => Math.floor(1000 + Math.random() * 9000).toString();
@@ -301,6 +303,9 @@ export const getReturnById = async (req, res, next) => {
     if (role === 'captain' && returnDoc.captain && String(returnDoc.captain._id || returnDoc.captain) !== userId) {
       return res.status(403).json({ success: false, message: 'Unauthorized access.' });
     }
+    if (['seller', 'admin', 'super_admin'].includes(role) && !(await canAccessReturn(req, returnDoc))) {
+      return res.status(404).json({ success: false, message: 'Return request not found.' });
+    }
 
     res.status(200).json({
       success: true,
@@ -421,10 +426,10 @@ export const approveOrRejectReturn = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { action, rejectionReason } = req.body; // action = 'APPROVE' | 'REJECT'
-    const actorRole = req.user.role === 'admin' ? 'Admin' : 'Seller';
+    const actorRole = ['admin', 'super_admin'].includes(req.user.role) ? 'Admin' : 'Seller';
 
     const returnDoc = await ReturnRequest.findOne(buildReturnIdQuery(id));
-    if (!returnDoc) {
+    if (!returnDoc || !(await canAccessReturn(req, returnDoc))) {
       return res.status(404).json({ success: false, message: 'Return request not found.' });
     }
 
@@ -879,7 +884,7 @@ export const sellerReceiveReturnedProduct = async (req, res, next) => {
     const { notes } = req.body;
 
     const returnDoc = await ReturnRequest.findOne(buildReturnIdQuery(id));
-    if (!returnDoc) {
+    if (!returnDoc || !(await canAccessReturn(req, returnDoc))) {
       return res.status(404).json({ success: false, message: 'Return request not found.' });
     }
 
@@ -946,7 +951,7 @@ export const verifyReturnedProduct = async (req, res, next) => {
     const userId = req.user.id || req.user._id;
 
     const returnDoc = await ReturnRequest.findOne(buildReturnIdQuery(id));
-    if (!returnDoc) {
+    if (!returnDoc || !(await canAccessReturn(req, returnDoc))) {
       return res.status(404).json({ success: false, message: 'Return request not found.' });
     }
 
@@ -1170,6 +1175,12 @@ export const getAdminReturns = async (req, res, next) => {
     const { status, search, page = 1, limit = 20 } = req.query;
     const query = {};
 
+    // Brand scope: only returns for sellers inside the validated scope.
+    if (req.scope && !req.scope.isAll) {
+      const scopedSellerIds = await getScopedSellerIds(req.scope);
+      query.seller = { $in: scopedSellerIds || [] };
+    }
+
     if (status && status !== 'All') {
       query.status = status;
     }
@@ -1232,7 +1243,7 @@ export const adminAssignCaptain = async (req, res, next) => {
     }
 
     const returnDoc = await ReturnRequest.findOne(buildReturnIdQuery(id));
-    if (!returnDoc) {
+    if (!returnDoc || !(await canAccessReturn(req, returnDoc))) {
       return res.status(404).json({ success: false, message: 'Return request not found.' });
     }
 

@@ -3,6 +3,7 @@ import {
   AlertTriangle, IndianRupee, ArrowUpRight, Clock, CheckCircle2, XCircle, RefreshCw, Landmark, ArrowDownLeft, Plus
 } from 'lucide-react';
 import { walletService } from '../../../services/authService';
+import { subscribeRealtime } from '../../../services/financeSocket';
 
 const Wallet = () => {
   const [activeTab, setActiveTab] = useState('Transactions');
@@ -66,10 +67,13 @@ const Wallet = () => {
       fetchWallet();
     };
     window.addEventListener('seller-order-update', onOrderUpdate);
+    // Real time: payout approved / paid / rejected by the Super Admin refreshes the wallet immediately
+    const unsubscribePayout = subscribeRealtime('seller', ['payout:updated'], onOrderUpdate);
     const interval = setInterval(fetchWallet, 60000);
     return () => {
       window.removeEventListener('seller-order-update', onOrderUpdate);
       clearInterval(interval);
+      unsubscribePayout();
     };
   }, []);
 

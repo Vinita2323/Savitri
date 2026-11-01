@@ -12,8 +12,23 @@ import ReferralSettings from '../models/ReferralSettings.model.js';
 import CaptainCashSettlement from '../models/CaptainCashSettlement.model.js';
 import CodCashCollection from '../models/CodCashCollection.model.js';
 import PlatformLedger from '../models/PlatformLedger.model.js';
+import {
+  sellerScopeFilter,
+  sellerInScope,
+  getScopedSellerIds,
+  orderScopeFilter,
+  orderInScope,
+  captainScopeFilter,
+  captainInScope,
+  getScopedUserIds,
+  canAccessAllBrands,
+} from '../middleware/scopeMiddleware.js';
+
+// Combine a scope filter with a query ({} filter = consolidated scope = no restriction).
+const withScope = (f, q) => (f && Object.keys(f).length ? { $and: [f, q] } : q);
 import { processReferralReward } from './referralController.js';
-import { invalidateUserOrdersCache } from './orderController.js';
+import { invalidateUserOrdersCache, processSellerSettlement } from './orderController.js';
+import SellerNotification from '../models/SellerNotification.model.js';
 import { invalidateProductsCache } from './productController.js';
 import {
   mapOrderEventToNotificationType,
@@ -25,6 +40,14 @@ import {
 // ==========================================
 export const getDashboardStats = async (req, res, next) => {
   try {
+    const scope = req.scope || { isAll: true };
+    const sellerF = sellerScopeFilter(scope);
+    const orderF = await orderScopeFilter(scope);
+    const captainF = captainScopeFilter(scope);
+    const scopedSellerIds = await getScopedSellerIds(scope);
+    const productF = scope.isAll ? {} : { sellerId: { $in: scopedSellerIds || [] } };
+    const scopedUserIds = await getScopedUserIds(scope);
+    const userF = scopedUserIds === null ? {} : { _id: { $in: scopedUserIds } };
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
@@ -53,42 +76,42 @@ export const getDashboardStats = async (req, res, next) => {
       topSellers,
       weeklyOrdersAgg
     ] = await Promise.all([
-      User.countDocuments({ role: { $ne: 'admin' } }).catch(() => 0),
+      User.countDocuments(withScope(userF, { role: { $ne: 'admin' } })).catch(() => 0),
       Category.countDocuments({ parent: null }).catch(() => 0),
       Category.countDocuments({ parent: { $ne: null } }).catch(() => 0),
-      Product.countDocuments().catch(() => 0),
-      Product.countDocuments({ stock: { $lte: 0 } }).catch(() => 0),
-      Product.countDocuments({ stock: { $gt: 0, $lte: 5 } }).catch(() => 0),
-      Order.countDocuments({ $or: [{ paymentStatus: 'Paid' }, { paymentMethod: 'COD' }] }).catch(() => 0),
-      Order.countDocuments({ orderStatus: { $in: ['Delivered', 'Completed'] } }).catch(() => 0),
-      Order.countDocuments({ orderStatus: { $in: ['Placed', 'Processing', 'Out for Delivery'] } }).catch(() => 0),
-      Order.countDocuments({ orderStatus: 'Cancelled' }).catch(() => 0),
-      Seller.countDocuments().catch(() => 0),
-      Seller.countDocuments({ $or: [{ status: 'pending' }, { status: 'under_review' }, { accountStatus: 'under_review' }] }).catch(() => 0),
-      Captain.countDocuments().catch(() => 0),
-      Captain.countDocuments({ isOnline: true }).catch(() => 0),
+      Product.countDocuments(productF).catch(() => 0),
+      Product.countDocuments(withScope(productF, { stock: { $lte: 0 } })).catch(() => 0),
+      Product.countDocuments(withScope(productF, { stock: { $gt: 0, $lte: 5 } })).catch(() => 0),
+      Order.countDocuments(withScope(orderF, { $or: [{ paymentStatus: 'Paid' }, { paymentMethod: 'COD' }] })).catch(() => 0),
+      Order.countDocuments(withScope(orderF, { orderStatus: { $in: ['Delivered', 'Completed'] } })).catch(() => 0),
+      Order.countDocuments(withScope(orderF, { orderStatus: { $in: ['Placed', 'Processing', 'Out for Delivery'] } })).catch(() => 0),
+      Order.countDocuments(withScope(orderF, { orderStatus: 'Cancelled' })).catch(() => 0),
+      Seller.countDocuments(sellerF).catch(() => 0),
+      Seller.countDocuments(withScope(sellerF, { $or: [{ status: 'pending' }, { status: 'under_review' }, { accountStatus: 'under_review' }] })).catch(() => 0),
+      Captain.countDocuments(captainF).catch(() => 0),
+      Captain.countDocuments(withScope(captainF, { isOnline: true })).catch(() => 0),
       Order.aggregate([
-        { $match: { createdAt: { $gte: todayStart }, $or: [{ paymentStatus: 'Paid' }, { paymentMethod: 'COD' }] } },
+        { $match: withScope(orderF, { createdAt: { $gte: todayStart }, $or: [{ paymentStatus: 'Paid' }, { paymentMethod: 'COD' }] }) },
         { $group: { _id: null, total: { $sum: '$grandTotal' } } }
       ]).catch(() => []),
       Order.aggregate([
-        { $match: { $or: [{ paymentStatus: 'Paid' }, { paymentMethod: 'COD' }] } },
+        { $match: withScope(orderF, { $or: [{ paymentStatus: 'Paid' }, { paymentMethod: 'COD' }] }) },
         { $group: { _id: null, total: { $sum: '$grandTotal' } } }
       ]).catch(() => []),
-      Order.find()
+      Order.find(orderF)
         .populate('user', 'name phone email')
         .sort({ createdAt: -1 })
         .limit(10)
         .lean()
         .catch(() => []),
-      Seller.find()
+      Seller.find(sellerF)
         .select('businessName ownerName phone totalEarnings walletBalance status createdAt')
         .sort({ totalEarnings: -1, walletBalance: -1 })
         .limit(10)
         .lean()
         .catch(() => []),
       Order.aggregate([
-        { $match: { createdAt: { $gte: sevenDaysAgo }, $or: [{ paymentStatus: 'Paid' }, { paymentMethod: 'COD' }] } },
+        { $match: withScope(orderF, { createdAt: { $gte: sevenDaysAgo }, $or: [{ paymentStatus: 'Paid' }, { paymentMethod: 'COD' }] }) },
         {
           $group: {
             _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
@@ -160,10 +183,14 @@ export const getDashboardStats = async (req, res, next) => {
 
 export const getAllUsers = async (req, res, next) => {
   try {
+    const scope = req.scope || { isAll: true };
+    const orderF = await orderScopeFilter(scope);
+    const scopedUserIds = await getScopedUserIds(scope);
+    const userF = scopedUserIds === null ? {} : { _id: { $in: scopedUserIds } };
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = req.query.limit ? Number(req.query.limit) : 200;
 
-    let dbQuery = User.find({ role: { $ne: 'admin' } })
+    let dbQuery = User.find(withScope(userF, { role: { $ne: 'admin' } }))
       .select('-otp -otpExpiry')
       .sort({ createdAt: -1 })
       .lean();
@@ -174,8 +201,9 @@ export const getAllUsers = async (req, res, next) => {
 
     const [users, total, orderStatsAgg, returnOrders] = await Promise.all([
       dbQuery,
-      User.countDocuments({ role: { $ne: 'admin' } }),
+      User.countDocuments(withScope(userF, { role: { $ne: 'admin' } })),
       Order.aggregate([
+        { $match: orderF },
         {
           $group: {
             _id: '$user',
@@ -220,7 +248,7 @@ export const getAllUsers = async (req, res, next) => {
         console.error('[Admin] Error in orderStatsAgg:', err);
         return [];
       }),
-      Order.find({
+      Order.find(withScope(orderF, {
         $or: [
           {
             orderStatus: {
@@ -233,7 +261,7 @@ export const getAllUsers = async (req, res, next) => {
             }
           }
         ]
-      })
+      }))
         .populate('user', 'name phone email addresses')
         .sort({ updatedAt: -1, createdAt: -1 })
         .limit(100)
@@ -294,6 +322,11 @@ export const toggleUserBlock = async (req, res, next) => {
     const { id } = req.params;
     const { isBlocked, reason = '', status } = req.body;
     const adminIdentifier = req.user?.email || req.user?.name || 'Admin';
+
+    // Customer accounts are shared across brands, so blocking is a platform-wide action.
+    if (!(await canAccessAllBrands(req.user))) {
+      return res.status(403).json({ success: false, message: 'Forbidden: blocking a customer requires all-brand access' });
+    }
 
     const user = await User.findById(id);
     if (!user) {
@@ -359,12 +392,14 @@ export const invalidateCaptainsCache = () => { captainsCache = { data: null, tim
 export const getAllSellers = async (req, res, next) => {
   try {
     const now = Date.now();
-    // Cache for 15 seconds unless forced with ?fresh=true
-    if (!req.query.fresh && sellersCache.data && (now - sellersCache.timestamp < 15000)) {
+    const scope = req.scope || { isAll: true };
+    const cacheKey = scope.brandId || 'ALL';
+    // Cache for 15 seconds unless forced with ?fresh=true (cache is per brand scope)
+    if (!req.query.fresh && sellersCache.data && sellersCache.key === cacheKey && (now - sellersCache.timestamp < 15000)) {
       return res.status(200).json(sellersCache.data);
     }
 
-    const sellers = await Seller.find({})
+    const sellers = await Seller.find(sellerScopeFilter(scope))
       .select('-password -otp -otpExpiry -fcmTokens -fcmTokenMobile')
       .populate('referredBy', 'ownerName businessName phone email')
       .sort({ _id: -1 })
@@ -377,7 +412,7 @@ export const getAllSellers = async (req, res, next) => {
       sellers: sellers || []
     };
 
-    sellersCache = { data: payload, timestamp: now };
+    sellersCache = { data: payload, timestamp: now, key: cacheKey };
     return res.status(200).json(payload);
   } catch (error) {
     console.error('[Admin] Error fetching sellers:', error);
@@ -397,7 +432,7 @@ export const toggleSellerStatus = async (req, res, next) => {
     }
 
     const seller = await Seller.findById(id);
-    if (!seller) {
+    if (!seller || !sellerInScope(req.scope, seller)) {
       return res.status(404).json({ success: false, message: 'Seller not found' });
     }
 
@@ -512,7 +547,7 @@ export const updateSellerCommission = async (req, res, next) => {
     }
 
     const seller = await Seller.findById(id);
-    if (!seller) {
+    if (!seller || !sellerInScope(req.scope, seller)) {
       return res.status(404).json({ success: false, message: 'Seller not found' });
     }
 
@@ -538,15 +573,12 @@ export const deleteSeller = async (req, res, next) => {
     const { id } = req.params;
     let seller = null;
 
-    if (mongoose.Types.ObjectId.isValid(id)) {
-      seller = await Seller.findByIdAndDelete(id);
-    } else {
-      seller = await Seller.findOneAndDelete({
-        $or: [
-          { businessName: id },
-          { phone: id }
-        ]
-      });
+    const found = mongoose.Types.ObjectId.isValid(id)
+      ? await Seller.findById(id)
+      : await Seller.findOne({ $or: [{ businessName: id }, { phone: id }] });
+    if (found && sellerInScope(req.scope, found)) {
+      await Seller.deleteOne({ _id: found._id });
+      seller = found;
     }
 
     if (!seller) {
@@ -587,12 +619,14 @@ export const deleteSeller = async (req, res, next) => {
 export const getAllCaptains = async (req, res, next) => {
   try {
     const now = Date.now();
-    // Cache for 15 seconds unless forced with ?fresh=true
-    if (!req.query.fresh && captainsCache.data && (now - captainsCache.timestamp < 15000)) {
+    const scope = req.scope || { isAll: true };
+    const cacheKey = scope.brandId || 'ALL';
+    // Cache for 15 seconds unless forced with ?fresh=true (cache is per brand scope)
+    if (!req.query.fresh && captainsCache.data && captainsCache.key === cacheKey && (now - captainsCache.timestamp < 15000)) {
       return res.status(200).json(captainsCache.data);
     }
 
-    const captains = await Captain.find({})
+    const captains = await Captain.find(captainScopeFilter(scope))
       .select('_id name phone email alternateMobile dob age fatherName currentAddress permanentAddress emergencyContact city state pinCode vehicleType drivingLicenseNumber aadhaarNumber rcNumber vehicleInsuranceNumber insuranceValidTill panCardNumber bankDetails documents walletBalance cashCollected status accountStatus membershipStatus isVerified isOnline liveLocation workingArea createdAt updatedAt')
       .sort({ _id: -1 })
       .lean()
@@ -604,7 +638,7 @@ export const getAllCaptains = async (req, res, next) => {
       captains: captains || [],
     };
 
-    captainsCache = { data: payload, timestamp: now };
+    captainsCache = { data: payload, timestamp: now, key: cacheKey };
     return res.status(200).json(payload);
   } catch (error) {
     console.error('[Admin] Error fetching captains:', error);
@@ -624,7 +658,7 @@ export const toggleCaptainStatus = async (req, res, next) => {
     }
 
     const captain = await Captain.findById(id);
-    if (!captain) {
+    if (!captain || !captainInScope(req.scope, captain)) {
       return res.status(404).json({ success: false, message: 'Captain not found' });
     }
 
@@ -719,10 +753,11 @@ export const toggleCaptainStatus = async (req, res, next) => {
 export const deleteCaptain = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const captain = await Captain.findByIdAndDelete(id);
-    if (!captain) {
+    const existing = await Captain.findById(id);
+    if (!existing || !captainInScope(req.scope, existing)) {
       return res.status(404).json({ success: false, message: 'Captain not found' });
     }
+    const captain = await Captain.findByIdAndDelete(existing._id);
 
     invalidateCaptainsCache();
 
@@ -742,7 +777,7 @@ export const deleteCaptain = async (req, res, next) => {
 // Get available (online + approved) captains for assignment
 export const getAvailableCaptains = async (req, res, next) => {
   try {
-    const captains = await Captain.find({ status: 'approved', isOnline: true })
+    const captains = await Captain.find(withScope(captainScopeFilter(req.scope), { status: 'approved', isOnline: true }))
       .select('name phone vehicleType city workingArea liveLocation walletBalance')
       .sort({ createdAt: -1 })
       .lean();
@@ -764,7 +799,7 @@ export const assignCaptainToOrder = async (req, res, next) => {
     }
 
     const captain = await Captain.findById(captainId);
-    if (!captain) {
+    if (!captain || !captainInScope(req.scope, captain)) {
       return res.status(404).json({ success: false, message: 'Captain not found' });
     }
 
@@ -773,7 +808,7 @@ export const assignCaptainToOrder = async (req, res, next) => {
       isMongoId ? { $or: [{ _id: orderId }, { orderId }] } : { orderId }
     );
 
-    if (!order) {
+    if (!order || !(await orderInScope(req.scope, order))) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
@@ -835,7 +870,7 @@ export const assignCaptainToOrder = async (req, res, next) => {
 // Get all orders with captain assignment status (for admin order management)
 export const getAdminOrders = async (req, res, next) => {
   try {
-    const orders = await Order.find()
+    const orders = await Order.find(await orderScopeFilter(req.scope || { isAll: true }))
       .populate('user', 'name phone email')
       .populate('captainId', 'name phone vehicleType')
       .sort({ createdAt: -1 })
@@ -859,8 +894,12 @@ export const updateAdminOrderStatus = async (req, res, next) => {
       isMongoId ? { $or: [{ _id: orderId }, { orderId }] } : { orderId }
     );
 
-    if (!order) {
+    if (!order || !(await orderInScope(req.scope, order))) {
       return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (orderStatus && !Order.schema.path('orderStatus').enumValues.includes(orderStatus)) {
+      return res.status(400).json({ success: false, message: 'Invalid orderStatus: ' + orderStatus });
     }
 
     if (orderStatus) order.orderStatus = orderStatus;
@@ -876,6 +915,22 @@ export const updateAdminOrderStatus = async (req, res, next) => {
     }
 
     await order.save();
+
+    // Delivered by an admin must reach the sellers and the finance ledger exactly like a seller-side
+    // delivery: mark the seller notifications delivered/paid and run the (atomic, idempotent)
+    // settlement that credits the seller wallet and writes the SELLER_EARNING / PLATFORM_COMMISSION rows.
+    if (orderStatus === 'Delivered') {
+      try {
+        await SellerNotification.updateMany(
+          { order: order._id },
+          { $set: { status: 'DELIVERED', ...(order.paymentStatus === 'Paid' ? { paymentStatus: 'Paid' } : {}) } }
+        );
+        const pending = await SellerNotification.find({ order: order._id, settlementStatus: 'PENDING' }).select('_id').lean();
+        for (const n of pending) await processSellerSettlement(n._id);
+      } catch (settleErr) {
+        console.warn('[Admin] Settlement after admin delivery failed:', settleErr.message);
+      }
+    }
 
     const notifType = mapOrderEventToNotificationType({
       orderStatus: order.orderStatus,
@@ -909,7 +964,7 @@ export const getUserOrdersForAdmin = async (req, res, next) => {
     const { userId } = req.params;
 
     const isMongoId = mongoose.Types.ObjectId.isValid(userId);
-    const filter = isMongoId ? { user: userId } : { user: userId };
+    const filter = withScope(await orderScopeFilter(req.scope || { isAll: true }), isMongoId ? { user: userId } : { user: userId });
 
     const orders = await Order.find(filter)
       .populate('captainId', 'name phone vehicleType')
@@ -937,7 +992,7 @@ export const updateReturnOrderStatus = async (req, res, next) => {
       isMongoId ? { $or: [{ _id: orderId }, { orderId }] } : { orderId }
     );
 
-    if (!order) {
+    if (!order || !(await orderInScope(req.scope, order))) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
@@ -978,7 +1033,7 @@ export const updateSellerDetails = async (req, res, next) => {
     }
 
     const seller = await Seller.findById(id);
-    if (!seller) {
+    if (!seller || !sellerInScope(req.scope, seller)) {
       return res.status(404).json({ success: false, message: 'Seller not found' });
     }
 
@@ -1039,7 +1094,7 @@ export const updateCaptainDetails = async (req, res, next) => {
     }
 
     const captain = await Captain.findById(id);
-    if (!captain) {
+    if (!captain || !captainInScope(req.scope, captain)) {
       return res.status(404).json({ success: false, message: 'Captain not found' });
     }
 
@@ -1083,6 +1138,12 @@ export const getCaptainCashSettlements = async (req, res, next) => {
     if (status && status !== 'ALL') {
       query.status = status;
     }
+    const scope = req.scope || { isAll: true };
+    let scopedCaptainIds = null;
+    if (!scope.isAll) {
+      scopedCaptainIds = (await Captain.find(captainScopeFilter(scope)).select('_id').lean()).map((c) => c._id);
+      query.captainId = { $in: scopedCaptainIds };
+    }
 
     const settlements = await CaptainCashSettlement.find(query)
       .populate('captainId', 'name phone email city vehicleType outstandingCash cashCollected totalCodCollected')
@@ -1092,6 +1153,7 @@ export const getCaptainCashSettlements = async (req, res, next) => {
     // Summary calculations across all settlements and captains
     const [captainsSummary, pendingAgg, approvedAgg] = await Promise.all([
       Captain.aggregate([
+        { $match: captainScopeFilter(scope) },
         {
           $group: {
             _id: null,
@@ -1102,11 +1164,11 @@ export const getCaptainCashSettlements = async (req, res, next) => {
         },
       ]).catch(() => []),
       CaptainCashSettlement.aggregate([
-        { $match: { status: 'PENDING' } },
+        { $match: withScope(scopedCaptainIds ? { captainId: { $in: scopedCaptainIds } } : {}, { status: 'PENDING' }) },
         { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
       ]).catch(() => []),
       CaptainCashSettlement.aggregate([
-        { $match: { status: 'APPROVED' } },
+        { $match: withScope(scopedCaptainIds ? { captainId: { $in: scopedCaptainIds } } : {}, { status: 'APPROVED' }) },
         { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
       ]).catch(() => []),
     ]);
@@ -1152,6 +1214,9 @@ export const processCaptainCashSettlement = async (req, res, next) => {
     }
 
     const captain = await Captain.findById(settlement.captainId);
+    if (captain && !captainInScope(req.scope, captain)) {
+      return res.status(404).json({ success: false, message: 'Settlement request not found' });
+    }
     if (!captain) {
       return res.status(404).json({ success: false, message: 'Captain associated with this settlement was not found' });
     }

@@ -200,6 +200,32 @@ orderSchema.index({ captainId: 1, captainStatus: 1 });
 orderSchema.index({ captainId: 1, createdAt: -1 });
 orderSchema.index({ orderStatus: 1, createdAt: -1 });
 orderSchema.index({ paymentStatus: 1, createdAt: -1 });
+// Record the customer payment in the central ledger whenever an order becomes Paid
+// (idempotent; covers save() and findOneAndUpdate()/updateOne() paths used across controllers).
+const touchesPaid = (update) => /"paymentStatus":"Paid"/.test(JSON.stringify(update || {}));
+orderSchema.pre('save', function () {
+  this.$locals.becamePaid = this.paymentStatus === 'Paid' && (this.isNew || this.isModified('paymentStatus'));
+});
+orderSchema.post('save', function (doc) {
+  if (this.$locals?.becamePaid) {
+    import('../utils/ledgerHelper.js').then((m) => m.recordCustomerPayment(doc._id)).catch(() => {});
+  }
+});
+orderSchema.pre(['findOneAndUpdate', 'updateOne'], function () {
+  this._paidTouch = touchesPaid(this.getUpdate());
+});
+orderSchema.post('findOneAndUpdate', function (doc) {
+  if (this._paidTouch && doc?._id) {
+    import('../utils/ledgerHelper.js').then((m) => m.recordCustomerPayment(doc._id)).catch(() => {});
+  }
+});
+orderSchema.post('updateOne', function () {
+  const id = this.getFilter()?._id;
+  if (this._paidTouch && id) {
+    import('../utils/ledgerHelper.js').then((m) => m.recordCustomerPayment(id)).catch(() => {});
+  }
+});
+
 orderSchema.index({ sellerStatus: 1, createdAt: -1 });
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ 'razorpay.orderId': 1 }, { partialFilterExpression: { 'razorpay.orderId': { $type: 'string' } } });

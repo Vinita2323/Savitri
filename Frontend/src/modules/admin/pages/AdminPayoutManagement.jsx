@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import API from '../../../services/api';
 import { useDebounce } from '../../../hooks/useDebounce';
+import { subscribeLedgerChanges } from '../../../services/financeSocket';
 import {
   Search,
   Store,
@@ -150,6 +151,17 @@ const PayoutManagement = ({ recipientType }) => {
   }, [page, recipientType, statusFilter, debouncedSearch, startDate, endDate]);
 
   useEffect(() => { fetchPayouts(); }, [fetchPayouts]);
+
+  // Real time: payout requests / status changes push a ping; quiet refetch (30s poll as fallback).
+  const fetchRef = React.useRef(fetchPayouts);
+  useEffect(() => { fetchRef.current = fetchPayouts; }, [fetchPayouts]);
+  useEffect(() => {
+    let debounce;
+    const bump = () => { clearTimeout(debounce); debounce = setTimeout(() => fetchRef.current(true), 400); };
+    const unsubscribe = subscribeLedgerChanges(bump);
+    const poll = setInterval(() => { if (document.visibilityState === 'visible') bump(); }, 30000);
+    return () => { clearTimeout(debounce); clearInterval(poll); unsubscribe(); };
+  }, []);
 
   const openAction = (payout, action) => {
     setSelectedPayout(payout);

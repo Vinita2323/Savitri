@@ -8,8 +8,8 @@ const router = express.Router();
 router.get('/', getCategories);
 
 // Protected routes for Admin to manage categories
-router.post('/', protect('admin'), createCategory);
-router.put('/:id', protect('admin'), updateCategory);
-router.delete('/:id', protect('admin'), deleteCategory);
+router.post('/', protect('admin', 'super_admin'), createCategory);
+router.put('/:id', protect('admin', 'super_admin'), updateCategory);
+router.delete('/:id', protect('admin', 'super_admin'), deleteCategory);
 
 export default router;

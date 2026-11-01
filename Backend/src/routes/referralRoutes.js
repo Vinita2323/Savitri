@@ -28,11 +28,11 @@ router.get('/captain/code', protect('captain'), getCaptainReferralCode);
 router.get('/captain/my', protect('captain'), getCaptainReferrals);
 
 // ── Admin Routes ──────────────────────────────────────────────────────────────
-router.get('/admin/settings', protect('admin'), getReferralSettings);
-router.put('/admin/settings', protect('admin'), updateReferralSettings);
-router.get('/admin/stats', protect('admin'), getReferralStats);
-router.get('/admin/all', protect('admin'), getAllReferrals);
-router.put('/admin/:id/approve', protect('admin'), adminUpdateReferralStatus);
-router.post('/admin/:id/credit', protect('admin'), adminCreditReferralReward);
+router.get('/admin/settings', protect('admin', 'super_admin'), getReferralSettings);
+router.put('/admin/settings', protect('admin', 'super_admin'), updateReferralSettings);
+router.get('/admin/stats', protect('admin', 'super_admin'), getReferralStats);
+router.get('/admin/all', protect('admin', 'super_admin'), getAllReferrals);
+router.put('/admin/:id/approve', protect('admin', 'super_admin'), adminUpdateReferralStatus);
+router.post('/admin/:id/credit', protect('admin', 'super_admin'), adminCreditReferralReward);
 
 export default router;

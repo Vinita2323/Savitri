@@ -1252,7 +1252,8 @@ export const getOrderById = async (req, res, next) => {
       .populate('captainId', 'name phone vehicleType liveLocation')
       .populate('items.product', 'name mainImage image price salePrice');
 
-    if (!order) {
+    // Ownership: customers may only read their own orders (404 avoids disclosing existence).
+    if (!order || String(order.user?._id || order.user) !== String(req.user.id)) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
@@ -1402,7 +1403,7 @@ export const markNotificationViewed = async (req, res, next) => {
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return res.status(404).json({ success: false, message: 'Notification not found' });
     }
-    const notification = await SellerNotification.findById(id);
+    const notification = await SellerNotification.findOne({ _id: id, sellerId: req.user.id });
 
     if (!notification) {
       return res.status(404).json({ success: false, message: 'Notification not found' });
@@ -1433,7 +1434,7 @@ export const acceptSellerOrder = async (req, res, next) => {
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return res.status(404).json({ success: false, message: 'Order notification not found' });
     }
-    const notification = await SellerNotification.findById(id);
+    const notification = await SellerNotification.findOne({ _id: id, sellerId: req.user.id });
 
     if (!notification) {
       return res.status(404).json({ success: false, message: 'Order notification not found' });
@@ -1521,7 +1522,7 @@ export const rejectSellerOrder = async (req, res, next) => {
       ? customReason.trim()
       : (rejectionReason || 'Unable to fulfill order');
 
-    const notification = await SellerNotification.findById(id);
+    const notification = await SellerNotification.findOne({ _id: id, sellerId: req.user.id });
 
     if (!notification) {
       return res.status(404).json({ success: false, message: 'Order notification not found' });
@@ -1599,7 +1600,7 @@ export const updateSellerOrderStatus = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Status is required' });
     }
 
-    const notification = await SellerNotification.findById(id);
+    const notification = await SellerNotification.findOne({ _id: id, sellerId: req.user.id });
     if (!notification) {
       return res.status(404).json({ success: false, message: 'Order notification not found' });
     }

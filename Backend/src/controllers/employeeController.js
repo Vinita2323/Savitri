@@ -6,6 +6,10 @@ import LeaveRequest from '../models/LeaveRequest.model.js';
 import Shift from '../models/Shift.model.js';
 import Holiday from '../models/Holiday.model.js';
 
+// Brand check for by-id access (IDOR protection). Consolidated scope (isAll) sees every brand;
+// otherwise the record must belong to the validated brand. Callers answer 404 on failure.
+const inBrand = (req, doc) => !req.scope || req.scope.isAll || (doc && doc.brandId === req.scope.brandId);
+
 // Helper: Format Date to YYYY-MM-DD
 const toDateString = (d = new Date()) => {
   const date = new Date(d);
@@ -229,7 +233,7 @@ export const getEmployeeById = async (req, res) => {
     const { id } = req.params;
     const employee = await Employee.findById(id).lean();
 
-    if (!employee) {
+    if (!employee || !inBrand(req, employee)) {
       return res.status(404).json({ success: false, message: 'Employee not found.' });
     }
 
@@ -337,6 +341,12 @@ export const updateEmployee = async (req, res) => {
 
     delete updates.employeeId; // Immutable ID
 
+    const current = await Employee.findById(id).select('brandId').lean();
+    if (!current || !inBrand(req, current)) {
+      return res.status(404).json({ success: false, message: 'Employee not found.' });
+    }
+    delete updates._id;
+
     const updated = await Employee.findByIdAndUpdate(id, updates, { new: true });
     if (!updated) {
       return res.status(404).json({ success: false, message: 'Employee not found.' });
@@ -358,7 +368,7 @@ export const toggleEmployeeStatus = async (req, res) => {
     const { status } = req.body;
 
     const emp = await Employee.findById(id);
-    if (!emp) {
+    if (!emp || !inBrand(req, emp)) {
       return res.status(404).json({ success: false, message: 'Employee not found.' });
     }
 
@@ -458,6 +468,9 @@ export const checkIn = async (req, res) => {
         { employeeId: employeeId },
       ],
     });
+    if (emp && !inBrand(req, emp)) {
+      return res.status(404).json({ success: false, message: 'Employee not found.' });
+    }
 
     if (!emp) {
       return res.status(404).json({ success: false, message: 'Employee not found.' });
@@ -553,6 +566,9 @@ export const checkOut = async (req, res) => {
         { employeeId: employeeId },
       ],
     });
+    if (emp && !inBrand(req, emp)) {
+      return res.status(404).json({ success: false, message: 'Employee not found.' });
+    }
 
     if (!emp) {
       return res.status(404).json({ success: false, message: 'Employee not found.' });
@@ -617,7 +633,7 @@ export const requestOrApproveCorrection = async (req, res) => {
     const { checkIn, checkOut, status, reason } = req.body;
 
     const attendance = await Attendance.findById(id);
-    if (!attendance) {
+    if (!attendance || !inBrand(req, attendance)) {
       return res.status(404).json({ success: false, message: 'Attendance record not found.' });
     }
 
@@ -796,7 +812,7 @@ export const updateTaskStatus = async (req, res) => {
     const { status, completionNotes, progressPercent } = req.body;
 
     const task = await EmployeeTask.findById(id);
-    if (!task) {
+    if (!task || !inBrand(req, task)) {
       return res.status(404).json({ success: false, message: 'Task not found.' });
     }
 
@@ -833,7 +849,7 @@ export const addTaskComment = async (req, res) => {
     }
 
     const task = await EmployeeTask.findById(id);
-    if (!task) {
+    if (!task || !inBrand(req, task)) {
       return res.status(404).json({ success: false, message: 'Task not found.' });
     }
 
@@ -911,7 +927,7 @@ export const submitLeaveRequest = async (req, res) => {
     }
 
     const emp = await Employee.findById(employeeId);
-    if (!emp) {
+    if (!emp || !inBrand(req, emp)) {
       return res.status(404).json({ success: false, message: 'Employee not found.' });
     }
 
@@ -967,7 +983,7 @@ export const reviewLeaveRequest = async (req, res) => {
     }
 
     const leave = await LeaveRequest.findById(id);
-    if (!leave) {
+    if (!leave || !inBrand(req, leave)) {
       return res.status(404).json({ success: false, message: 'Leave request not found.' });
     }
 

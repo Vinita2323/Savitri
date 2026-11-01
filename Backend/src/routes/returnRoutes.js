@@ -1,5 +1,6 @@
 import express from 'express';
 import { protect } from '../middleware/authMiddleware.js';
+import { scopeUnlessSeller } from '../utils/accessControl.js';
 import {
   requestItemReturn,
   getMyReturns,
@@ -39,12 +40,12 @@ router.post('/captain/:id/verify-otp', protect('captain'), captainVerifyReturnOt
 router.put('/captain/:id/fail-inspection', protect('captain'), captainFailReturnInspection);
 
 // ── Admin Routes ──
-router.get('/admin/all', protect('admin'), getAdminReturns);
-router.put('/admin/:id/approve', protect('admin'), approveOrRejectReturn);
-router.put('/admin/:id/assign-captain', protect('admin'), adminAssignCaptain);
-router.put('/admin/:id/verify', protect('admin'), verifyReturnedProduct);
+router.get('/admin/all', protect('admin', 'super_admin'), scopeUnlessSeller, getAdminReturns);
+router.put('/admin/:id/approve', protect('admin', 'super_admin'), scopeUnlessSeller, approveOrRejectReturn);
+router.put('/admin/:id/assign-captain', protect('admin', 'super_admin'), scopeUnlessSeller, adminAssignCaptain);
+router.put('/admin/:id/verify', protect('admin', 'super_admin'), scopeUnlessSeller, verifyReturnedProduct);
 
 // ── Common Return Detail (Role authorized inside controller) ──
-router.get('/:id', protect('user', 'seller', 'captain', 'admin'), getReturnById);
+router.get('/:id', protect('user', 'seller', 'captain', 'admin', 'super_admin'), scopeUnlessSeller, getReturnById);
 
 export default router;

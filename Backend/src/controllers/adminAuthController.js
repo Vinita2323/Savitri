@@ -1,4 +1,5 @@
 import Admin from '../models/Admin.model.js';
+import { isAdminAccountActive } from '../middleware/authMiddleware.js';
 import { generateToken } from '../utils/generateToken.js';
 import {
   ADMIN_AUTH_COOKIE,
@@ -31,7 +32,7 @@ export const adminLogin = async (req, res, next) => {
   try {
     const { email, password, rememberMe = false } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
       return res.status(400).json({
         success: false,
         message: 'Please provide both email and password',
@@ -56,12 +57,20 @@ export const adminLogin = async (req, res, next) => {
       });
     }
 
+    if (!isAdminAccountActive(admin)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Account is inactive or suspended',
+      });
+    }
+
     const remember = Boolean(rememberMe);
     const token = generateToken(
       {
         id: admin._id,
         email: admin.email,
         role: admin.role,
+        tokenVersion: admin.tokenVersion || 0,
         rememberMe: remember,
       },
       remember ? ADMIN_REMEMBER_TTL : ADMIN_SESSION_TTL
@@ -174,6 +183,8 @@ export const updateAdminProfile = async (req, res, next) => {
     const pwdToSet = newPassword || password;
     if (pwdToSet && typeof pwdToSet === 'string' && pwdToSet.trim().length >= 4) {
       admin.password = pwdToSet.trim();
+      // A password change revokes every previously issued token; the fresh token below carries the new version.
+      admin.tokenVersion = (admin.tokenVersion || 0) + 1;
     }
 
     await admin.save();
@@ -184,6 +195,7 @@ export const updateAdminProfile = async (req, res, next) => {
         id: admin._id,
         email: admin.email,
         role: admin.role,
+        tokenVersion: admin.tokenVersion || 0,
         rememberMe: remember,
       },
       remember ? ADMIN_REMEMBER_TTL : ADMIN_SESSION_TTL

@@ -97,6 +97,17 @@ const payoutRequestSchema = new mongoose.Schema(
   }
 );
 
+// Keep the requester's own records and every open admin dashboard in sync (see utils/payoutSync.js).
+payoutRequestSchema.pre('save', function () {
+  this.$locals.wasNew = this.isNew;
+  this.$locals.statusChanged = !this.isNew && this.isModified('status');
+});
+payoutRequestSchema.post('save', function (doc) {
+  const flags = { wasNew: Boolean(this.$locals?.wasNew), statusChanged: Boolean(this.$locals?.statusChanged) };
+  if (!flags.wasNew && !flags.statusChanged) return;
+  import('../utils/payoutSync.js').then((m) => m.onPayoutSaved(doc, flags)).catch((e) => console.warn('[PayoutSync]', e.message));
+});
+
 payoutRequestSchema.index({ recipientType: 1, status: 1, createdAt: -1 });
 payoutRequestSchema.index({ recipientId: 1, createdAt: -1 });
 payoutRequestSchema.index({ status: 1, paidAt: -1 });

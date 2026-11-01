@@ -3,8 +3,11 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { uploadToCloudinary } from '../config/cloudinary.js';
+import { simpleRateLimit } from '../middleware/simpleRateLimit.js';
 
 const router = express.Router();
+// Uploads stay public (seller/captain registration uploads happen before login) but are rate limited per IP.
+router.use(simpleRateLimit({ windowMs: 60_000, max: 60 }));
 
 // Supported subfolders for clean organization
 const ALLOWED_FOLDERS = ['banners', 'products', 'categories', 'profiles', 'reviews', 'transport', 'misc'];

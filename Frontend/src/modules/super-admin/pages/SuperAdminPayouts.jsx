@@ -4,6 +4,7 @@ import { SuperAdminHeader } from '../components/SuperAdminHeader';
 import { useSuperAdmin } from '../context/SuperAdminContext';
 import { superAdminService } from '../../../services/superAdminService';
 import { useDebounce } from '../../../hooks/useDebounce';
+import { subscribeLedgerChanges } from '../../../services/financeSocket';
 import {
   Search,
   Filter,
@@ -124,6 +125,30 @@ export const SuperAdminPayouts = ({ fixedRecipientType } = {}) => {
     fetchPayouts();
   }, [fetchPayouts]);
 
+  // Real time: a new payout request, approval, rejection or payment pushes a ping and the list refetches
+  // quietly (no spinner). A 30s poll covers an unavailable socket.
+  const [liveConnected, setLiveConnected] = useState(false);
+  const fetchRef = React.useRef(fetchPayouts);
+  useEffect(() => {
+    fetchRef.current = fetchPayouts;
+  }, [fetchPayouts]);
+  useEffect(() => {
+    let debounce;
+    const bump = () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => fetchRef.current(true), 400);
+    };
+    const unsubscribe = subscribeLedgerChanges(bump, setLiveConnected);
+    const poll = setInterval(() => {
+      if (document.visibilityState === 'visible') bump();
+    }, 30000);
+    return () => {
+      clearTimeout(debounce);
+      clearInterval(poll);
+      unsubscribe();
+    };
+  }, []);
+
   // Open detailed view modal & fetch recipient complete ledger stats
   const handleOpenDetail = async (payout) => {
     setSelectedPayout(payout);
@@ -238,7 +263,7 @@ export const SuperAdminPayouts = ({ fixedRecipientType } = {}) => {
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col font-sans">
       <SuperAdminHeader
         title="Payout Requests Governance"
-        subtitle="Exclusive authorization, review, and bank settlement execution for Sellers and Captains"
+        subtitle={`Exclusive authorization, review, and bank settlement execution for Sellers and Captains - ${liveConnected ? "Real-time updates on" : "Auto-refresh every 30s"}`}
         onRefresh={() => fetchPayouts(true)}
         refreshing={refreshing}
       />

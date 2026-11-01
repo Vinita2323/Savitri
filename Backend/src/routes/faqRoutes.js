@@ -1,3 +1,4 @@
+import { protect } from '../middleware/authMiddleware.js';
 import express from 'express';
 import {
   getPublicFaqs,
@@ -13,9 +14,9 @@ const router = express.Router();
 router.get('/', getPublicFaqs);
 
 // Admin routes
-router.get('/admin', getAdminFaqs);
-router.post('/', createFaq);
-router.put('/:id', updateFaq);
-router.delete('/:id', deleteFaq);
+router.get('/admin', protect('admin', 'super_admin'), getAdminFaqs);
+router.post('/', protect('admin', 'super_admin'), createFaq);
+router.put('/:id', protect('admin', 'super_admin'), updateFaq);
+router.delete('/:id', protect('admin', 'super_admin'), deleteFaq);
 
 export default router;

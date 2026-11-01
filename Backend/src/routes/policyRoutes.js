@@ -14,8 +14,8 @@ router.get('/', getPolicies);
 router.get('/:target/:type', getPolicyByTargetAndType);
 
 // Admin management routes to create / edit / update policies
-router.post('/', protect('admin'), saveOrUpdatePolicy);
-router.put('/', protect('admin'), saveOrUpdatePolicy);
-router.delete('/:id', protect('admin'), deletePolicy);
+router.post('/', protect('admin', 'super_admin'), saveOrUpdatePolicy);
+router.put('/', protect('admin', 'super_admin'), saveOrUpdatePolicy);
+router.delete('/:id', protect('admin', 'super_admin'), deletePolicy);
 
 export default router;

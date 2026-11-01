@@ -57,11 +57,20 @@ import compression from 'compression';
 import performanceLogger from './middleware/performanceMiddleware.js';
 
 import { fileURLToPath } from 'url';
+import { assertJwtConfigured } from './utils/jwtConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// Fail fast: never run with a missing or placeholder JWT secret.
+try {
+  assertJwtConfigured();
+} catch (err) {
+  console.error(err.message);
+  process.exit(1);
+}
 
 const app = express();
 
