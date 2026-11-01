@@ -35,7 +35,6 @@ export const getAllBrands = async (req, res, next) => {
     if (!(await canAccessAllBrands(req.user))) {
       filter.brandId = { $in: Array.isArray(req.user?.authorizedBrands) ? req.user.authorizedBrands : [] };
     }
-
     const brands = await Brand.find(filter)
       .sort({ isDefault: -1, status: 1, createdAt: -1 })
       .lean();

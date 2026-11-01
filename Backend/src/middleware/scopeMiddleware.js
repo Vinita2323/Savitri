@@ -299,7 +299,6 @@ const singleAssignedBrand = async (user) => {
   if (list && list.length === 1 && list[0] !== '*') return list[0];
   return null;
 };
-
 /** Mongo filter selecting the sellers (stores) that belong to a scope. {} for consolidated scope. */
 export const sellerScopeFilter = (scope) => {
   if (!scope || scope.isAll) return {};

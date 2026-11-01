@@ -224,7 +224,6 @@ export const SuperAdminTransactions = ({ fixedCategory, pageTitle } = {}) => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBrandId, page, filters, reload, fixedCategory]);
-
   // Real time: refetch when the backend reports a ledger change (new payment, settlement, payout, refund...),
   // plus a 30s safety poll while the tab is visible in case the socket is unavailable.
   useEffect(() => {

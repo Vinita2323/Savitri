@@ -798,6 +798,21 @@ export const rejectPayout = async (req, res, next) => {
       }
     }
 
+    // Verify scope authorization
+    if (!scope.isAll) {
+      if (payout.recipientType === 'SELLER') {
+        const s = await Seller.findById(payout.recipientId).lean();
+        if (!sellerInScope(scope, s)) {
+          return res.status(403).json({ success: false, message: 'Action forbidden: Recipient outside your authorized regional scope.' });
+        }
+      } else if (payout.recipientType === 'CAPTAIN') {
+        const c = await Captain.findById(payout.recipientId).lean();
+        if (c?.city && !getCityRegex(scope.city).test(c.city)) {
+          return res.status(403).json({ success: false, message: 'Action forbidden: Recipient outside your authorized regional scope.' });
+        }
+      }
+    }
+
     const previousStatus = payout.status;
     const refundAmt = payout.requestedAmount;
 
@@ -934,7 +949,6 @@ export const processPayout = async (req, res, next) => {
         );
       }
     } catch (_) {}
-
     // Brand of the recipient for ledger scoping (the active scope may be consolidated 'ALL')
     let ledgerBrandId = scope.isAll ? '' : scope.brandId;
     let ledgerCity = scope.city;
