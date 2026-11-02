@@ -79,8 +79,9 @@ const SuperAdminEmployeeWrapper = ({ Component, currentTab }) => {
 
 const SuperAdminQuotationWrapper = ({ Component }) => {
   const navigate = useNavigate();
+  const { selectedBrandId } = useSuperAdmin();
   return (
-    <QuotationProvider>
+    <QuotationProvider brandKey={selectedBrandId}>
       <Component
         onNavigate={(tab, data) => {
           const cleanTab = tab ? tab.replace(/^\//, '') : 'quotations';
@@ -110,8 +111,9 @@ const SuperAdminDeliveryChallanWrapper = ({ Component }) => {
 const SuperAdminProformaInvoiceWrapper = ({ Component }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { selectedBrandId } = useSuperAdmin();
   return (
-    <QuotationProvider>
+    <QuotationProvider brandKey={selectedBrandId}>
       <ProformaInvoiceProvider>
         <Component
           onNavigate={(tab, data) => {

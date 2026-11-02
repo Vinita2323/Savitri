@@ -59,7 +59,7 @@ export const QuotationRequests = ({ onNavigate }) => {
 
   const handleConfirmReject = () => {
     if (!rejectDialogRequest) return;
-    rejectQuotationRequest(rejectDialogRequest.id, rejectReason || 'Inquiry outside supply scope');
+    rejectQuotationRequest(rejectDialogRequest.id, rejectReason || 'Inquiry outside supply scope').catch((e) => alert(e.message));
     setRejectDialogRequest(null);
     setRejectReason('');
   };
@@ -260,7 +260,7 @@ export const QuotationRequests = ({ onNavigate }) => {
                         {req.status === 'Pending' && (
                           <button
                             type="button"
-                            onClick={() => updateRequestStatus(req.id, 'Under Review')}
+                            onClick={() => updateRequestStatus(req.id, 'Under Review').catch((e) => alert(e.message))}
                             title="Mark as Under Review"
                             className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 cursor-pointer border-none bg-transparent"
                           >

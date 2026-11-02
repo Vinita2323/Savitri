@@ -24,7 +24,9 @@ export const QuotationDetails = ({ onNavigate }) => {
     getQuotationById,
     setEditingQuotationId,
     sendQuotationEmail,
+    updateQuotationStatus,
   } = useQuotations();
+  const [statusError, setStatusError] = useState('');
 
   // Email dialog state
   const [showEmailDialog, setShowEmailDialog] = useState(false);
@@ -164,6 +166,36 @@ export const QuotationDetails = ({ onNavigate }) => {
               <span>Email: {quotation.emailStatus}</span>
             </span>
           )}
+
+          {/* Record the buyer's response (server validates the transition) */}
+          {['Sent', 'Under Review', 'Revision Requested', 'Accepted'].includes(quotation.status) && (
+            <select
+              value=""
+              onChange={async (e) => {
+                const next = e.target.value;
+                if (!next) return;
+                setStatusError('');
+                try {
+                  await updateQuotationStatus(quotation.id, next, next === 'Rejected' ? 'Rejected by buyer' : '');
+                } catch (err) {
+                  setStatusError(err.message);
+                }
+              }}
+              className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-800 text-xs font-bold cursor-pointer"
+              title="Record buyer response"
+            >
+              <option value="">Record buyer response…</option>
+              {(quotation.status === 'Accepted'
+                ? ['Converted to Order']
+                : ['Under Review', 'Revision Requested', 'Accepted', 'Rejected', 'Expired']
+              )
+                .filter((s) => s !== quotation.status)
+                .map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+            </select>
+          )}
+          {statusError && <span className="text-xs font-semibold text-rose-600">{statusError}</span>}
 
           {quotation.status === 'Draft' && (
             <button

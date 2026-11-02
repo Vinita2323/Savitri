@@ -49,13 +49,17 @@ export const AcceptedQuotations = ({ onNavigate }) => {
     0
   );
 
-  const handleConvertToOrder = (q) => {
+  const handleConvertToOrder = async (q) => {
     if (q.convertedOrderId) {
       showToast(`Quotation already converted to Order ${q.convertedOrderId}.`);
       return;
     }
-    const orderId = convertToOrder(q.id);
-    showToast(`Success! Quotation ${q.quotationNumber} converted to Purchase Order: ${orderId}`);
+    try {
+      const orderId = await convertToOrder(q.id);
+      showToast(`Success! Quotation ${q.quotationNumber} converted to Purchase Order: ${orderId}`);
+    } catch (err) {
+      showToast(err.message);
+    }
   };
 
   const handleView = (q) => {

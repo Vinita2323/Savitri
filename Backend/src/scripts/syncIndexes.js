@@ -44,12 +44,16 @@ import Cart from '../models/Cart.model.js';
 import Wishlist from '../models/Wishlist.model.js';
 import Faq from '../models/Faq.model.js';
 import SupportSetting from '../models/SupportSetting.model.js';
+import Quotation from '../models/Quotation.model.js';
+import QuotationRequest from '../models/QuotationRequest.model.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const models = [
+  { name: 'Quotation', model: Quotation },
+  { name: 'QuotationRequest', model: QuotationRequest },
   { name: 'User', model: User },
   { name: 'Seller', model: Seller },
   { name: 'Captain', model: Captain },

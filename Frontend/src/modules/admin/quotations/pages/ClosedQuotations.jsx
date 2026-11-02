@@ -38,11 +38,15 @@ export const ClosedQuotations = ({ onNavigate }) => {
       });
   }, [quotations, search, filterType]);
 
-  const handleDuplicate = (id) => {
-    const dup = duplicateQuotation(id);
-    if (dup) {
-      alert(`Created fresh new Draft from closed bid: ${dup.quotationNumber}`);
-      onNavigate('quotations');
+  const handleDuplicate = async (id) => {
+    try {
+      const dup = await duplicateQuotation(id);
+      if (dup) {
+        alert(`Created fresh new Draft from closed bid: ${dup.quotationNumber}`);
+        onNavigate('quotations');
+      }
+    } catch (err) {
+      alert(err.message);
     }
   };
 

@@ -33,6 +33,9 @@ export const QuotationList = ({ onNavigate }) => {
     duplicateQuotation,
     deleteQuotation,
     sendQuotationEmail,
+    loading,
+    loadError,
+    refresh,
   } = useQuotations();
 
   // Filter States
@@ -132,10 +135,12 @@ export const QuotationList = ({ onNavigate }) => {
     setPreviewModalQuote(q);
   };
 
-  const handleDuplicate = (id) => {
-    const dup = duplicateQuotation(id);
-    if (dup) {
-      showToast(`Quotation duplicated as new Draft: ${dup.quotationNumber}`);
+  const handleDuplicate = async (id) => {
+    try {
+      const dup = await duplicateQuotation(id);
+      if (dup) showToast(`Quotation duplicated as new Draft: ${dup.quotationNumber}`);
+    } catch (err) {
+      showToast(err.message);
     }
   };
 
@@ -156,15 +161,29 @@ export const QuotationList = ({ onNavigate }) => {
     setSendDialogQuote(null);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteDialogQuote) return;
-    deleteQuotation(deleteDialogQuote.id);
-    showToast(`Draft quotation ${deleteDialogQuote.quotationNumber} permanently deleted.`);
+    const target = deleteDialogQuote;
     setDeleteDialogQuote(null);
+    try {
+      await deleteQuotation(target.id);
+      showToast(`Draft quotation ${target.quotationNumber} permanently deleted.`);
+    } catch (err) {
+      showToast(err.message);
+    }
   };
 
   return (
     <div className="space-y-6 pb-12 font-sans">
+      {loadError && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
+          <span>{loadError}</span>
+          <button type="button" onClick={refresh} className="cursor-pointer rounded-lg border border-rose-200 bg-white px-3 py-1 text-rose-700">Retry</button>
+        </div>
+      )}
+      {loading && !loadError && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-500">Loading quotations…</div>
+      )}
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center justify-between gap-3 rounded-xl bg-slate-900 px-4 py-3 text-xs font-semibold text-white shadow-xl animate-bounce">

@@ -307,7 +307,7 @@ export const CreateQuotation = ({ onNavigate }) => {
   };
 
   // Save as Draft
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (!buyer.organizationName.trim()) {
       setValidationError('Please enter at least the Organization Name to save as draft.');
       return;
@@ -315,11 +315,16 @@ export const CreateQuotation = ({ onNavigate }) => {
     setValidationError('');
 
     const quoteData = constructQuotationObject('Draft');
-    if (editingQuotationId) {
-      updateQuotation(editingQuotationId, quoteData);
-      setEditingQuotationId(null);
-    } else {
-      addQuotation(quoteData);
+    try {
+      if (editingQuotationId) {
+        await updateQuotation(editingQuotationId, quoteData);
+        setEditingQuotationId(null);
+      } else {
+        await addQuotation(quoteData);
+      }
+    } catch (err) {
+      setValidationError(err.message);
+      return;
     }
     setPrefillData(null);
     onNavigate('quotations');
@@ -331,14 +336,19 @@ export const CreateQuotation = ({ onNavigate }) => {
     setShowSendConfirm(true);
   };
 
-  const handleConfirmSend = () => {
+  const handleConfirmSend = async () => {
     setShowSendConfirm(false);
     const quoteData = constructQuotationObject('Sent');
-    if (editingQuotationId) {
-      updateQuotation(editingQuotationId, quoteData);
-      setEditingQuotationId(null);
-    } else {
-      addQuotation(quoteData);
+    try {
+      if (editingQuotationId) {
+        await updateQuotation(editingQuotationId, quoteData);
+        setEditingQuotationId(null);
+      } else {
+        await addQuotation(quoteData);
+      }
+    } catch (err) {
+      setValidationError(err.message);
+      return;
     }
     setPrefillData(null);
     onNavigate('quotations');

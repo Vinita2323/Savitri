@@ -1,294 +1,197 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import {
-  INITIAL_QUOTATIONS,
-  INITIAL_QUOTATION_REQUESTS,
-} from '../data/mockQuotations';
-import { generateNextQuotationNumber } from '../utils/quotationCalculations';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import API from '../../../../services/api';
 
+/**
+ * Quotation state backed by the server (MongoDB).
+ *
+ * - Data is loaded from GET /quotations and GET /quotations/requests and is scoped by the backend to the
+ *   brand selected in the Super Admin panel (X-Brand-Id header is added by the shared axios instance).
+ * - Every action calls the API and then updates local state from the server's response, so the screen
+ *   always shows what is stored. Async actions resolve to the stored record, or throw an Error whose
+ *   message is the server's message (pages show it).
+ * - `brandKey` (optional) makes the provider reload when the active brand changes.
+ */
 const QuotationContext = createContext(null);
 
-const getQuoteKey = (suffix) => {
-  const brand =
-    typeof sessionStorage !== 'undefined'
-      ? sessionStorage.getItem('shippnex_super_admin_brand') || 'brand_fg'
-      : 'brand_fg';
-  return `savitri_mock_${suffix}_${brand}`;
-};
+const errMsg = (err, fallback) => err?.response?.data?.message || err?.message || fallback;
 
-export const QuotationProvider = ({ children }) => {
-  // Load quotations from localStorage or fallback to initial mock data
-  const [quotations, setQuotations] = useState(() => {
-    try {
-      const saved = localStorage.getItem(getQuoteKey('quotations'));
-      return saved ? JSON.parse(saved) : INITIAL_QUOTATIONS;
-    } catch (e) {
-      return INITIAL_QUOTATIONS;
-    }
-  });
+export const QuotationProvider = ({ children, brandKey }) => {
+  const [quotations, setQuotations] = useState([]);
+  const [quotationRequests, setQuotationRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  // Load quotation requests from localStorage or fallback
-  const [quotationRequests, setQuotationRequests] = useState(() => {
-    try {
-      const saved = localStorage.getItem(getQuoteKey('quotation_requests'));
-      return saved ? JSON.parse(saved) : INITIAL_QUOTATION_REQUESTS;
-    } catch (e) {
-      return INITIAL_QUOTATION_REQUESTS;
-    }
-  });
-
-  // State to pass prefilled data from RFQ to Create Quotation page
+  // Navigation helpers shared between pages (client-side only)
   const [prefillData, setPrefillData] = useState(null);
-
-  // State for actively viewed quotation details / print / preview
   const [selectedQuotationId, setSelectedQuotationId] = useState(null);
-
-  // Editing draft state
   const [editingQuotationId, setEditingQuotationId] = useState(null);
 
-  // Save to localStorage on change
-  useEffect(() => {
+  const seq = useRef(0);
+
+  const refresh = useCallback(async () => {
+    const mine = ++seq.current;
+    setLoading(true);
+    setLoadError('');
     try {
-      localStorage.setItem(getQuoteKey('quotations'), JSON.stringify(quotations));
-    } catch (e) {}
-  }, [quotations]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(getQuoteKey('quotation_requests'), JSON.stringify(quotationRequests));
-    } catch (e) {}
-  }, [quotationRequests]);
-
-  // Create new quotation (Draft)
-  const addQuotation = (newQuotation) => {
-    const quoteNumber = newQuotation.quotationNumber || generateNextQuotationNumber(quotations);
-    const quotationWithMeta = {
-      ...newQuotation,
-      id: quoteNumber,
-      quotationNumber: quoteNumber,
-      createdAt: newQuotation.createdAt || new Date().toISOString(),
-      status: newQuotation.status || 'Draft',
-      emailStatus: newQuotation.emailStatus || 'Not Sent',
-      emailLog: newQuotation.emailLog || [],
-    };
-
-    setQuotations((prev) => [quotationWithMeta, ...prev]);
-
-    // If originated from an RFQ, mark request as "Quotation Created"
-    if (newQuotation.originatingRequestId) {
-      setQuotationRequests((prevReqs) =>
-        prevReqs.map((req) =>
-          req.id === newQuotation.originatingRequestId
-            ? { ...req, status: 'Quotation Created', quotationNumber: quoteNumber }
-            : req
-        )
-      );
+      const [q, r] = await Promise.all([
+        API.get('/quotations', { params: { limit: 1000 } }),
+        API.get('/quotations/requests'),
+      ]);
+      if (mine !== seq.current) return; // a newer load (e.g. brand switch) superseded this one
+      setQuotations(q.data?.quotations || []);
+      setQuotationRequests(r.data?.requests || []);
+    } catch (err) {
+      if (mine !== seq.current) return;
+      setQuotations([]);
+      setQuotationRequests([]);
+      setLoadError(errMsg(err, 'Could not load quotations.'));
+    } finally {
+      if (mine === seq.current) setLoading(false);
     }
+  }, []);
 
-    return quotationWithMeta;
+  // Initial load, and reload (dropping the previous brand's records) when the brand changes
+  useEffect(() => {
+    setQuotations([]);
+    setQuotationRequests([]);
+    setSelectedQuotationId(null);
+    setEditingQuotationId(null);
+    refresh();
+  }, [brandKey, refresh]);
+
+  const upsert = (record) =>
+    setQuotations((prev) => (prev.some((x) => x.id === record.id) ? prev.map((x) => (x.id === record.id ? record : x)) : [record, ...prev]));
+
+  const call = async (fn, fallback) => {
+    try {
+      return await fn();
+    } catch (err) {
+      throw new Error(errMsg(err, fallback));
+    }
   };
 
-  // Update existing quotation
-  const updateQuotation = (id, updatedFields) => {
-    setQuotations((prev) =>
-      prev.map((q) => (q.id === id ? { ...q, ...updatedFields, updatedAt: new Date().toISOString() } : q))
-    );
-  };
+  // Create (Draft, or Sent when sending straight from the builder). Resolves to the stored quotation.
+  const addQuotation = (newQuotation) =>
+    call(async () => {
+      const { data } = await API.post('/quotations', newQuotation);
+      upsert(data.quotation);
+      if (newQuotation.originatingRequestId) {
+        setQuotationRequests((prev) =>
+          prev.map((r) =>
+            r.id === newQuotation.originatingRequestId
+              ? { ...r, status: 'Quotation Created', quotationNumber: data.quotation.quotationNumber }
+              : r
+          )
+        );
+      }
+      return data.quotation;
+    }, 'Could not save the quotation.');
 
-  // Delete draft quotation
-  const deleteQuotation = (id) => {
-    setQuotations((prev) => prev.filter((q) => q.id !== id));
-  };
+  const updateQuotation = (id, fields) =>
+    call(async () => {
+      const { data } = await API.put(`/quotations/${encodeURIComponent(id)}`, fields);
+      upsert(data.quotation);
+      return data.quotation;
+    }, 'Could not update the quotation.');
 
-  // Duplicate an existing quotation as a new Draft
-  const duplicateQuotation = (id) => {
-    const source = quotations.find((q) => q.id === id);
-    if (!source) return null;
+  const deleteQuotation = (id) =>
+    call(async () => {
+      await API.delete(`/quotations/${encodeURIComponent(id)}`);
+      setQuotations((prev) => prev.filter((q) => q.id !== id));
+    }, 'Could not delete the quotation.');
 
-    const newNumber = generateNextQuotationNumber(quotations);
-    const today = new Date().toISOString().split('T')[0];
-    const validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const duplicateQuotation = (id) =>
+    call(async () => {
+      const { data } = await API.post(`/quotations/${encodeURIComponent(id)}/duplicate`);
+      upsert(data.quotation);
+      return data.quotation;
+    }, 'Could not duplicate the quotation.');
 
-    const duplicated = {
-      ...source,
-      id: newNumber,
-      quotationNumber: newNumber,
-      quotationDate: today,
-      validUntil: validUntil,
-      status: 'Draft',
-      emailStatus: 'Not Sent',
-      emailLog: [],
-      subject: `${source.subject} (Copy)`,
-      createdAt: new Date().toISOString(),
-      updatedAt: null,
-      sentAt: null,
-    };
+  const markReadyToSend = (id) =>
+    call(async () => {
+      const { data } = await API.post(`/quotations/${encodeURIComponent(id)}/ready`);
+      upsert(data.quotation);
+      return data.quotation;
+    }, 'Could not update the quotation.');
 
-    setQuotations((prev) => [duplicated, ...prev]);
-    return duplicated;
-  };
+  const cancelQuotation = (id, reason = '') =>
+    call(async () => {
+      const { data } = await API.post(`/quotations/${encodeURIComponent(id)}/cancel`, { reason });
+      upsert(data.quotation);
+      return data.quotation;
+    }, 'Could not cancel the quotation.');
 
-  // Mark quotation as "Ready to Send" (status update only — no email)
-  const markReadyToSend = (id) => {
-    setQuotations((prev) =>
-      prev.map((q) =>
-        q.id === id
-          ? {
-              ...q,
-              status: 'Ready to Send',
-              updatedAt: new Date().toISOString(),
-            }
-          : q
-      )
-    );
-  };
+  // Record the buyer's response / move the status (server validates the transition)
+  const updateQuotationStatus = (id, status, reason = '') =>
+    call(async () => {
+      const { data } = await API.patch(`/quotations/${encodeURIComponent(id)}/status`, { status, reason });
+      upsert(data.quotation);
+      return data.quotation;
+    }, 'Could not change the quotation status.');
 
-  // Cancel / close a quotation
-  const cancelQuotation = (id, reason = '') => {
-    setQuotations((prev) =>
-      prev.map((q) =>
-        q.id === id
-          ? {
-              ...q,
-              status: 'Cancelled',
-              cancellationReason: reason,
-              cancelledAt: new Date().toISOString(),
-            }
-          : q
-      )
-    );
-  };
+  // Accepted -> Converted to Order. Resolves to the purchase-order reference.
+  const convertToOrder = (id) =>
+    call(async () => {
+      const { data } = await API.post(`/quotations/${encodeURIComponent(id)}/convert`);
+      upsert(data.quotation);
+      return data.quotation.purchaseOrderNumber;
+    }, 'Could not convert the quotation.');
 
   /**
-   * Send quotation email to client via backend API.
-   * Records the attempt result (success/failure) in the quotation's emailLog.
-   *
-   * @param {string} id - Quotation ID
-   * @param {Object} emailPayload - { recipientEmail, subject, body }
+   * E-mail the quotation to the client. The server sends the mail and records the attempt
+   * (status + log) on the stored quotation; local state is refreshed from its response.
    * @returns {Promise<{success: boolean, message: string}>}
    */
   const sendQuotationEmail = async (id, emailPayload) => {
-    const quotation = quotations.find((q) => q.id === id);
-    if (!quotation) {
-      return { success: false, message: 'Quotation not found.' };
-    }
-
-    // Optimistically mark as Sending
-    setQuotations((prev) =>
-      prev.map((q) =>
-        q.id === id ? { ...q, emailStatus: 'Sending' } : q
-      )
-    );
-
     try {
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const response = await fetch(`${apiBase}/quotations/send-email`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          quotationId: id,
-          quotationNumber: quotation.quotationNumber,
-          recipientEmail: emailPayload.recipientEmail,
-          recipientName: emailPayload.recipientName || quotation.buyer?.contactPerson || '',
-          organizationName: emailPayload.organizationName || quotation.buyer?.organizationName || '',
-          emailSubject: emailPayload.subject,
-          emailBody: emailPayload.body,
-          grandTotal: quotation.summary?.grandTotal || 0,
-          validUntil: quotation.validUntil,
-        }),
+      const { data } = await API.post('/quotations/send-email', {
+        quotationId: id,
+        recipientEmail: emailPayload.recipientEmail,
+        recipientName: emailPayload.recipientName || '',
+        organizationName: emailPayload.organizationName || '',
+        emailSubject: emailPayload.subject,
+        emailBody: emailPayload.body,
       });
-
-      const data = await response.json();
-
-      const logEntry = {
-        timestamp: new Date().toISOString(),
-        recipientEmail: emailPayload.recipientEmail,
-        subject: emailPayload.subject,
-        success: data.success === true,
-        error: data.success ? null : (data.message || 'Unknown error'),
-        messageId: data.messageId || null,
-      };
-
-      if (data.success) {
-        setQuotations((prev) =>
-          prev.map((q) =>
-            q.id === id
-              ? {
-                  ...q,
-                  status: q.status === 'Draft' ? 'Sent' : q.status,
-                  emailStatus: 'Sent',
-                  sentAt: new Date().toISOString(),
-                  lastEmailSentAt: new Date().toISOString(),
-                  emailLog: [...(q.emailLog || []), logEntry],
-                }
-              : q
-          )
-        );
-        return { success: true, message: `Email successfully sent to ${emailPayload.recipientEmail}.` };
-      } else {
-        setQuotations((prev) =>
-          prev.map((q) =>
-            q.id === id
-              ? {
-                  ...q,
-                  emailStatus: 'Failed',
-                  emailLog: [...(q.emailLog || []), logEntry],
-                }
-              : q
-          )
-        );
-        return { success: false, message: data.message || 'Email delivery failed. Please check SMTP configuration.' };
-      }
+      if (data.quotation) upsert(data.quotation);
+      return { success: data.success === true, message: data.message || `Email sent to ${emailPayload.recipientEmail}.` };
     } catch (err) {
-      const logEntry = {
-        timestamp: new Date().toISOString(),
-        recipientEmail: emailPayload.recipientEmail,
-        subject: emailPayload.subject,
-        success: false,
-        error: err.message || 'Network error',
-        messageId: null,
-      };
-
-      setQuotations((prev) =>
-        prev.map((q) =>
-          q.id === id
-            ? {
-                ...q,
-                emailStatus: 'Failed',
-                emailLog: [...(q.emailLog || []), logEntry],
-              }
-            : q
-        )
-      );
-      return { success: false, message: `Network error: ${err.message}. Is the backend server running?` };
+      const stored = err?.response?.data?.quotation;
+      if (stored) upsert(stored);
+      return { success: false, message: errMsg(err, 'Email delivery failed. Please check SMTP configuration.') };
     }
   };
 
-  // Update RFQ request status
-  const updateRequestStatus = (requestId, newStatus) => {
-    setQuotationRequests((prev) =>
-      prev.map((req) => (req.id === requestId ? { ...req, status: newStatus } : req))
-    );
-  };
+  // RFQ queue
+  const replaceRequest = (r) => setQuotationRequests((prev) => prev.map((x) => (x.id === r.id ? r : x)));
 
-  // Reject quotation request
-  const rejectQuotationRequest = (requestId, reason) => {
-    setQuotationRequests((prev) =>
-      prev.map((req) =>
-        req.id === requestId ? { ...req, status: 'Rejected', rejectionReason: reason } : req
-      )
-    );
-  };
+  const updateRequestStatus = (requestId, newStatus) =>
+    call(async () => {
+      const { data } = await API.patch(`/quotations/requests/${encodeURIComponent(requestId)}/status`, { status: newStatus });
+      replaceRequest(data.request);
+      return data.request;
+    }, 'Could not update the request.');
 
-  // Start creating quotation from RFQ request
+  const rejectQuotationRequest = (requestId, reason) =>
+    call(async () => {
+      const { data } = await API.post(`/quotations/requests/${encodeURIComponent(requestId)}/reject`, { reason });
+      replaceRequest(data.request);
+      return data.request;
+    }, 'Could not reject the request.');
+
+  const createQuotationRequest = (payload) =>
+    call(async () => {
+      const { data } = await API.post('/quotations/requests', payload);
+      setQuotationRequests((prev) => [data.request, ...prev]);
+      return data.request;
+    }, 'Could not create the request.');
+
+  // Prefill the quotation builder from an RFQ (client-side navigation state only)
   const startQuotationFromRequest = (req) => {
     const formattedItems = (req.requestedProducts || []).map((p, idx) => ({
       id: `item-${idx + 1}`,
       name: p.productName || 'Requested Item',
       sku: p.sku || `REQ-SKU-${idx + 1}`,
-      description: `Sourced as per buyer request specifications`,
+      description: 'Sourced as per buyer request specifications',
       hsn: '11010000',
       quantity: p.quantity || 1,
       unit: p.unit || 'Pcs',
@@ -298,7 +201,7 @@ export const QuotationProvider = ({ children }) => {
       gstRate: 5,
       taxableAmount: (p.quantity || 1) * (p.estimatedPrice || 100),
       taxAmount: ((p.quantity || 1) * (p.estimatedPrice || 100) * 5) / 100,
-      lineTotal: ((p.quantity || 1) * (p.estimatedPrice || 100) * 1.05),
+      lineTotal: (p.quantity || 1) * (p.estimatedPrice || 100) * 1.05,
     }));
 
     setPrefillData({
@@ -318,9 +221,9 @@ export const QuotationProvider = ({ children }) => {
         pan: '',
         billingAddress: req.billingAddress || req.deliveryLocation || '',
         shippingAddress: req.shippingAddress || req.deliveryLocation || '',
-        city: req.city || 'Indore',
-        state: req.state || 'Madhya Pradesh',
-        pincode: req.pincode || '452001',
+        city: req.city || '',
+        state: req.state || '',
+        pincode: req.pincode || '',
       },
       items: formattedItems.length > 0 ? formattedItems : null,
       commercialTerms: {
@@ -330,15 +233,16 @@ export const QuotationProvider = ({ children }) => {
     });
   };
 
-  const getQuotationById = (id) => {
-    return quotations.find((q) => q.id === id || q.quotationNumber === id) || null;
-  };
+  const getQuotationById = (id) => quotations.find((q) => q.id === id || q.quotationNumber === id) || null;
 
   return (
     <QuotationContext.Provider
       value={{
         quotations,
         quotationRequests,
+        loading,
+        loadError,
+        refresh,
         prefillData,
         setPrefillData,
         selectedQuotationId,
@@ -351,9 +255,12 @@ export const QuotationProvider = ({ children }) => {
         duplicateQuotation,
         markReadyToSend,
         cancelQuotation,
+        updateQuotationStatus,
+        convertToOrder,
         sendQuotationEmail,
         updateRequestStatus,
         rejectQuotationRequest,
+        createQuotationRequest,
         startQuotationFromRequest,
         getQuotationById,
       }}
