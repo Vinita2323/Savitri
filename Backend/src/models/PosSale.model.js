@@ -122,5 +122,27 @@ posSaleSchema.index({ createdAt: -1 });
 posSaleSchema.index({ 'store.storeId': 1, createdAt: -1 });
 posSaleSchema.index({ 'customer.phone': 1 });
 
+// Treasury: money taken at the counter (cash / UPI / card) is queued as an unlinked inflow so an admin can allocate
+// it to the cash or bank account it landed in. POS takings are NOT Razorpay collections, so they never touch
+// Razorpay Clearing. Idempotent per invoice; a cancelled sale withdraws a still-unallocated entry.
+posSaleSchema.post('save', function (doc) {
+  const direct = ['CASH', 'UPI', 'CARD', 'NETBANKING'].includes(doc.payment?.method);
+  import('../services/treasuryInbox.js')
+    .then(async (m) => {
+      if (doc.status === 'CANCELLED') {
+        const { default: BankStatementEntry } = await import('./BankStatementEntry.model.js');
+        await BankStatementEntry.updateOne({ dedupeKey: `src:POS:${doc.invoiceNumber}`, status: 'UNMATCHED' }, { $set: { status: 'IGNORED', notes: 'POS sale cancelled' } });
+        return;
+      }
+      if (doc.status !== 'COMPLETED' || doc.payment?.status !== 'PAID' || !direct) return;
+      const amount = Math.round(Number(doc.payment?.amountReceived ? Math.min(doc.payment.amountReceived, doc.grandTotal) : doc.grandTotal) * 100);
+      await m.queueUnlinked({
+        brandId: await m.brandForSeller(doc.store?.storeId), source: 'POS', sourceRef: doc.invoiceNumber, amountPaise: amount, direction: 'CREDIT',
+        description: `POS sale ${doc.invoiceNumber} (${doc.payment.method})`, reference: doc.payment?.referenceNumber || '', date: doc.createdAt || new Date(), suggestedCategory: 'POS Sales',
+      });
+    })
+    .catch((err) => console.warn('[Treasury] Could not queue POS sale:', err.message));
+});
+
 const PosSale = mongoose.model('PosSale', posSaleSchema);
 export default PosSale;

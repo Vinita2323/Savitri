@@ -6,6 +6,7 @@ import WithdrawalRequest from '../models/WithdrawalRequest.model.js';
 import PayoutRequest from '../models/PayoutRequest.model.js';
 import User from '../models/User.model.js';
 import UserWalletTransaction from '../models/UserWalletTransaction.model.js';
+import { resolveSellerCommissionRate, getGlobalSellerCommission } from '../utils/commissionRate.js';
 
 // @desc    Get Seller Wallet Data (Metrics, Transactions, Withdrawals)
 // @route   GET /api/wallet/seller
@@ -41,8 +42,9 @@ export const getSellerWallet = async (req, res, next) => {
       status: { $nin: ['DELIVERED', 'Delivered', 'REJECTED', 'Rejected'] }
     });
 
+    const globalCommissionRate = await getGlobalSellerCommission();
     const pendingBalance = pendingNotifications.reduce((acc, n) => {
-      const commRate = n.commissionRate || seller.commissionPercentage || 10;
+      const commRate = n.commissionRate ?? resolveSellerCommissionRate(seller, globalCommissionRate);
       const gross = n.totalAmount || 0;
       const net = gross - (gross * commRate / 100);
       return acc + net;

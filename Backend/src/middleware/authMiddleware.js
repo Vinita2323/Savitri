@@ -53,6 +53,8 @@ export const protect = (...requiredRoles) => {
         effective = {
           ...decoded,
           role: normalizeRole(admin.role),
+          email: admin.email,
+          name: admin.name,
           authorizedBrands: Array.isArray(admin.authorizedBrands) ? admin.authorizedBrands : undefined,
         };
       }

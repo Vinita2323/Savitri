@@ -45,6 +45,10 @@ const sellerSchema = new mongoose.Schema(
       type: Number,
       default: 10,
     },
+    // true  = this seller has a custom rate (commissionPercentage) that overrides the global default
+    // false = follows the global seller commission (after a reset)
+    // unset = legacy record: custom only if its stored rate differs from the old hard-coded 10%
+    hasCustomCommission: { type: Boolean },
     walletBalance: {
       type: Number,
       default: 0,

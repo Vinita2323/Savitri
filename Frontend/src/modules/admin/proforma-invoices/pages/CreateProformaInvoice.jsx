@@ -44,45 +44,9 @@ const UNIT_OPTIONS = ['Units', 'Pcs', 'Kg', 'Litre', 'Box', 'Pack', 'Set', 'Cart
 export const CreateProformaInvoice = ({ onNavigate }) => {
   const { createInvoice } = useProformaInvoice();
 
-  // Quotation Context access with graceful fallback to localStorage
-  let quotationCtx = null;
-  try {
-    quotationCtx = useQuotations();
-  } catch {
-    quotationCtx = null;
-  }
-
-  // Synchronize local quotations from localStorage
-  const [localQuotations, setLocalQuotations] = useState(() => {
-    try {
-      const raw = localStorage.getItem('savitri_mock_quotations');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      try {
-        const raw = localStorage.getItem('savitri_mock_quotations');
-        setLocalQuotations(raw ? JSON.parse(raw) : []);
-      } catch {
-        setLocalQuotations([]);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  // Actual reactive quotations array
-  const availableQuotations = useMemo(() => {
-    if (quotationCtx?.quotations !== undefined && quotationCtx?.quotations !== null) {
-      return quotationCtx.quotations;
-    }
-    return localQuotations;
-  }, [quotationCtx?.quotations, localQuotations]);
+  // Quotations come from the server through the quotation context (the page is always wrapped in its provider).
+  const quotationCtx = useQuotations();
+  const availableQuotations = useMemo(() => quotationCtx?.quotations || [], [quotationCtx?.quotations]);
 
   // Mode: 'quotation' or 'manual'
   const [creationMode, setCreationMode] = useState('quotation');
@@ -204,7 +168,7 @@ export const CreateProformaInvoice = ({ onNavigate }) => {
         if (numRes.status === 'fulfilled' && numRes.value?.proformaNumber) {
           setProformaNumber(numRes.value.proformaNumber);
         } else {
-          setProformaNumber(`PI-${new Date().getFullYear()}-0001`);
+          setProformaNumber('');
         }
 
         if (clientRes.status === 'fulfilled' && clientRes.value?.clients) {
@@ -215,7 +179,7 @@ export const CreateProformaInvoice = ({ onNavigate }) => {
           setProductList(prodRes.value.products);
         }
       } catch {
-        setProformaNumber(`PI-${new Date().getFullYear()}-0001`);
+        setProformaNumber('');
       }
     };
 
@@ -485,10 +449,6 @@ export const CreateProformaInvoice = ({ onNavigate }) => {
     setErrorMsg('');
 
     // Validations
-    if (!proformaNumber.trim()) {
-      setErrorMsg('Proforma Invoice number is required.');
-      return;
-    }
     if (!clientSnapshot.companyName.trim()) {
       setErrorMsg('Client / Company Name is required.');
       return;
@@ -514,7 +474,7 @@ export const CreateProformaInvoice = ({ onNavigate }) => {
     }
 
     const payload = {
-      proformaNumber: proformaNumber.trim(),
+      // The number is allocated by the server when the document is saved.
       issueDate,
       validUntil,
       currency,
@@ -905,14 +865,14 @@ export const CreateProformaInvoice = ({ onNavigate }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Proforma Invoice # <span className="text-rose-500">*</span>
+              Proforma Invoice #
             </label>
             <input
               type="text"
-              value={proformaNumber}
-              onChange={(e) => setProformaNumber(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-sm font-medium text-slate-800 outline-none focus:ring-2 focus:ring-[#1A2E0A]/20 focus:border-[#1A2E0A]"
-              required
+              value={proformaNumber ? `${proformaNumber} (assigned on save)` : 'Assigned on save'}
+              readOnly
+              title="The number is assigned by the server when the document is saved"
+              className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-xl font-mono text-sm font-medium text-slate-600 outline-none"
             />
           </div>
 

@@ -3,6 +3,77 @@ import DeliveryChallan from '../models/DeliveryChallan.model.js';
 import Order from '../models/Order.model.js';
 import User from '../models/User.model.js';
 import Product from '../models/Product.model.js';
+import Counter, { nextSequence } from '../models/Counter.model.js';
+import { orderInScope, orderScopeFilter } from '../middleware/scopeMiddleware.js';
+
+// ── Brand scoping ─────────────────────────────────────────────────────────────
+// A challan belongs to one brand. Every read/write is confined to the brand selected in the panel
+// (req.scope); a challan of another brand is reported as 404 so its existence is not disclosed.
+const scopeFilter = (req) => (!req.scope || req.scope.isAll ? {} : { brandId: req.scope.brandId });
+const withScope = (req, q) => (Object.keys(scopeFilter(req)).length ? { $and: [scopeFilter(req), q] } : q);
+const findScoped = (req, ref) => {
+  const key = String(ref || '').trim();
+  const or = [{ challanNumber: key.toUpperCase() }];
+  if (mongoose.Types.ObjectId.isValid(key)) or.push({ _id: key });
+  return DeliveryChallan.findOne(withScope(req, { $or: or }));
+};
+const escapeRe = (v) => String(v).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const actorName = (req) => req.user?.email || req.user?.name || (req.user?.role === 'super_admin' ? 'Super Admin' : 'Admin');
+const notFound = (res) => res.status(404).json({ success: false, message: 'Delivery Challan not found' });
+const dispatchKey = (item) => String(item.product || item.variantSku || item.sku || item.name).trim();
+const EDITABLE_STATUSES = ['Draft', 'Dispatched'];
+
+/**
+ * Builds challan lines from what the order REALLY contains. The ordered quantity and price always
+ * come from the order - never from the request - so a client cannot dispatch more than was bought.
+ */
+const buildItemsFromOrder = (orderDoc, dispatchedMap, submitted) => {
+  const orderItems = new Map();
+  (orderDoc.items || []).forEach((oi) => orderItems.set(dispatchKey(oi), oi));
+  const seen = new Set();
+  const out = [];
+  let total = 0;
+  for (const item of submitted) {
+    const key = dispatchKey(item || {});
+    const oi = orderItems.get(key);
+    if (!oi) return { error: `"${item?.name || key}" is not part of this order.` };
+    if (seen.has(key)) return { error: `"${item.name || key}" appears more than once.` };
+    seen.add(key);
+    const qty = Number(item.dispatchedQuantity);
+    if (!Number.isFinite(qty) || qty < 0) return { error: `Dispatched quantity for "${oi.name}" must be zero or more.` };
+    const orderedQty = Number(oi.quantity) || 0;
+    const prev = dispatchedMap[key] || 0;
+    const remaining = Math.max(0, orderedQty - prev);
+    if (qty > remaining) {
+      return { error: `Over-dispatch rejected for "${oi.name}": attempted ${qty}, but remaining dispatchable quantity is ${remaining}` };
+    }
+    if (qty === 0) continue; // lines with nothing to dispatch are not part of the challan
+    total += qty;
+    out.push({
+      product: oi.product || null,
+      name: oi.name,
+      sku: oi.sku || item.sku || '',
+      variantSku: oi.variantSku || '',
+      variantTitle: oi.variantTitle || '',
+      hsn: item.hsn || '',
+      unit: item.unit || oi.unit || 'Units',
+      unitPrice: Number(oi.price) || 0,
+      orderedQuantity: orderedQty,
+      previouslyDispatchedQuantity: prev,
+      dispatchedQuantity: qty,
+      remainingQuantity: Math.max(0, remaining - qty),
+      notes: item.notes || '',
+    });
+  }
+  if (out.length === 0) return { error: 'At least one product item with a dispatch quantity greater than zero is required.' };
+  return { items: out, total };
+};
+
+/** After a challan becomes "active", make sure concurrent requests did not over-dispatch the order. */
+const orderIsOverDispatched = async (orderDoc) => {
+  const map = await calculateOrderDispatches(orderDoc._id);
+  return (orderDoc.items || []).some((oi) => (map[dispatchKey(oi)] || 0) > (Number(oi.quantity) || 0));
+};
 
 /**
  * Helper: Computes previously dispatched quantities for an order across all active (non-cancelled) challans.
@@ -37,27 +108,20 @@ export const calculateOrderDispatches = async (orderId, excludeChallanId = null)
  * Generate sequential unique Challan Number: DC-YYYY-XXXX
  */
 export const generateNextChallanNumber = async () => {
-  const currentYear = new Date().getFullYear();
-  const prefix = `DC-${currentYear}-`;
-
-  const latestChallan = await DeliveryChallan.findOne({
-    challanNumber: new RegExp(`^${prefix}\\d+`, 'i'),
-  })
-    .sort({ challanNumber: -1 })
-    .lean();
-
-  let nextSequence = 1;
-  if (latestChallan && latestChallan.challanNumber) {
-    const parts = latestChallan.challanNumber.split('-');
-    if (parts.length >= 3) {
-      const num = parseInt(parts[2], 10);
-      if (!isNaN(num)) {
-        nextSequence = num + 1;
-      }
-    }
+  const year = new Date().getFullYear();
+  // Atomic counter: concurrent requests can never get the same number (no reliance on a unique index).
+  for (let i = 0; i < 20; i++) {
+    const seq = await nextSequence(`challan-${year}`);
+    const number = `DC-${year}-${String(seq).padStart(4, '0')}`;
+    if (!(await DeliveryChallan.exists({ challanNumber: number }))) return number;
   }
+  throw new Error('Could not allocate a challan number.');
+};
 
-  return `${prefix}${String(nextSequence).padStart(4, '0')}`;
+const peekNextChallanNumber = async () => {
+  const year = new Date().getFullYear();
+  const c = await Counter.findById(`challan-${year}`).lean();
+  return `DC-${year}-${String((c?.seq || 0) + 1).padStart(4, '0')}`;
 };
 
 /**
@@ -65,7 +129,7 @@ export const generateNextChallanNumber = async () => {
  */
 export const getNextChallanNumber = async (req, res, next) => {
   try {
-    const challanNumber = await generateNextChallanNumber();
+    const challanNumber = await peekNextChallanNumber();
     res.status(200).json({
       success: true,
       challanNumber,
@@ -153,6 +217,7 @@ export const getEligibleOrdersByClient = async (req, res, next) => {
     const orders = await Order.find({
       user: clientId,
       orderStatus: { $nin: ['Cancelled', 'Rejected', 'Returned'] },
+      ...(await orderScopeFilter(req.scope)),
     })
       .sort({ createdAt: -1 })
       .lean();
@@ -240,7 +305,7 @@ export const getOrderDispatchSummary = async (req, res, next) => {
       .populate('user', 'name phone email addresses')
       .lean();
 
-    if (!order) {
+    if (!order || !(await orderInScope(req.scope, order))) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
@@ -288,7 +353,7 @@ export const getOrderDispatchSummary = async (req, res, next) => {
     });
 
     // Also get existing challans for this order
-    const existingChallans = await DeliveryChallan.find({ order: order._id })
+    const existingChallans = await DeliveryChallan.find(withScope(req, { order: order._id }))
       .select('challanNumber challanDate status totalDispatchedQuantity createdAt')
       .sort({ createdAt: -1 })
       .lean();
@@ -329,7 +394,7 @@ export const getDeliveryChallans = async (req, res, next) => {
       endDate = '',
     } = req.query;
 
-    const filter = {};
+    const filter = { ...scopeFilter(req) };
 
     if (status && status !== 'all') {
       filter.status = status;
@@ -340,11 +405,7 @@ export const getDeliveryChallans = async (req, res, next) => {
     }
 
     if (orderNumber && orderNumber.trim()) {
-      filter.orderNumber = { $regex: orderNumber.trim(), $options: 'i' };
-    }
-
-    if (req.scope && !req.scope.isAll && req.scope.city) {
-      filter['clientSnapshot.shippingAddress.city'] = new RegExp(`^${req.scope.city.trim()}$`, 'i');
+      filter.orderNumber = { $regex: escapeRe(orderNumber), $options: 'i' };
     }
 
     if (startDate || endDate) {
@@ -360,7 +421,7 @@ export const getDeliveryChallans = async (req, res, next) => {
     }
 
     if (search && search.trim()) {
-      const term = search.trim();
+      const term = escapeRe(search);
       filter.$or = [
         { challanNumber: { $regex: term, $options: 'i' } },
         { orderNumber: { $regex: term, $options: 'i' } },
@@ -384,6 +445,7 @@ export const getDeliveryChallans = async (req, res, next) => {
         .lean(),
       DeliveryChallan.countDocuments(filter),
       DeliveryChallan.aggregate([
+        { $match: scopeFilter(req) },
         {
           $group: {
             _id: '$status',
@@ -434,12 +496,7 @@ export const getDeliveryChallans = async (req, res, next) => {
  */
 export const getDeliveryChallanById = async (req, res, next) => {
   try {
-    const { id } = req.params;
-
-    const isMongoId = mongoose.Types.ObjectId.isValid(id);
-    const challan = await DeliveryChallan.findOne(
-      isMongoId ? { $or: [{ _id: id }, { challanNumber: id }] } : { challanNumber: id }
-    )
+    const challan = await findScoped(req, req.params.id)
       .populate('client', 'name phone email')
       .populate('order', 'orderId orderStatus grandTotal createdAt')
       .lean();
@@ -486,17 +543,29 @@ export const createDeliveryChallan = async (req, res, next) => {
       status = 'Draft',
     } = req.body;
 
-    if (!clientId || !orderId) {
+    if (!req.scope || req.scope.isAll || !req.scope.brandId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Select a specific brand/region before creating a Delivery Challan (not "All Regions").',
+      });
+    }
+    if (!clientId || !orderId || !mongoose.Types.ObjectId.isValid(String(orderId))) {
       return res.status(400).json({
         success: false,
         message: 'Client and Order references are required to create a delivery challan',
       });
     }
+    if (!EDITABLE_STATUSES.includes(status)) {
+      return res.status(400).json({ success: false, message: 'A new challan can only be created as Draft or Dispatched.' });
+    }
 
-    // Verify Order exists
+    // The order must exist AND belong to the selected brand (otherwise it is reported as not found).
     const orderDoc = await Order.findById(orderId).lean();
-    if (!orderDoc) {
+    if (!orderDoc || !(await orderInScope(req.scope, orderDoc))) {
       return res.status(404).json({ success: false, message: 'Referenced order not found' });
+    }
+    if (String(orderDoc.user) !== String(clientId)) {
+      return res.status(400).json({ success: false, message: 'The client does not match the customer of this order.' });
     }
 
     if (['Cancelled', 'Rejected'].includes(orderDoc.orderStatus)) {
@@ -506,7 +575,6 @@ export const createDeliveryChallan = async (req, res, next) => {
       });
     }
 
-    // Validate Items
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
         success: false,
@@ -514,76 +582,27 @@ export const createDeliveryChallan = async (req, res, next) => {
       });
     }
 
-    // Get live dispatched quantities from DB
     const dispatchedMap = await calculateOrderDispatches(orderDoc._id);
+    const built = buildItemsFromOrder(orderDoc, dispatchedMap, items);
+    if (built.error) return res.status(400).json({ success: false, message: built.error });
+    const validatedItems = built.items;
+    const totalDispatchedQty = built.total;
 
-    // Compute item balances and validate
-    let totalDispatchedQty = 0;
-    const validatedItems = [];
-
-    for (const item of items) {
-      const dispatchedQty = Number(item.dispatchedQuantity) || 0;
-      if (dispatchedQty <= 0 && status !== 'Draft') {
-        return res.status(400).json({
-          success: false,
-          message: `Dispatched quantity for "${item.name}" must be greater than zero`,
-        });
-      }
-
-      const key = String(item.product || item.variantSku || item.sku || item.name).trim();
-      const prevDispatched = dispatchedMap[key] || 0;
-      const orderedQty = Number(item.orderedQuantity) || 0;
-      const remainingBeforeThis = Math.max(0, orderedQty - prevDispatched);
-
-      // Strict over-dispatch check if finalizing
-      if (status === 'Dispatched' && dispatchedQty > remainingBeforeThis) {
-        return res.status(400).json({
-          success: false,
-          message: `Over-dispatch rejected for "${item.name}": Attempted ${dispatchedQty}, but remaining dispatchable quantity is ${remainingBeforeThis}`,
-        });
-      }
-
-      totalDispatchedQty += dispatchedQty;
-
-      validatedItems.push({
-        product: item.product || null,
-        name: item.name,
-        sku: item.sku || '',
-        variantSku: item.variantSku || '',
-        variantTitle: item.variantTitle || '',
-        hsn: item.hsn || '',
-        unit: item.unit || 'Units',
-        unitPrice: Number(item.unitPrice) || 0,
-        orderedQuantity: orderedQty,
-        previouslyDispatchedQuantity: prevDispatched,
-        dispatchedQuantity: dispatchedQty,
-        remainingQuantity: Math.max(0, remainingBeforeThis - dispatchedQty),
-        notes: item.notes || '',
-      });
-    }
-
-    if (totalDispatchedQty <= 0 && status === 'Dispatched') {
+    if (status === 'Dispatched' && (totalDispatchedQty <= 0)) {
       return res.status(400).json({
         success: false,
         message: 'Total dispatch quantity must be greater than 0',
       });
     }
 
-    // Generate unique challan number if not provided or exists
-    let challanNumber = (customChallanNumber || '').trim().toUpperCase();
-    if (!challanNumber) {
-      challanNumber = await generateNextChallanNumber();
-    } else {
-      const existing = await DeliveryChallan.findOne({ challanNumber });
-      if (existing) {
-        challanNumber = await generateNextChallanNumber();
-      }
-    }
+    // The number is always allocated by the server (a client-supplied number is ignored).
+    void customChallanNumber;
+    const challanNumber = await generateNextChallanNumber();
 
     const creatorInfo = {
-      userId: req.user?.id || req.user?._id || 'admin',
-      name: req.user?.name || 'Administrator',
-      role: req.user?.role || 'admin',
+      userId: String(req.user?.id || req.user?._id || ''),
+      name: actorName(req),
+      role: req.user?.role || '',
     };
 
     const initialAudit = {
@@ -595,16 +614,17 @@ export const createDeliveryChallan = async (req, res, next) => {
     };
 
     const newChallan = new DeliveryChallan({
+      brandId: req.scope.brandId,
       challanNumber,
       challanDate: new Date(challanDate),
       dispatchDate: new Date(dispatchDate),
       expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate) : null,
-      client: clientId,
+      client: orderDoc.user,
       clientSnapshot: clientSnapshot || {},
       order: orderDoc._id,
-      orderNumber: orderNumber || orderDoc.orderId,
-      orderDate: orderDate ? new Date(orderDate) : orderDoc.createdAt,
-      orderGrandTotal: orderGrandTotal || orderDoc.grandTotal || 0,
+      orderNumber: orderDoc.orderId,
+      orderDate: orderDoc.createdAt,
+      orderGrandTotal: orderDoc.grandTotal || 0,
       items: validatedItems,
       totalDispatchedQuantity: totalDispatchedQty,
       transportDetails: transportDetails || {},
@@ -616,7 +636,17 @@ export const createDeliveryChallan = async (req, res, next) => {
       auditHistory: [initialAudit],
     });
 
+    void orderNumber; void orderDate; void orderGrandTotal;
     await newChallan.save();
+
+    // Concurrent requests can both pass the balance check; undo this one if the order is now over-dispatched.
+    if (status === 'Dispatched' && (await orderIsOverDispatched(orderDoc))) {
+      await DeliveryChallan.deleteOne({ _id: newChallan._id });
+      return res.status(409).json({
+        success: false,
+        message: 'Another dispatch for this order was recorded at the same time and the quantity is no longer available. Please reload and retry.',
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -636,9 +666,9 @@ export const updateDeliveryChallan = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const challan = await DeliveryChallan.findById(id);
+    const challan = await findScoped(req, id);
     if (!challan) {
-      return res.status(404).json({ success: false, message: 'Challan not found' });
+      return notFound(res);
     }
 
     if (challan.status !== 'Draft') {
@@ -661,42 +691,25 @@ export const updateDeliveryChallan = async (req, res, next) => {
       status = 'Draft',
     } = req.body;
 
-    // Recalculate balances excluding this challan
+    if (!EDITABLE_STATUSES.includes(status)) {
+      return res.status(400).json({ success: false, message: 'A draft can only be saved as Draft or Dispatched.' });
+    }
+
+    // Recalculate balances excluding this challan, from the order's real quantities
+    const orderDoc = await Order.findById(challan.order).lean();
+    if (!orderDoc) return res.status(404).json({ success: false, message: 'Referenced order not found' });
     const dispatchedMap = await calculateOrderDispatches(challan.order, challan._id);
 
     let totalDispatchedQty = 0;
-    const validatedItems = [];
-
-    for (const item of items) {
-      const dispatchedQty = Number(item.dispatchedQuantity) || 0;
-      const key = String(item.product || item.variantSku || item.sku || item.name).trim();
-      const prevDispatched = dispatchedMap[key] || 0;
-      const orderedQty = Number(item.orderedQuantity) || 0;
-      const remainingBeforeThis = Math.max(0, orderedQty - prevDispatched);
-
-      if (status === 'Dispatched' && dispatchedQty > remainingBeforeThis) {
-        return res.status(400).json({
-          success: false,
-          message: `Over-dispatch rejected for "${item.name}": Attempted ${dispatchedQty}, max allowed is ${remainingBeforeThis}`,
-        });
-      }
-
-      totalDispatchedQty += dispatchedQty;
-      validatedItems.push({
-        product: item.product || null,
-        name: item.name,
-        sku: item.sku || '',
-        variantSku: item.variantSku || '',
-        variantTitle: item.variantTitle || '',
-        hsn: item.hsn || '',
-        unit: item.unit || 'Units',
-        unitPrice: Number(item.unitPrice) || 0,
-        orderedQuantity: orderedQty,
-        previouslyDispatchedQuantity: prevDispatched,
-        dispatchedQuantity: dispatchedQty,
-        remainingQuantity: Math.max(0, remainingBeforeThis - dispatchedQty),
-        notes: item.notes || '',
-      });
+    let validatedItems = [];
+    if (Array.isArray(items) && items.length > 0) {
+      const built = buildItemsFromOrder(orderDoc, dispatchedMap, items);
+      if (built.error) return res.status(400).json({ success: false, message: built.error });
+      validatedItems = built.items;
+      totalDispatchedQty = built.total;
+    }
+    if (status === 'Dispatched' && (validatedItems.length > 0 ? totalDispatchedQty : challan.totalDispatchedQuantity) <= 0) {
+      return res.status(400).json({ success: false, message: 'Total dispatch quantity must be greater than 0' });
     }
 
     if (challanDate) challan.challanDate = new Date(challanDate);
@@ -720,7 +733,7 @@ export const updateDeliveryChallan = async (req, res, next) => {
       challan.auditHistory.push({
         status,
         action: `Status transitioned from ${previousStatus} to ${status}`,
-        changedBy: req.user?.name || 'Administrator',
+        changedBy: actorName(req),
         timestamp: new Date(),
         notes: 'Challan finalized / updated',
       });
@@ -728,13 +741,22 @@ export const updateDeliveryChallan = async (req, res, next) => {
       challan.auditHistory.push({
         status: challan.status,
         action: 'Draft Details Updated',
-        changedBy: req.user?.name || 'Administrator',
+        changedBy: actorName(req),
         timestamp: new Date(),
         notes: 'Draft items or transport details updated',
       });
     }
 
     await challan.save();
+
+    if (challan.status === 'Dispatched' && (await orderIsOverDispatched(orderDoc))) {
+      challan.status = 'Draft';
+      await challan.save();
+      return res.status(409).json({
+        success: false,
+        message: 'Another dispatch for this order was recorded at the same time and the quantity is no longer available. The challan stays a Draft.',
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -754,9 +776,9 @@ export const finalizeDeliveryChallan = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const challan = await DeliveryChallan.findById(id);
+    const challan = await findScoped(req, id);
     if (!challan) {
-      return res.status(404).json({ success: false, message: 'Challan not found' });
+      return notFound(res);
     }
 
     if (challan.status !== 'Draft') {
@@ -785,17 +807,31 @@ export const finalizeDeliveryChallan = async (req, res, next) => {
       item.remainingQuantity = Math.max(0, remainingBeforeThis - item.dispatchedQuantity);
     }
 
+    if (!(challan.totalDispatchedQuantity > 0)) {
+      return res.status(400).json({ success: false, message: 'Total dispatch quantity must be greater than 0' });
+    }
+    const finalizeOrder = await Order.findById(challan.order).lean();
+
     challan.status = 'Dispatched';
     challan.dispatchDate = new Date();
     challan.auditHistory.push({
       status: 'Dispatched',
       action: 'Challan Finalized and Marked as Dispatched',
-      changedBy: req.user?.name || 'Administrator',
+      changedBy: actorName(req),
       timestamp: new Date(),
       notes: `Finalized with ${challan.totalDispatchedQuantity} total dispatched items`,
     });
 
     await challan.save();
+
+    if (finalizeOrder && (await orderIsOverDispatched(finalizeOrder))) {
+      challan.status = 'Draft';
+      await challan.save();
+      return res.status(409).json({
+        success: false,
+        message: 'Another dispatch for this order was recorded at the same time and the quantity is no longer available. The challan stays a Draft.',
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -824,9 +860,9 @@ export const updateDeliveryStatus = async (req, res, next) => {
       });
     }
 
-    const challan = await DeliveryChallan.findById(id);
+    const challan = await findScoped(req, id);
     if (!challan) {
-      return res.status(404).json({ success: false, message: 'Challan not found' });
+      return notFound(res);
     }
 
     if (challan.status === 'Cancelled') {
@@ -834,6 +870,10 @@ export const updateDeliveryStatus = async (req, res, next) => {
         success: false,
         message: 'Cannot update delivery status of a cancelled challan',
       });
+    }
+
+    if (challan.status === 'Delivered') {
+      return res.status(400).json({ success: false, message: 'This challan is already marked Delivered.' });
     }
 
     if (challan.status === 'Draft') {
@@ -854,7 +894,7 @@ export const updateDeliveryStatus = async (req, res, next) => {
     challan.auditHistory.push({
       status,
       action: `Marked as ${status}`,
-      changedBy: req.user?.name || 'Administrator',
+      changedBy: actorName(req),
       timestamp: new Date(),
       notes: `Received by: ${receivedBy || 'Consignee'}. Remarks: ${receiverRemarks || 'Goods verified in good condition'}`,
     });
@@ -878,11 +918,11 @@ export const updateDeliveryStatus = async (req, res, next) => {
 export const cancelDeliveryChallan = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { reason = 'Cancelled by administrator' } = req.body;
+    const reason = String((req.body || {}).reason || '').trim() || 'Cancelled by administrator';
 
-    const challan = await DeliveryChallan.findById(id);
+    const challan = await findScoped(req, id);
     if (!challan) {
-      return res.status(404).json({ success: false, message: 'Challan not found' });
+      return notFound(res);
     }
 
     if (challan.status === 'Cancelled') {
@@ -899,14 +939,14 @@ export const cancelDeliveryChallan = async (req, res, next) => {
     challan.status = 'Cancelled';
     challan.cancellation = {
       cancelledAt: new Date(),
-      cancelledBy: req.user?.name || 'Administrator',
+      cancelledBy: actorName(req),
       reason,
     };
 
     challan.auditHistory.push({
       status: 'Cancelled',
       action: 'Challan Cancelled',
-      changedBy: req.user?.name || 'Administrator',
+      changedBy: actorName(req),
       timestamp: new Date(),
       notes: `Reason: ${reason}`,
     });

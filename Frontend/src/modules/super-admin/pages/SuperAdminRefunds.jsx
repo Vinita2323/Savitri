@@ -17,6 +17,7 @@ import {
 import { SuperAdminHeader } from '../components/SuperAdminHeader';
 import { useSuperAdmin } from '../context/SuperAdminContext';
 import { superAdminService } from '../../../services/superAdminService';
+import treasuryService from '../../../services/treasuryService';
 import {
   DetailDrawer,
   Fact,
@@ -36,6 +37,7 @@ const STATUS_LABELS = {
   PROCESSING: 'Refund Processing',
   COMPLETED: 'Refunded',
   REJECTED: 'Rejected',
+  FAILED: 'Refund Failed',
 };
 
 const BADGE = {
@@ -44,6 +46,7 @@ const BADGE = {
   'Refund Processing': 'bg-orange-50 text-orange-800 border-orange-200',
   Refunded: 'bg-emerald-50 text-emerald-800 border-emerald-200',
   Rejected: 'bg-rose-50 text-rose-800 border-rose-200',
+  'Refund Failed': 'bg-rose-50 text-rose-800 border-rose-200',
 };
 
 const EMPTY_FILTERS = { search: '', status: 'ALL', startDate: '', endDate: '' };
@@ -79,7 +82,10 @@ const toRefundRow = (r = {}) => ({
   status: STATUS_LABELS[r.status] || r.status || '—',
   paymentMethod: r.paymentMethod || '—',
   paymentRef: r.paymentReference || '—',
-  gatewayRefundId: r.gatewayRefundId || '—',
+  gatewayRefundId: r.gatewayRefund?.razorpayRefundId || r.gatewayRefundId || '—',
+  viaGateway: Boolean(r.gatewayEligible || r.refundMode === 'RAZORPAY'),
+  gatewayStatus: r.gatewayRefund?.status || '',
+  gatewayFailure: r.gatewayRefund?.failureReason || '',
   remarks: r.remarks || '',
   requestedAt: r.createdAt,
   processedAt: r.processedAt,
@@ -133,6 +139,25 @@ export const SuperAdminRefunds = () => {
     };
   }, [selectedBrandId, reload]);
 
+  // Keep the list live: a customer's return request or a seller's completed return shows up without a reload.
+  useEffect(() => {
+    let cancelled = false;
+    const tick = () => {
+      if (document.hidden) return;
+      superAdminService
+        .getRefunds({ brandId: selectedBrandId })
+        .then((res) => {
+          if (!cancelled && res?.success) setRecords((res.refunds || []).map(toRefundRow));
+        })
+        .catch(() => {});
+    };
+    const timer = setInterval(tick, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [selectedBrandId]);
+
   const filtered = useMemo(() => {
     const q = filters.search.trim().toLowerCase();
     return records.filter((r) => {
@@ -175,7 +200,7 @@ export const SuperAdminRefunds = () => {
 
   const processRefund = async (status) => {
     if (!selected) return;
-    if (status === 'COMPLETED' && !gatewayRefundId.trim()) {
+    if (status === 'COMPLETED' && !selected.viaGateway && !gatewayRefundId.trim()) {
       setActionError('Enter the gateway refund ID to mark this refund as completed.');
       return;
     }
@@ -188,6 +213,7 @@ export const SuperAdminRefunds = () => {
         remarks: remarks.trim() || undefined,
       });
       if (!res?.success) throw new Error(res?.message || 'Could not update refund.');
+      if (res.message) window.alert(res.message);
       setSelected(null);
       setReload((n) => n + 1);
     } catch (err) {
@@ -347,16 +373,27 @@ export const SuperAdminRefunds = () => {
             {selected.remarks ? <Fact label="Remarks" value={selected.remarks} /> : null}
           </div>
 
-          {['REQUESTED', 'APPROVED', 'PROCESSING'].includes(selected.statusCode) ? (
+          {['REQUESTED', 'APPROVED', 'PROCESSING', 'FAILED'].includes(selected.statusCode) ? (
             <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-              <input value={gatewayRefundId} onChange={(e) => setGatewayRefundId(e.target.value)} placeholder="Gateway refund ID (required to mark refunded)" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#F7941D]" />
+              {selected.viaGateway ? (
+                <p className="m-0 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+                  Paid through Razorpay: the refund is sent to the gateway and is marked <strong>Refunded</strong> only when Razorpay confirms it
+                  {selected.gatewayStatus ? <> (gateway status: <strong>{selected.gatewayStatus}</strong>)</> : null}.
+                  {selected.gatewayFailure ? <span className="block text-rose-700 mt-1">Last attempt failed: {selected.gatewayFailure}</span> : null}
+                </p>
+              ) : (
+                <input value={gatewayRefundId} onChange={(e) => setGatewayRefundId(e.target.value)} placeholder="Payment reference (refund paid outside the gateway)" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#F7941D]" />
+              )}
               <input value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Remarks (optional)" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#F7941D]" />
               {actionError ? <p className="m-0 text-sm font-medium text-rose-700">{actionError}</p> : null}
               <div className="flex flex-wrap gap-2">
                 {selected.statusCode === 'REQUESTED' ? (
                   <button type="button" disabled={acting} onClick={() => processRefund('APPROVED')} className="cursor-pointer rounded-xl border-none bg-sky-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">Approve</button>
                 ) : null}
-                <button type="button" disabled={acting} onClick={() => processRefund('COMPLETED')} className="cursor-pointer rounded-xl border-none bg-emerald-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">Mark refunded</button>
+                <button type="button" disabled={acting} onClick={() => processRefund('COMPLETED')} className="cursor-pointer rounded-xl border-none bg-emerald-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">{selected.viaGateway ? (selected.gatewayStatus === 'initiated' || selected.gatewayStatus === 'initiating' ? 'Refund in progress' : 'Refund via Razorpay') : 'Mark refunded'}</button>
+                {selected.viaGateway && selected.gatewayRefundId && selected.gatewayRefundId !== '—' ? (
+                  <button type="button" disabled={acting} onClick={async () => { setActing(true); setActionError(''); try { const r = await treasuryService.syncRefund(selected.id); window.alert('Razorpay status: ' + r.gatewayStatus); setSelected(null); setReload((n) => n + 1); } catch (e) { setActionError(e?.response?.data?.message || e.message); } finally { setActing(false); } }} className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50">Check Razorpay status</button>
+                ) : null}
                 <button type="button" disabled={acting} onClick={() => processRefund('REJECTED')} className="cursor-pointer rounded-xl border-none bg-rose-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">Reject</button>
               </div>
             </div>

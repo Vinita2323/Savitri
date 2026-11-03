@@ -171,6 +171,8 @@ const emailHistorySchema = new mongoose.Schema({
 
 const proformaInvoiceSchema = new mongoose.Schema(
   {
+    // Owning brand/region. Set by the server from the active scope - never from the request body.
+    brandId: { type: String, index: true },
     proformaNumber: {
       type: String,
       required: true,
@@ -409,6 +411,7 @@ const proformaInvoiceSchema = new mongoose.Schema(
 );
 
 // High performance query indexes
+proformaInvoiceSchema.index({ brandId: 1, createdAt: -1 });
 proformaInvoiceSchema.index({ client: 1, createdAt: -1 });
 proformaInvoiceSchema.index({ status: 1, createdAt: -1 });
 proformaInvoiceSchema.index({ paymentStatus: 1, createdAt: -1 });

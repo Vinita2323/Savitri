@@ -46,6 +46,13 @@ import Faq from '../models/Faq.model.js';
 import SupportSetting from '../models/SupportSetting.model.js';
 import Quotation from '../models/Quotation.model.js';
 import QuotationRequest from '../models/QuotationRequest.model.js';
+import ProformaInvoice from '../models/ProformaInvoice.model.js';
+import DeliveryChallan from '../models/DeliveryChallan.model.js';
+import TreasuryAccount from '../models/TreasuryAccount.model.js';
+import JournalEntry from '../models/JournalEntry.model.js';
+import GatewayPayment from '../models/GatewayPayment.model.js';
+import GatewaySettlement from '../models/GatewaySettlement.model.js';
+import BankStatementEntry from '../models/BankStatementEntry.model.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,6 +61,13 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const models = [
   { name: 'Quotation', model: Quotation },
   { name: 'QuotationRequest', model: QuotationRequest },
+  { name: 'ProformaInvoice', model: ProformaInvoice },
+  { name: 'DeliveryChallan', model: DeliveryChallan },
+  { name: 'TreasuryAccount', model: TreasuryAccount },
+  { name: 'JournalEntry', model: JournalEntry },
+  { name: 'GatewayPayment', model: GatewayPayment },
+  { name: 'GatewaySettlement', model: GatewaySettlement },
+  { name: 'BankStatementEntry', model: BankStatementEntry },
   { name: 'User', model: User },
   { name: 'Seller', model: Seller },
   { name: 'Captain', model: Captain },

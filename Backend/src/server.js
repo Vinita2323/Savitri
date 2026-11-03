@@ -48,6 +48,7 @@ import referralRoutes from './routes/referralRoutes.js';
 import returnRoutes from './routes/returnRoutes.js';
 import pricingRoutes from './routes/pricingRoutes.js';
 import razorpayWebhookRoutes from './routes/razorpayWebhookRoutes.js';
+import treasuryRoutes from './routes/treasuryRoutes.js';
 import deliveryChallanRoutes from './routes/deliveryChallanRoutes.js';
 import quotationRoutes from './routes/quotationRoutes.js';
 import proformaInvoiceRoutes from './routes/proformaInvoiceRoutes.js';
@@ -196,6 +197,7 @@ const registerRoutes = (prefix = '') => {
   app.use(`${prefix}/quotations`, quotationRoutes);
   app.use(`${prefix}/proforma-invoices`, proformaInvoiceRoutes);
   app.use(`${prefix}/pos`, posRoutes);
+  app.use(`${prefix}/treasury`, treasuryRoutes);
   app.use(`${prefix}/employees`, employeeRoutes);
   app.use(`${prefix}`, commissionRoutes);
 };

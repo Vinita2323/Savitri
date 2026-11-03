@@ -8,6 +8,7 @@ export const AddAccountModal = ({ isOpen, onClose, defaultType = 'bank' }) => {
   const [type, setType] = useState(defaultType);
   const [accountName, setAccountName] = useState('');
   const [bankName, setBankName] = useState('');
+  const [accountType, setAccountType] = useState('CURRENT');
   const [accountNumber, setAccountNumber] = useState('');
   const [ifsc, setIfsc] = useState('');
   const [openingBalance, setOpeningBalance] = useState('0');
@@ -21,7 +22,7 @@ export const AddAccountModal = ({ isOpen, onClose, defaultType = 'bank' }) => {
 
   const isCash = type === 'cash';
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -48,10 +49,11 @@ export const AddAccountModal = ({ isOpen, onClose, defaultType = 'bank' }) => {
     }
 
     try {
-      addAccount({
+      await addAccount({
         accountName: accountName.trim(),
         type,
         bankName: bankName.trim(),
+        accountType,
         accountNumber: accountNumber.trim(),
         ifsc: ifsc.trim(),
         openingBalance: balNum,
@@ -149,6 +151,18 @@ export const AddAccountModal = ({ isOpen, onClose, defaultType = 'bank' }) => {
           {/* Bank Fields (conditional) */}
           {!isCash && (
             <>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Account Type</label>
+                <select
+                  value={accountType}
+                  onChange={(e) => setAccountType(e.target.value)}
+                  className="w-full px-3 py-2 text-sm font-normal border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#1A2E0A] outline-none bg-white"
+                >
+                  <option value="CURRENT">Current account</option>
+                  <option value="SAVINGS">Savings account</option>
+                  <option value="ESCROW">Escrow account</option>
+                </select>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">

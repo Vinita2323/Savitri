@@ -9,7 +9,7 @@ import {
 } from '../utils/cashBankUtils';
 
 export const TransactionPanel = () => {
-  const { selectedAccount, currentAccountTransactions } = useCashBank();
+  const { selectedAccount, currentAccountTransactions, exportTransactions } = useCashBank();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
@@ -135,6 +135,15 @@ export const TransactionPanel = () => {
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
             <span>Export</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => exportTransactions('xlsx')}
+            className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
+            title="Download this account's ledger as an Excel file"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <span>Excel</span>
           </button>
         </div>
       </div>

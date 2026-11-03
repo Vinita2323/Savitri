@@ -92,6 +92,14 @@ export const superAdminService = {
     const response = await API.put(`/super-admin/sellers/${sellerId}/commission`, payload);
     return response.data;
   },
+  resetSellerCommission: async (sellerId, payload = {}) => {
+    const response = await API.post(`/super-admin/sellers/${sellerId}/commission/reset`, payload);
+    return response.data;
+  },
+  getCommissionHistory: async (params = {}) => {
+    const response = await API.get('/super-admin/commissions/history', { params });
+    return response.data;
+  },
 
   // Financial Adjustments
   getFinancialAdjustments: async (params = {}) => {

@@ -8,13 +8,22 @@ export const AccountList = ({ onOpenAddAccount }) => {
   const {
     cashAccounts,
     bankAccounts,
+    clearingAccounts,
+    feeAccounts,
     selectedAccountId,
     selectAccount,
     totalBalance,
     unlinkedTotal,
     unlinkedCount,
     isUnlinkedSelected,
+    isRazorpaySelected,
+    filter,
   } = useCashBank();
+  const showCash = filter === 'all' || filter === 'cash';
+  const showBank = filter === 'all' || filter === 'bank';
+  const showClearing = filter === 'all' || filter === 'clearing';
+  const clearingTotal = clearingAccounts.reduce((s, a) => s + a.balance, 0);
+  const feeTotal = feeAccounts.reduce((s, a) => s + a.balance, 0);
 
   return (
     <div className="space-y-4">
@@ -32,6 +41,7 @@ export const AccountList = ({ onOpenAddAccount }) => {
       </div>
 
       {/* 2. Cash in Hand Section */}
+      {showCash && (
       <div className="space-y-1.5">
         <div className="flex items-center justify-between px-1">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -50,7 +60,10 @@ export const AccountList = ({ onOpenAddAccount }) => {
         </div>
       </div>
 
+      )}
+
       {/* 3. Bank Accounts Section */}
+      {showBank && (
       <div className="space-y-1.5">
         <div className="flex items-center justify-between px-1">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -83,6 +96,32 @@ export const AccountList = ({ onOpenAddAccount }) => {
           )}
         </div>
       </div>
+
+      )}
+
+      {/* Razorpay Clearing: money collected by the gateway and not yet settled into a bank (not a bank account) */}
+      {showClearing && (
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Razorpay</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => selectAccount('razorpay')}
+          className={`w-full text-left px-3.5 py-3 rounded-lg transition-all flex items-center justify-between cursor-pointer border ${isRazorpaySelected ? 'bg-sky-50/70 border-sky-300 shadow-xs' : 'bg-white border-transparent hover:bg-slate-50 hover:border-slate-200'}`}
+          data-testid="razorpay-clearing-row"
+        >
+          <div className="min-w-0">
+            <div className={`text-sm truncate ${isRazorpaySelected ? 'font-semibold text-sky-950' : 'font-medium text-slate-700'}`}>Razorpay Clearing</div>
+            <div className="text-xs text-slate-400 font-normal truncate mt-0.5">Collected, awaiting settlement</div>
+          </div>
+          <div className="text-right shrink-0 pl-3">
+            <div className="text-sm font-medium text-amber-700">{formatINR(clearingTotal)}</div>
+            <div className="text-[10px] text-slate-400">Fees {formatINR(feeTotal)}</div>
+          </div>
+        </button>
+      </div>
+      )}
 
       {/* 4. Minimal Unlinked Transactions Item */}
       <div className="pt-1">
@@ -141,7 +180,7 @@ export const AccountList = ({ onOpenAddAccount }) => {
 
       {/* 5. Minimal 1-line note */}
       <p className="text-[11px] text-slate-400 text-center pt-2">
-        Demo data only &bull; Persisted in browser localStorage
+        Live ledger &bull; Every balance is derived from posted double-entry journal entries
       </p>
     </div>
   );

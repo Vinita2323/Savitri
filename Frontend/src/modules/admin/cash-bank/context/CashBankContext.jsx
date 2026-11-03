@@ -1,437 +1,230 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  INITIAL_ACCOUNTS,
-  INITIAL_TRANSACTIONS,
-  INITIAL_UNLINKED_TRANSACTIONS,
-} from '../data/cashBankDemoData';
-import { generateId, maskAccountNumber } from '../utils/cashBankUtils';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import treasuryService from '../../../../services/treasuryService';
 
-const getStorageKey = () => {
-  const brand =
-    typeof sessionStorage !== 'undefined'
-      ? sessionStorage.getItem('shippnex_super_admin_brand') || 'brand_fg'
-      : 'brand_fg';
-  return `savitri_cash_bank_data_${brand}`;
-};
-
+/**
+ * Cash & Bank state. The server (MongoDB double-entry treasury book) is the only source of truth:
+ * balances, transactions, Razorpay clearing and settlements all come from the API. Nothing is kept in
+ * localStorage and there is no demo data.
+ */
 const CashBankContext = createContext(null);
 
+const messageOf = (err, fallback) => err?.response?.data?.message || err?.message || fallback;
+const fail = (err, fallback) => { throw new Error(messageOf(err, fallback)); };
+
 export const CashBankProvider = ({ children }) => {
-  // 1. Initialize State from localStorage per active brand scope
-  const [accounts, setAccounts] = useState(() => {
-    try {
-      const stored = localStorage.getItem(getStorageKey());
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed.accounts) && parsed.accounts.length > 0) {
-          return parsed.accounts;
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to parse stored cash and bank data:', e);
-    }
-    return INITIAL_ACCOUNTS;
-  });
-
-  const [transactions, setTransactions] = useState(() => {
-    try {
-      const stored = localStorage.getItem(getStorageKey());
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed.transactions)) {
-          return parsed.transactions;
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to parse stored transactions:', e);
-    }
-    return INITIAL_TRANSACTIONS;
-  });
-
-  const [unlinkedTransactions, setUnlinkedTransactions] = useState(() => {
-    try {
-      const stored = localStorage.getItem(getStorageKey());
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed.unlinkedTransactions)) {
-          return parsed.unlinkedTransactions;
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to parse stored unlinked transactions:', e);
-    }
-    return INITIAL_UNLINKED_TRANSACTIONS;
-  });
-
-  // Selected account: can be an account ID or 'unlinked'
-  const [selectedAccountId, setSelectedAccountId] = useState(() => {
-    return 'acc_hdfc';
-  });
-
-  // Toast / notification feedback
+  const [accounts, setAccounts] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [integrity, setIntegrity] = useState(null);
+  const [unlinkedTransactions, setUnlinkedTransactions] = useState([]);
+  const [selectedAccountId, setSelectedAccountId] = useState('');
+  const [transactions, setTransactions] = useState([]);
+  const [settlements, setSettlements] = useState([]);
+  const [reconciliation, setReconciliation] = useState(null);
+  const [gatewayPayments, setGatewayPayments] = useState([]);
+  const [filter, setFilter] = useState('all'); // all | cash | bank | clearing
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [toast, setToast] = useState(null);
+  const inFlight = useRef(new Set());
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type, id: Date.now() });
-    setTimeout(() => {
-      setToast(null);
-    }, 4000);
+    setTimeout(() => setToast(null), 4000);
   }, []);
 
-  // 2. Persist to localStorage whenever state changes
-  useEffect(() => {
+  const refresh = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
-      const payload = {
-        accounts,
-        transactions,
-        unlinkedTransactions,
-        updatedAt: new Date().toISOString(),
-      };
-      localStorage.setItem(getStorageKey(), JSON.stringify(payload));
-    } catch (e) {
-      console.error('Failed to save cash and bank state to localStorage:', e);
+      const [dash, unl] = await Promise.all([treasuryService.getDashboard(), treasuryService.getUnlinked()]);
+      setAccounts(dash.accounts || []);
+      setSummary(dash.summary || null);
+      setIntegrity(dash.integrity || null);
+      setUnlinkedTransactions(unl.unlinked || []);
+      setLoadError('');
+      setSelectedAccountId((cur) => {
+        if (cur === 'unlinked' || cur === 'razorpay') return cur;
+        if (cur && (dash.accounts || []).some((a) => a.id === cur)) return cur;
+        const first = (dash.accounts || []).find((a) => a.type === 'bank' || a.type === 'cash');
+        return first ? first.id : 'razorpay';
+      });
+    } catch (err) {
+      setLoadError(messageOf(err, 'Could not load Cash and Bank from the server.'));
+    } finally {
+      if (!silent) setLoading(false);
     }
-  }, [accounts, transactions, unlinkedTransactions]);
-
-  // Total balance: aggregated across all cash & bank accounts
-  const totalBalance = useMemo(() => {
-    return accounts.reduce((sum, acc) => sum + (parseFloat(acc.balance) || 0), 0);
-  }, [accounts]);
-
-  // Unlinked summary
-  const unlinkedTotal = useMemo(() => {
-    return unlinkedTransactions.reduce((sum, tx) => sum + (parseFloat(tx.amount) || 0), 0);
-  }, [unlinkedTransactions]);
-
-  const unlinkedCount = unlinkedTransactions.length;
-
-  // Currently selected account object
-  const selectedAccount = useMemo(() => {
-    if (selectedAccountId === 'unlinked') return null;
-    return accounts.find((acc) => acc.id === selectedAccountId) || accounts[0] || null;
-  }, [accounts, selectedAccountId]);
-
-  const isUnlinkedSelected = selectedAccountId === 'unlinked';
-
-  // Transactions belonging to selected account, sorted date descending
-  const currentAccountTransactions = useMemo(() => {
-    if (isUnlinkedSelected || !selectedAccount) return [];
-    return transactions
-      .filter((tx) => tx.accountId === selectedAccount.id)
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [transactions, selectedAccount, isUnlinkedSelected]);
-
-  // Separate cash and bank accounts
-  const cashAccounts = useMemo(() => {
-    return accounts.filter((acc) => acc.type === 'cash' || acc.isCash);
-  }, [accounts]);
-
-  const bankAccounts = useMemo(() => {
-    return accounts.filter((acc) => acc.type === 'bank' && !acc.isCash);
-  }, [accounts]);
-
-  // Select account handler
-  const selectAccount = useCallback((id) => {
-    setSelectedAccountId(id);
   }, []);
 
-  // 3. Add New Account
-  const addAccount = useCallback(
-    ({ accountName, type, bankName, accountNumber, ifsc, openingBalance, openingBalanceDate, notes }) => {
-      const cleanName = (accountName || '').trim();
-      if (!cleanName) {
-        throw new Error('Please provide a valid account name.');
-      }
+  useEffect(() => { refresh(); }, [refresh]);
+  // Live: a captured payment, settlement or refund shows up without a reload
+  useEffect(() => {
+    const t = setInterval(() => { if (!document.hidden) refresh({ silent: true }); }, 30000);
+    return () => clearInterval(t);
+  }, [refresh]);
 
-      const balanceNum = parseFloat(openingBalance) || 0;
-      if (balanceNum < 0) {
-        throw new Error('Opening balance cannot be negative.');
-      }
+  const isRealAccountSelected = selectedAccountId && selectedAccountId !== 'unlinked' && selectedAccountId !== 'razorpay';
+  const loadTransactions = useCallback(async (id) => {
+    if (!id) return;
+    try {
+      const res = await treasuryService.getAccountTransactions(id);
+      setTransactions(res.transactions || []);
+    } catch (err) {
+      setTransactions([]);
+      setLoadError(messageOf(err, 'Could not load transactions.'));
+    }
+  }, []);
+  useEffect(() => { if (isRealAccountSelected) loadTransactions(selectedAccountId); }, [selectedAccountId, isRealAccountSelected, loadTransactions]);
 
-      const isCash = type === 'cash';
-      const cleanBankName = isCash ? '' : (bankName || '').trim();
-      const cleanAccNum = isCash ? '' : (accountNumber || '').trim();
+  const loadSettlements = useCallback(async (params = {}) => {
+    try { setSettlements((await treasuryService.getSettlements(params)).settlements || []); }
+    catch (err) { setLoadError(messageOf(err, 'Could not load settlements.')); }
+  }, []);
+  const loadReconciliation = useCallback(async () => {
+    try { setReconciliation(await treasuryService.getReconciliation()); }
+    catch (err) { setLoadError(messageOf(err, 'Could not load reconciliation.')); }
+  }, []);
+  const loadGatewayPayments = useCallback(async (params = {}) => {
+    try { setGatewayPayments((await treasuryService.getGatewayPayments(params)).payments || []); }
+    catch (err) { setLoadError(messageOf(err, 'Could not load Razorpay payments.')); }
+  }, []);
 
-      const newId = generateId(isCash ? 'acc_cash' : 'acc_bank');
-      const newAccount = {
-        id: newId,
-        accountName: cleanName,
-        type: isCash ? 'cash' : 'bank',
-        isCash,
-        bankName: cleanBankName,
-        accountNumber: cleanAccNum,
-        maskedAccount: isCash ? 'Physical Cash' : maskAccountNumber(cleanAccNum),
-        ifsc: isCash ? '' : (ifsc || '').trim().toUpperCase(),
-        balance: balanceNum,
-        openingBalance: balanceNum,
-        openingBalanceDate: openingBalanceDate || new Date().toISOString().split('T')[0],
-        notes: (notes || '').trim(),
-        createdAt: new Date().toISOString(),
-      };
+  const afterChange = useCallback(async () => {
+    await refresh({ silent: true });
+    if (isRealAccountSelected) await loadTransactions(selectedAccountId);
+  }, [refresh, loadTransactions, selectedAccountId, isRealAccountSelected]);
 
-      // If opening balance > 0, generate an initial opening balance ledger entry
-      let initialTx = null;
-      if (balanceNum > 0) {
-        initialTx = {
-          id: generateId('tx_open'),
-          accountId: newId,
-          date: openingBalanceDate || new Date().toISOString().split('T')[0],
-          description: `Opening Balance — ${cleanName}`,
-          category: 'Capital Infusion',
-          type: 'money_in',
-          amount: balanceNum,
-          paymentMode: isCash ? 'Cash Receipt' : 'Bank Transfer',
-          referenceNumber: 'OPEN-BAL',
-          notes: 'Account ledger opening balance initialization',
-          runningBalance: balanceNum,
-        };
-      }
+  // Guard against double submission: one in-flight request per action kind
+  const once = useCallback(async (kind, fn) => {
+    if (inFlight.current.has(kind)) throw new Error('Please wait - the previous request is still being processed.');
+    inFlight.current.add(kind);
+    try { return await fn(); } finally { inFlight.current.delete(kind); }
+  }, []);
 
-      setAccounts((prev) => [...prev, newAccount]);
-      if (initialTx) {
-        setTransactions((prev) => [initialTx, ...prev]);
-      }
+  const cashAccounts = useMemo(() => accounts.filter((a) => a.type === 'cash'), [accounts]);
+  const bankAccounts = useMemo(() => accounts.filter((a) => a.type === 'bank'), [accounts]);
+  const clearingAccounts = useMemo(() => accounts.filter((a) => a.type === 'gateway_clearing'), [accounts]);
+  const feeAccounts = useMemo(() => accounts.filter((a) => a.type === 'gateway_fee'), [accounts]);
+  const totalBalance = summary?.totalNetBalance ?? 0;
+  const unlinkedTotal = useMemo(() => unlinkedTransactions.reduce((s, u) => s + (Number(u.amount) || 0), 0), [unlinkedTransactions]);
+  const unlinkedCount = unlinkedTransactions.length;
+  const selectedAccount = useMemo(() => (isRealAccountSelected ? accounts.find((a) => a.id === selectedAccountId) || null : null), [accounts, selectedAccountId, isRealAccountSelected]);
+  const isUnlinkedSelected = selectedAccountId === 'unlinked';
+  const isRazorpaySelected = selectedAccountId === 'razorpay';
+  const currentAccountTransactions = isRealAccountSelected ? transactions : [];
+  const selectAccount = useCallback((id) => setSelectedAccountId(id), []);
 
-      setSelectedAccountId(newId);
-      showToast(`Account "${cleanName}" successfully created.`);
-      return { success: true, account: newAccount };
-    },
-    [showToast]
-  );
+  // ── actions (all server-backed; errors carry the server's message) ──────────────────────────
+  const addAccount = useCallback(({ accountName, type, bankName, accountNumber, ifsc, openingBalance, openingBalanceDate, notes, accountType }) =>
+    once('addAccount', async () => {
+      try {
+        const res = await treasuryService.createAccount({
+          accountName, type: type === 'cash' ? 'CASH' : (accountType || 'CURRENT'), bankName, accountNumber, ifsc,
+          openingBalance, openingBalanceDate, notes,
+        });
+        await refresh({ silent: true });
+        setSelectedAccountId(res.account.id);
+        showToast(`Account "${res.account.accountName}" successfully created.`);
+        return { success: true, account: res.account };
+      } catch (err) { return fail(err, 'Could not create the account.'); }
+    }), [once, refresh, showToast]);
 
-  // 4. Add / Reduce Money
-  const addTransaction = useCallback(
-    ({ accountId, type, amount, date, category, referenceNumber, paymentMode, notes }) => {
-      const targetAcc = accounts.find((acc) => acc.id === accountId);
-      if (!targetAcc) {
-        throw new Error('Selected account not found.');
-      }
+  const addTransaction = useCallback(({ accountId, type, amount, date, category, referenceNumber, paymentMode, notes }) =>
+    once('addTransaction', async () => {
+      try {
+        const res = await treasuryService.addReduceMoney({ accountId, type, amount, date, category, referenceNumber, paymentMode, notes });
+        await afterChange();
+        showToast(`${type === 'money_in' ? 'Money In' : 'Money Out'} of ₹${Number(amount).toLocaleString('en-IN')} recorded.`);
+        return { success: true, entryNumber: res.entryNumber };
+      } catch (err) { return fail(err, 'Could not record the transaction.'); }
+    }), [once, afterChange, showToast]);
 
-      const numAmount = parseFloat(amount);
-      if (isNaN(numAmount) || numAmount <= 0) {
-        throw new Error('Transaction amount must be greater than zero.');
-      }
+  const transferMoney = useCallback(({ fromAccountId, toAccountId, amount, date, referenceNumber, paymentMode, notes }) =>
+    once('transfer', async () => {
+      try {
+        await treasuryService.transfer({ fromAccountId, toAccountId, amount, date, referenceNumber, paymentMode, notes });
+        await afterChange();
+        showToast(`Transferred ₹${Number(amount).toLocaleString('en-IN')}.`);
+        return { success: true };
+      } catch (err) { return fail(err, 'Could not transfer the funds.'); }
+    }), [once, afterChange, showToast]);
 
-      if (!date) {
-        throw new Error('Please select a transaction date.');
-      }
+  const linkUnlinkedTransaction = useCallback((id, { targetAccountId, category, referenceNumber, notes, force }) =>
+    once('link:' + id, async () => {
+      try {
+        await treasuryService.linkUnlinked(id, { targetAccountId, category, referenceNumber, notes, force });
+        await afterChange();
+        showToast('Transaction allocated to the account.');
+        return { success: true };
+      } catch (err) { return fail(err, 'Could not allocate the transaction.'); }
+    }), [once, afterChange, showToast]);
 
-      const currentBal = parseFloat(targetAcc.balance) || 0;
-      let newBal = currentBal;
+  const addStatementLine = useCallback((data) => once('stmt', async () => {
+    try { const res = await treasuryService.addStatementLine(data); await afterChange(); showToast('Bank statement line added.'); return res; }
+    catch (err) { return fail(err, 'Could not add the statement line.'); }
+  }), [once, afterChange, showToast]);
 
-      if (type === 'money_in') {
-        newBal = currentBal + numAmount;
-      } else if (type === 'money_out') {
-        if (numAmount > currentBal) {
-          // Allow overdraft with notice or check
-        }
-        newBal = currentBal - numAmount;
-      } else {
-        throw new Error('Invalid transaction type.');
-      }
+  const ignoreUnlinked = useCallback((id, reason) => once('ign:' + id, async () => {
+    try { await treasuryService.ignoreUnlinked(id, reason); await afterChange(); showToast('Transaction ignored.', 'info'); }
+    catch (err) { fail(err, 'Could not ignore the transaction.'); }
+  }), [once, afterChange, showToast]);
 
-      const newTx = {
-        id: generateId('tx'),
-        accountId,
-        date,
-        description: (notes || category || 'Ledger Entry').trim(),
-        category: category || (type === 'money_in' ? 'Customer Receipt' : 'General Expense'),
-        type,
-        amount: numAmount,
-        paymentMode: paymentMode || (targetAcc.isCash ? 'Cash Receipt' : 'NEFT/RTGS'),
-        referenceNumber: (referenceNumber || '').trim(),
-        notes: (notes || '').trim(),
-        runningBalance: newBal,
-      };
+  const reverseEntry = useCallback((entryId, reason) => once('rev:' + entryId, async () => {
+    try { await treasuryService.reverseEntry(entryId, reason); await afterChange(); showToast('Entry reversed with a correcting entry.'); }
+    catch (err) { fail(err, 'Could not reverse the entry.'); }
+  }), [once, afterChange, showToast]);
 
-      // Update account balance
-      setAccounts((prev) =>
-        prev.map((acc) => (acc.id === accountId ? { ...acc, balance: newBal } : acc))
-      );
+  const razorpayRefresh = useCallback(async () => {
+    await Promise.all([refresh({ silent: true }), loadSettlements(), loadReconciliation(), loadGatewayPayments()]);
+  }, [refresh, loadSettlements, loadReconciliation, loadGatewayPayments]);
 
-      // Add to transactions list
-      setTransactions((prev) => [newTx, ...prev]);
+  const syncSettlements = useCallback((range = {}) => once('sync', async () => {
+    try { const res = await treasuryService.syncSettlements(range); await razorpayRefresh(); showToast(`Synced ${res.fetched} settlement(s) from Razorpay.`); return res; }
+    catch (err) { return fail(err, 'Could not sync settlements from Razorpay.'); }
+  }), [once, razorpayRefresh, showToast]);
 
-      const typeLabel = type === 'money_in' ? 'Money In' : 'Money Out';
-      showToast(`${typeLabel} of ₹${numAmount.toLocaleString('en-IN')} recorded for ${targetAcc.accountName}.`);
-      return { success: true, transaction: newTx };
-    },
-    [accounts, showToast]
-  );
+  const postSettlement = useCallback((id, destinationAccountId) => once('post:' + id, async () => {
+    try { const res = await treasuryService.postSettlement(id, destinationAccountId); await razorpayRefresh(); showToast('Settlement posted to the bank account.'); return res; }
+    catch (err) { return fail(err, 'Could not post the settlement.'); }
+  }), [once, razorpayRefresh, showToast]);
 
-  // 5. Transfer Money
-  const transferMoney = useCallback(
-    ({ fromAccountId, toAccountId, amount, date, referenceNumber, paymentMode, notes }) => {
-      if (fromAccountId === toAccountId) {
-        throw new Error('Source and destination accounts must be different.');
-      }
+  const matchSettlement = useCallback((id, statementId) => once('match:' + id, async () => {
+    try { const res = await treasuryService.matchSettlement(id, statementId); await razorpayRefresh(); showToast(`Reconciliation: ${res.status}.`); return res; }
+    catch (err) { return fail(err, 'Could not match the settlement.'); }
+  }), [once, razorpayRefresh, showToast]);
 
-      const sourceAcc = accounts.find((acc) => acc.id === fromAccountId);
-      const destAcc = accounts.find((acc) => acc.id === toAccountId);
+  const unmatchSettlement = useCallback((id) => once('unmatch:' + id, async () => {
+    try { await treasuryService.unmatchSettlement(id); await razorpayRefresh(); showToast('Match removed.', 'info'); }
+    catch (err) { fail(err, 'Could not remove the match.'); }
+  }), [once, razorpayRefresh, showToast]);
 
-      if (!sourceAcc || !destAcc) {
-        throw new Error('Selected source or destination account not found.');
-      }
+  const autoReconcile = useCallback(() => once('auto', async () => {
+    try { const res = await treasuryService.autoReconcile(); await razorpayRefresh(); showToast(`Auto-match: ${res.matched} matched, ${res.partial} need confirmation, ${res.discrepancies} discrepancies.`); return res; }
+    catch (err) { return fail(err, 'Could not run reconciliation.'); }
+  }), [once, razorpayRefresh, showToast]);
 
-      const numAmount = parseFloat(amount);
-      if (isNaN(numAmount) || numAmount <= 0) {
-        throw new Error('Transfer amount must be greater than zero.');
-      }
+  const setSettlementAccount = useCallback((id) => once('setacc', async () => {
+    try { await treasuryService.updateAccount(id, { isSettlementAccount: true }); await refresh({ silent: true }); showToast('Default settlement account updated.'); }
+    catch (err) { fail(err, 'Could not set the settlement account.'); }
+  }), [once, refresh, showToast]);
 
-      if (numAmount > sourceAcc.balance) {
-        throw new Error(
-          `Insufficient funds in ${sourceAcc.accountName}. Available: ₹${sourceAcc.balance.toLocaleString('en-IN')}`
-        );
-      }
-
-      if (!date) {
-        throw new Error('Please specify a transfer date.');
-      }
-
-      const newSourceBal = sourceAcc.balance - numAmount;
-      const newDestBal = destAcc.balance + numAmount;
-
-      const transferRef = (referenceNumber || '').trim() || `TRF-${Date.now().toString().slice(-6)}`;
-      const linkId = generateId('trf_pair');
-
-      // Outward entry on Source Account
-      const outTx = {
-        id: generateId('tx_trf_out'),
-        accountId: fromAccountId,
-        date,
-        description: `Transfer to ${destAcc.accountName}`,
-        category: 'Internal Transfer',
-        type: 'transfer',
-        transferType: 'out',
-        targetAccountId: toAccountId,
-        targetAccountName: destAcc.accountName,
-        linkedTransferId: linkId,
-        amount: numAmount,
-        paymentMode: paymentMode || (sourceAcc.isCash || destAcc.isCash ? 'Bank Transfer' : 'NEFT/RTGS'),
-        referenceNumber: transferRef,
-        notes: (notes || '').trim(),
-        runningBalance: newSourceBal,
-      };
-
-      // Inward entry on Destination Account
-      const inTx = {
-        id: generateId('tx_trf_in'),
-        accountId: toAccountId,
-        date,
-        description: `Transfer from ${sourceAcc.accountName}`,
-        category: 'Internal Transfer',
-        type: 'transfer',
-        transferType: 'in',
-        targetAccountId: fromAccountId,
-        targetAccountName: sourceAcc.accountName,
-        linkedTransferId: linkId,
-        amount: numAmount,
-        paymentMode: paymentMode || (sourceAcc.isCash || destAcc.isCash ? 'Bank Transfer' : 'NEFT/RTGS'),
-        referenceNumber: transferRef,
-        notes: (notes || '').trim(),
-        runningBalance: newDestBal,
-      };
-
-      // Update both account balances
-      setAccounts((prev) =>
-        prev.map((acc) => {
-          if (acc.id === fromAccountId) return { ...acc, balance: newSourceBal };
-          if (acc.id === toAccountId) return { ...acc, balance: newDestBal };
-          return acc;
-        })
-      );
-
-      // Add both entries to transaction ledger
-      setTransactions((prev) => [outTx, inTx, ...prev]);
-
-      showToast(
-        `Transferred ₹${numAmount.toLocaleString('en-IN')} from ${sourceAcc.accountName} to ${destAcc.accountName}.`
-      );
-      return { success: true };
-    },
-    [accounts, showToast]
-  );
-
-  // 6. Link Unlinked Transaction
-  const linkUnlinkedTransaction = useCallback(
-    (unlinkedId, { targetAccountId, category, referenceNumber, notes }) => {
-      const item = unlinkedTransactions.find((u) => u.id === unlinkedId);
-      if (!item) {
-        throw new Error('Unlinked transaction not found.');
-      }
-
-      const targetAcc = accounts.find((a) => a.id === targetAccountId);
-      if (!targetAcc) {
-        throw new Error('Please select a target account to link this transaction.');
-      }
-
-      const numAmount = parseFloat(item.amount) || 0;
-      const newBal = (parseFloat(targetAcc.balance) || 0) + numAmount;
-
-      const verifiedTx = {
-        id: generateId('tx_linked'),
-        accountId: targetAccountId,
-        date: item.date,
-        description: (notes || item.description).trim(),
-        category: category || item.suggestedCategory || 'Customer Receipt',
-        type: item.type || 'money_in',
-        amount: numAmount,
-        paymentMode: item.source?.includes('POS') ? 'Debit Card' : 'Bank Transfer',
-        referenceNumber: (referenceNumber || item.referenceNumber || '').trim(),
-        notes: (notes || `Reconciled from unlinked statement feed: ${item.source}`).trim(),
-        runningBalance: newBal,
-      };
-
-      // Update target account balance
-      setAccounts((prev) =>
-        prev.map((acc) => (acc.id === targetAccountId ? { ...acc, balance: newBal } : acc))
-      );
-
-      // Add to verified transactions
-      setTransactions((prev) => [verifiedTx, ...prev]);
-
-      // Remove from unlinked
-      setUnlinkedTransactions((prev) => prev.filter((u) => u.id !== unlinkedId));
-
-      showToast(
-        `Transaction of ₹${numAmount.toLocaleString('en-IN')} reconciled and linked to ${targetAcc.accountName}.`
-      );
-      return { success: true };
-    },
-    [unlinkedTransactions, accounts, showToast]
-  );
-
-  // 7. Reset Demo Data
-  const resetDemoData = useCallback(() => {
-    localStorage.removeItem(getStorageKey());
-    setAccounts(INITIAL_ACCOUNTS);
-    setTransactions(INITIAL_TRANSACTIONS);
-    setUnlinkedTransactions(INITIAL_UNLINKED_TRANSACTIONS);
-    setSelectedAccountId('acc_hdfc');
-    showToast('Demo data successfully restored to default sample state.', 'info');
+  const exportTransactions = useCallback(async (format = 'csv') => {
+    try {
+      await treasuryService.download('/treasury/export/transactions', { format, accountId: isRealAccountSelected ? selectedAccountId : undefined }, `treasury-transactions.${format === 'csv' ? 'csv' : 'xls'}`);
+    } catch (err) { showToast(messageOf(err, 'Export failed.'), 'info'); }
+  }, [isRealAccountSelected, selectedAccountId, showToast]);
+  const exportSettlements = useCallback(async (format = 'csv') => {
+    try { await treasuryService.download('/treasury/export/settlements', { format }, `razorpay-settlements.${format === 'csv' ? 'csv' : 'xls'}`); }
+    catch (err) { showToast(messageOf(err, 'Export failed.'), 'info'); }
   }, [showToast]);
 
   const value = {
-    accounts,
-    cashAccounts,
-    bankAccounts,
-    transactions,
-    unlinkedTransactions,
-    selectedAccountId,
-    selectedAccount,
-    isUnlinkedSelected,
-    currentAccountTransactions,
-    totalBalance,
-    unlinkedTotal,
-    unlinkedCount,
-    toast,
-    selectAccount,
-    addAccount,
-    addTransaction,
-    transferMoney,
-    linkUnlinkedTransaction,
-    resetDemoData,
-    showToast,
+    accounts, cashAccounts, bankAccounts, clearingAccounts, feeAccounts,
+    transactions, unlinkedTransactions, selectedAccountId, selectedAccount, isUnlinkedSelected, isRazorpaySelected,
+    currentAccountTransactions, totalBalance, unlinkedTotal, unlinkedCount, summary, integrity, filter, setFilter,
+    settlements, reconciliation, gatewayPayments, loading, loadError, toast,
+    selectAccount, refresh, addAccount, addTransaction, transferMoney, linkUnlinkedTransaction, addStatementLine,
+    ignoreUnlinked, reverseEntry, loadSettlements, loadReconciliation, loadGatewayPayments, razorpayRefresh,
+    syncSettlements, postSettlement, matchSettlement, unmatchSettlement, autoReconcile, setSettlementAccount,
+    exportTransactions, exportSettlements, showToast,
   };
 
   return <CashBankContext.Provider value={value}>{children}</CashBankContext.Provider>;
@@ -439,9 +232,7 @@ export const CashBankProvider = ({ children }) => {
 
 export const useCashBank = () => {
   const context = useContext(CashBankContext);
-  if (!context) {
-    throw new Error('useCashBank must be used within a CashBankProvider');
-  }
+  if (!context) throw new Error('useCashBank must be used within a CashBankProvider');
   return context;
 };
 

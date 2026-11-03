@@ -133,7 +133,7 @@ export const handleRazorpayWebhook = async (req, res) => {
     console.log(`[Razorpay Webhook] Received event=${event.event} payment=${paymentId} order=${razorpayOrderId}`);
 
     try {
-      const { outcome, reason } = await processRazorpayEvent(event);
+      const { outcome, reason } = await processRazorpayEvent(event, { eventId });
       await finishEvent(eventId, { status: outcome, result: reason, processedAt: new Date() });
       console.log(`[Razorpay Webhook] ${outcome} event=${event.event} payment=${paymentId} result=${reason}`);
       return res.status(200).json({ success: true });

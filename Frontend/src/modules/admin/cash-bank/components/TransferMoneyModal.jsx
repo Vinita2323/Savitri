@@ -61,7 +61,7 @@ export const TransferMoneyModal = ({ isOpen, onClose, defaultFromAccountId }) =>
   const newSourceBalance = sourceBalance - numAmount;
   const newDestBalance = destBalance + numAmount;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -93,7 +93,7 @@ export const TransferMoneyModal = ({ isOpen, onClose, defaultFromAccountId }) =>
     }
 
     try {
-      transferMoney({
+      await transferMoney({
         fromAccountId,
         toAccountId,
         amount: numAmount,

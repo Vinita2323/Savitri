@@ -1921,6 +1921,30 @@ export const SellerManagement = () => {
                         %
                       </span>
                     </div>
+                    {isSellerEditMode && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!window.confirm('Reset this seller to the global default commission?')) return;
+                          try {
+                            const r = await adminService.resetSellerCommission(editingSellerModal.id);
+                            if (r?.success) {
+                              const rate = r.seller?.commissionPercentage;
+                              setEditFormData((prev) => ({ ...prev, commission: String(rate ?? '') }));
+                              setSellers((prev) => prev.map((s) => (s.id === editingSellerModal.id ? { ...s, commission: `${rate}%`, commissionPercentage: rate } : s)));
+                              setEditingSellerModal((prev) => ({ ...prev, commission: `${rate}%` }));
+                            } else {
+                              alert(r?.message || 'Could not reset commission');
+                            }
+                          } catch (err) {
+                            alert(err.response?.data?.message || 'Could not reset commission');
+                          }
+                        }}
+                        className="mt-1.5 cursor-pointer rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        Reset to global default
+                      </button>
+                    )}
                   </div>
 
                   <div>
@@ -1928,8 +1952,9 @@ export const SellerManagement = () => {
                     <input
                       type="number"
                       value={editFormData.balance}
-                      disabled={!isSellerEditMode}
-                      onChange={(e) => setEditFormData({ ...editFormData, balance: e.target.value })}
+                      disabled
+                      readOnly
+                      title="Wallet balance can only be changed through a ledger adjustment with a reason"
                       className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 outline-none focus:border-[#F7941D] disabled:bg-slate-50 disabled:text-slate-600"
                     />
                   </div>
@@ -2250,14 +2275,24 @@ export const SellerManagement = () => {
                         alert('Wallet balance must be a valid number.');
                         return;
                       }
+                      // Profile fields only. Commission goes through its own audited workflow;
+                      // wallet balance can only be changed by a ledger-based adjustment.
                       const response = await adminService.updateSellerDetails(editingSellerModal.id, {
                         name: editFormData.name,
                         storeName: editFormData.storeName,
-                        commission: commissionNum,
-                        balance: balanceNum,
                       });
                       if (response && response.success) {
-                        const savedCommission = response.seller?.commissionPercentage ?? commissionNum;
+                        let savedCommission = response.seller?.commissionPercentage;
+                        const originalCommission = Number(String(editingSellerModal.commission ?? '').replace(/%/g, '').trim());
+                        if (commissionNum !== originalCommission) {
+                          const cRes = await adminService.updateSellerCommission(editingSellerModal.id, commissionNum);
+                          if (!cRes?.success) {
+                            alert(cRes?.message || 'Seller saved, but the commission could not be updated.');
+                          } else {
+                            savedCommission = cRes.seller?.commissionPercentage ?? commissionNum;
+                          }
+                        }
+                        savedCommission = savedCommission ?? originalCommission;
                         const savedBalance = response.seller?.walletBalance ?? balanceNum;
                         setSellers(prev => prev.map(s => s.id === editingSellerModal.id ? {
                           ...s,

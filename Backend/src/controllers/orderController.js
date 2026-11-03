@@ -12,6 +12,8 @@ import PlatformLedger from '../models/PlatformLedger.model.js';
 import CommissionSettings from '../models/CommissionSettings.model.js';
 import DeliveryPricing from '../models/DeliveryPricing.model.js';
 import RefundRequest from '../models/RefundRequest.model.js';
+import { resolveSellerCommissionRate, getGlobalSellerCommission } from '../utils/commissionRate.js';
+import { recordGatewayCapture } from '../services/razorpayTreasury.js';
 import {
   sendNotificationToUser, 
   sendNotificationToSeller, 
@@ -421,7 +423,7 @@ const createSellerOrderNotifications = async ({ order, orderItems, shippingAddre
 
     const assignedSellerId = sellerDoc ? String(sellerDoc._id) : sellerName;
     const actualSellerName = sellerDoc ? (sellerDoc.businessName || sellerDoc.ownerName || sellerName) : sellerName;
-    const commRate = Number(sellerDoc?.commissionPercentage !== undefined ? sellerDoc.commissionPercentage : globalSellerCommRate);
+    const commRate = resolveSellerCommissionRate(sellerDoc, globalSellerCommRate);
     const commAmount = Number(((groupSubtotal * commRate) / 100).toFixed(2));
     const netAmount = Number((groupSubtotal - commAmount).toFixed(2));
 
@@ -462,6 +464,21 @@ const createSellerOrderNotifications = async ({ order, orderItems, shippingAddre
 
 // Confirms an online order only after the Razorpay amount has already been checked.
 // Safe to call from both checkout verification and the webhook.
+// Treasury bookkeeping must never block order confirmation; it is idempotent and also repaired by the backfill job.
+const recordTreasuryCapture = async (order, paymentMeta, source) => {
+  try {
+    await recordGatewayCapture(order, {
+      paymentId: paymentMeta.paymentId || order.razorpay?.paymentId,
+      amount: paymentMeta.amount ?? order.razorpay?.amount,
+      currency: paymentMeta.currency,
+      razorpayOrderId: paymentMeta.razorpayOrderId || order.razorpay?.orderId,
+      method: paymentMeta.method || order.razorpay?.method,
+    }, { source, event: 'payment.captured' });
+  } catch (e) {
+    console.error('[Treasury] Could not record gateway capture for order', order?.orderId, e.message);
+  }
+};
+
 export const confirmOnlinePayment = async (order, paymentMeta = {}) => {
   if (!order) return { ok: false, reason: 'missing_order' };
   if (!isOnlinePaymentMethod(order.paymentMethod)) return { ok: false, reason: 'not_online' };
@@ -490,6 +507,7 @@ export const confirmOnlinePayment = async (order, paymentMeta = {}) => {
       orderPickupOtp: order.pickupOtp,
       globalSellerCommRate: order.sellerCommissionRate,
     });
+    await recordTreasuryCapture(order, paymentMeta, 'VERIFY');
     return { ok: true, already: true, order };
   }
 
@@ -518,7 +536,10 @@ export const confirmOnlinePayment = async (order, paymentMeta = {}) => {
 
   if (!claimed) {
     const fresh = await Order.findById(order._id);
-    if (fresh?.paymentStatus === 'Paid') return { ok: true, already: true, order: fresh };
+    if (fresh?.paymentStatus === 'Paid') {
+      await recordTreasuryCapture(fresh, paymentMeta, 'VERIFY');
+      return { ok: true, already: true, order: fresh };
+    }
     return { ok: false, reason: 'not_pending' };
   }
 
@@ -557,6 +578,7 @@ export const confirmOnlinePayment = async (order, paymentMeta = {}) => {
       data: { type: 'order_placed', orderId: claimed.orderId, link: '/profile' },
     }).catch(() => {});
   });
+  await recordTreasuryCapture(claimed, paymentMeta, 'VERIFY');
   return { ok: true, order: claimed };
 };
 
@@ -948,7 +970,7 @@ export const placeOrder = async (req, res, next) => {
 
       const assignedSellerId = sellerDoc ? String(sellerDoc._id) : sellerName;
       const actualSellerName = sellerDoc ? (sellerDoc.businessName || sellerDoc.ownerName || sellerName) : sellerName;
-      const commRate = Number(sellerDoc?.commissionPercentage !== undefined ? sellerDoc.commissionPercentage : globalSellerCommRate);
+      const commRate = resolveSellerCommissionRate(sellerDoc, globalSellerCommRate);
       const commAmount = Number(((groupSubtotal * commRate) / 100).toFixed(2));
       const netAmount = Number((groupSubtotal - commAmount).toFixed(2));
 
@@ -1774,7 +1796,7 @@ export const processSellerSettlement = async (notificationId) => {
     }
 
     const grossAmount = Number(notification.totalAmount || 0);
-    const commRate = Number(notification.commissionRate !== undefined ? notification.commissionRate : (seller.commissionPercentage || 10));
+    const commRate = Number(notification.commissionRate !== undefined && notification.commissionRate !== null ? notification.commissionRate : resolveSellerCommissionRate(seller, await getGlobalSellerCommission()));
     const commAmount = Number(((grossAmount * commRate) / 100).toFixed(2));
     const netAmount = Number((grossAmount - commAmount).toFixed(2));
 
@@ -2061,7 +2083,9 @@ export const verifyRazorpayPayment = async (req, res, next) => {
     hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
     const generated_signature = hmac.digest('hex');
 
-    if (generated_signature !== razorpay_signature) {
+    const sigA = Buffer.from(String(generated_signature), 'utf8');
+    const sigB = Buffer.from(String(razorpay_signature), 'utf8');
+    if (sigA.length !== sigB.length || !crypto.timingSafeEqual(sigA, sigB)) {
       console.info('[Razorpay] signature rejected', {
         razorpayOrderId: razorpay_order_id,
         razorpayPaymentId: razorpay_payment_id,

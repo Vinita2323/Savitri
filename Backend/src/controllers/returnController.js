@@ -11,6 +11,7 @@ import CaptainTransaction from '../models/CaptainTransaction.model.js';
 import WalletTransaction from '../models/WalletTransaction.model.js';
 import PlatformLedger from '../models/PlatformLedger.model.js';
 import RefundRequest from '../models/RefundRequest.model.js';
+import { resolveSellerCommissionRate, getGlobalSellerCommission } from '../utils/commissionRate.js';
 import { invalidateUserOrdersCache } from './orderController.js';
 import { creditUserWallet } from '../utils/userWalletHelper.js';
 import { canAccessReturn } from '../utils/accessControl.js';
@@ -1059,6 +1060,8 @@ export const verifyReturnedProduct = async (req, res, next) => {
         userPhone: returnDoc.customerPhone,
         amount: refundAmt,
         reason: `Item Return #${returnDoc.returnId}: ${returnDoc.reason}`,
+        refundMode: 'WALLET',
+        source: 'ITEM_RETURN',
         status: 'COMPLETED',
         paymentMethod: returnDoc.refundMethod,
         processedBy: userId,
@@ -1101,7 +1104,7 @@ export const verifyReturnedProduct = async (req, res, next) => {
     if (!returnDoc.sellerSettlementAdjusted && returnDoc.seller) {
       const seller = await Seller.findById(returnDoc.seller);
       if (seller) {
-        const commRate = seller.commissionPercentage || 10;
+        const commRate = resolveSellerCommissionRate(seller, await getGlobalSellerCommission());
         const grossReturn = Number(returnDoc.refundAmount || returnDoc.itemTotal || 0);
         const commReversal = Number(((grossReturn * commRate) / 100).toFixed(2));
         const netDeduction = Number((grossReturn - commReversal).toFixed(2));

@@ -1,5 +1,12 @@
 import Order from '../models/Order.model.js';
 import { razorpayInstance } from '../config/razorpay.js';
+import {
+  recordGatewayCapture,
+  recordGatewayFailure,
+  recordGatewayAuthorized,
+  processRefundEvent,
+  processSettlementEvent,
+} from './razorpayTreasury.js';
 
 // Events this application acts on. `order.paid` carries the same payment entity as
 // `payment.captured`, so it is handled as a safety net for a missed capture event.
@@ -8,6 +15,10 @@ export const SUPPORTED_EVENTS = new Set([
   'payment.captured',
   'payment.failed',
   'order.paid',
+  'refund.created',
+  'refund.processed',
+  'refund.failed',
+  'settlement.processed',
 ]);
 
 // Razorpay order receipts are created as `order_<localOrderId>_<timestamp>` by
@@ -58,7 +69,7 @@ const findLocalOrder = async (razorpayOrderId, rzpOrderEntity) => {
 
 const toDate = (unixSeconds) => (unixSeconds ? new Date(unixSeconds * 1000) : new Date());
 
-const handleAuthorized = async (order, payment) => {
+const handleAuthorized = async (order, payment, ctx = {}) => {
   // Auto-capture is on (payment_capture: 1), so this is transient. Record it, never
   // downgrade a captured payment, and do not treat it as paid.
   const updated = await Order.findOneAndUpdate(
@@ -72,10 +83,11 @@ const handleAuthorized = async (order, payment) => {
       },
     }
   );
+  await recordGatewayAuthorized(order, payment, ctx).catch((e) => console.error('[Treasury] authorized record failed:', e.message));
   return updated ? processed('authorized_recorded') : ignored('already_captured');
 };
 
-const handleCaptured = async (order, payment) => {
+const handleCaptured = async (order, payment, ctx = {}) => {
   if (order.paymentMethod === 'COD') {
     console.warn(`[Razorpay Webhook] Capture received for COD order ${order.orderId}; ignoring`);
     return ignored('cod_order');
@@ -105,11 +117,19 @@ const handleCaptured = async (order, payment) => {
     paymentId: payment.id,
     method: payment.method || null,
   });
-  if (result.ok) return processed(result.already ? 'already_captured' : 'captured');
+  if (result.ok) {
+    // confirmOnlinePayment records the treasury entry for new captures; this covers replays and
+    // payments confirmed before treasury tracking existed (idempotent either way)
+    await recordGatewayCapture(result.order || order, {
+      paymentId: payment.id, amount: Number(payment.amount), currency: payment.currency, razorpayOrderId: payment.order_id, method: payment.method,
+      feePaise: payment.fee ?? null, taxPaise: payment.tax ?? null,
+    }, { source: 'WEBHOOK', ...ctx });
+    return processed(result.already ? 'already_captured' : 'captured');
+  }
   return ignored(result.reason || 'not_confirmed');
 };
 
-const handleFailed = async (order, payment) => {
+const handleFailed = async (order, payment, ctx = {}) => {
   // A payment can fail and the customer retry successfully on the same Razorpay order,
   // and events can arrive out of order. A captured payment (or a different attempt that
   // is authorized) must never be overwritten by a failure.
@@ -134,6 +154,7 @@ const handleFailed = async (order, payment) => {
       },
     }
   );
+  await recordGatewayFailure(order, payment, ctx).catch((e) => console.error('[Treasury] failure record failed:', e.message));
   return updated ? processed('failed_recorded') : ignored('order_already_paid_or_retrying');
 };
 
@@ -143,8 +164,19 @@ const handleFailed = async (order, payment) => {
  * same final state. Throws on infrastructure errors so the caller can return 5xx.
  * Wallet/commission settlement happens at delivery, not here, so nothing else is touched.
  */
-export const processRazorpayEvent = async (event) => {
+export const processRazorpayEvent = async (event, meta = {}) => {
   if (!SUPPORTED_EVENTS.has(event.event)) return ignored('unsupported_event');
+
+  // Refund and settlement events carry no payment entity - they are applied to the treasury directly
+  if (event.event.startsWith('refund.')) {
+    const r = await processRefundEvent(event);
+    return r.outcome === 'processed' ? processed(r.reason) : ignored(r.reason);
+  }
+  if (event.event === 'settlement.processed') {
+    const r = await processSettlementEvent(event);
+    return r.outcome === 'processed' ? processed(r.reason) : ignored(r.reason);
+  }
+  const ctx = { event: event.event, eventId: meta.eventId || '' };
 
   const { payment, rzpOrder, razorpayOrderId } = extractPaymentInfo(event);
   if (!payment?.id || !razorpayOrderId) return ignored('missing_payment_entity');
@@ -154,12 +186,12 @@ export const processRazorpayEvent = async (event) => {
 
   switch (event.event) {
     case 'payment.authorized':
-      return handleAuthorized(order, payment);
+      return handleAuthorized(order, payment, ctx);
     case 'payment.captured':
     case 'order.paid':
-      return handleCaptured(order, payment);
+      return handleCaptured(order, payment, ctx);
     case 'payment.failed':
-      return handleFailed(order, payment);
+      return handleFailed(order, payment, ctx);
     default:
       return ignored('unsupported_event');
   }

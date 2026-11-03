@@ -36,6 +36,9 @@ const financialAuditLogSchema = new mongoose.Schema(
       default: '',
       index: true,
     },
+    // Owning brand of the affected record and, for seller-level actions, the seller itself
+    brandId: { type: String, default: '', index: true },
+    sellerId: { type: String, default: '', index: true },
     amount: {
       type: Number,
       default: null,

@@ -16,7 +16,10 @@ import CaptainCashSettlement from '../models/CaptainCashSettlement.model.js';
 import Product from '../models/Product.model.js';
 import User from '../models/User.model.js';
 import Brand from '../models/Brand.model.js';
-import { getCityRegex, getScopedSellerIds, getScopedCaptainIds, sellerScopeFilter, sellerInScope, captainInScope, captainScopeFilter } from '../middleware/scopeMiddleware.js';
+import { gatewayContextForRefund, initiateGatewayRefund } from '../services/razorpayTreasury.js';
+import { postEntry, actorOf as treasuryActor, ensureTreasuryIndexes } from '../services/treasuryLedger.js';
+import TreasuryAccount from '../models/TreasuryAccount.model.js';
+import { getCityRegex, getScopedOrderIds, orderInScope, getScopedSellerIds, getScopedCaptainIds, sellerScopeFilter, sellerInScope, captainInScope, captainScopeFilter } from '../middleware/scopeMiddleware.js';
 
 // Helper: Log financial audit entry
 const logAudit = async ({
@@ -1131,92 +1134,6 @@ export const getCaptainSettlements = async (req, res, next) => {
 // =========================================================================
 // 5. COMMISSION MANAGEMENT (SUPER ADMIN AUTHORITY ONLY) (BRAND/REGION SCOPED)
 // =========================================================================
-export const getAllCommissions = async (req, res, next) => {
-  try {
-    const scope = req.scope || { isAll: true };
-    const query = { ...sellerScopeFilter(scope) };
-
-    const sellers = await Seller.find(query)
-      .select('_id businessName ownerName phone email warehouseLocation commissionPercentage totalEarnings totalCommissionDeducted walletBalance status')
-      .sort({ totalCommissionDeducted: -1 })
-      .lean();
-
-    res.status(200).json({
-      success: true,
-      scope: {
-        isAll: scope.isAll,
-        brandId: scope.brandId,
-        brandName: scope.brand?.name || 'All Regions',
-        city: scope.city,
-      },
-      count: sellers.length,
-      sellers,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const updateSellerCommission = async (req, res, next) => {
-  try {
-    const scope = req.scope || { isAll: true };
-    const { sellerId } = req.params;
-    const { commissionPercentage, remarks } = req.body;
-
-    const rate = Number(commissionPercentage);
-    if (isNaN(rate) || rate < 0 || rate > 100) {
-      return res.status(400).json({
-        success: false,
-        message: 'Commission rate must be a valid number between 0% and 100%',
-      });
-    }
-
-    const seller = await Seller.findById(sellerId);
-    if (!seller) {
-      return res.status(404).json({ success: false, message: 'Seller not found' });
-    }
-
-    // Verify regional scope
-    if (!scope.isAll) {
-      if (!sellerInScope(scope, seller)) {
-        return res.status(403).json({
-          success: false,
-          message: 'Forbidden: Cannot update commission for a merchant outside your authorized regional scope.',
-        });
-      }
-    }
-
-    const previousRate = seller.commissionPercentage;
-    seller.commissionPercentage = rate;
-    await seller.save();
-
-    await logAudit({
-      actorId: req.user.id,
-      actorEmail: req.user.email,
-      action: 'UPDATE_COMMISSION',
-      targetEntity: 'Seller',
-      targetId: String(seller._id),
-      previousValue: { commissionPercentage: previousRate },
-      newValue: { commissionPercentage: rate },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-      remarks: remarks || `Commission updated from ${previousRate}% to ${rate}%`,
-    });
-
-    res.status(200).json({
-      success: true,
-      message: `Commission rate for "${seller.businessName}" updated to ${rate}%`,
-      seller: {
-        id: seller._id,
-        businessName: seller.businessName,
-        commissionPercentage: seller.commissionPercentage,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 // =========================================================================
 // 6. FINANCIAL ADJUSTMENTS (MANUAL OVERRIDE WITH AUDIT TRAIL)
 // =========================================================================
@@ -1250,7 +1167,7 @@ export const createFinancialAdjustment = async (req, res, next) => {
       // Verify regional scope
       if (!scope.isAll) {
         if (!sellerInScope(scope, seller)) {
-          return res.status(403).json({ success: false, message: 'Forbidden: Merchant outside authorized regional scope.' });
+          return res.status(404).json({ success: false, message: 'Seller not found' });
         }
       }
 
@@ -1419,19 +1336,28 @@ export const getRefunds = async (req, res, next) => {
     const scope = req.scope || { isAll: true };
     const query = {};
 
-    if (!scope.isAll && scope.city) {
-      const cityOrders = await Order.find({
-        'shippingAddress.city': getCityRegex(scope.city),
-      }).select('orderId _id').lean();
-      const cityOrderIds = cityOrders.map((o) => o.orderId);
-      const cityObjIds = cityOrders.map((o) => o._id);
+    // Brand scope: a refund belongs to the brand whose seller fulfilled the order (same attribution
+    // as orders everywhere else). Fails closed - refunds for orders never routed to a brand seller
+    // are visible only in the consolidated "All Regions" view.
+    if (!scope.isAll) {
+      const ids = await getScopedOrderIds(scope);
+      const scopedOrders = await Order.find({ _id: { $in: ids } }).select('orderId').lean();
       query.$or = [
-        { orderId: { $in: cityOrderIds } },
-        { order: { $in: cityObjIds } },
+        { order: { $in: ids } },
+        { orderId: { $in: scopedOrders.map((o) => o.orderId).filter(Boolean) } },
       ];
     }
 
-    const refunds = await RefundRequest.find(query).sort({ createdAt: -1 });
+    const refunds = await RefundRequest.find(query).sort({ createdAt: -1 }).lean();
+    // Tell the UI how each open refund will be paid: through Razorpay (no manual reference) or manually
+    const orderIds = [...new Set(refunds.map((r) => r.orderId).filter(Boolean))];
+    const paidOrders = await Order.find({ orderId: { $in: orderIds } }).select('orderId paymentMethod razorpay.paymentId razorpay.paymentStatus').lean();
+    const byOrder = new Map(paidOrders.map((o) => [o.orderId, o]));
+    const annotated = refunds.map((r) => {
+      const o = byOrder.get(r.orderId);
+      const viaGateway = r.refundMode === 'RAZORPAY' || (r.refundMode !== 'WALLET' && o && o.paymentMethod !== 'COD' && o.razorpay?.paymentStatus === 'captured' && !!o.razorpay?.paymentId);
+      return { ...r, gatewayEligible: Boolean(viaGateway), refundMode: viaGateway ? 'RAZORPAY' : r.refundMode };
+    });
     res.status(200).json({
       success: true,
       scope: {
@@ -1440,70 +1366,167 @@ export const getRefunds = async (req, res, next) => {
         brandName: scope.brand?.name || 'All Regions',
         city: scope.city,
       },
-      count: refunds.length,
-      refunds,
+      count: annotated.length,
+      refunds: annotated,
     });
   } catch (error) {
     next(error);
   }
 };
 
+// Allowed forward moves of a refund. Terminal states (COMPLETED, REJECTED) never change again.
+const REFUND_TRANSITIONS = {
+  FAILED: ['APPROVED', 'PROCESSING', 'COMPLETED', 'REJECTED'],
+  REQUESTED: ['APPROVED', 'PROCESSING', 'COMPLETED', 'REJECTED'],
+  APPROVED: ['PROCESSING', 'COMPLETED', 'REJECTED'],
+  PROCESSING: ['COMPLETED', 'REJECTED'],
+};
+
+// Keeps the customer's order (and therefore the customer/seller views) in step with the refund.
+const syncOrderWithRefund = async (refund, status) => {
+  const orderQuery = refund.order ? { _id: refund.order } : { orderId: refund.orderId };
+  let update = null;
+  if (status === 'APPROVED') update = { returnStatus: 'Approved', orderStatus: 'Return Approved' };
+  if (status === 'COMPLETED') update = { returnStatus: 'Refunded', orderStatus: 'Refund Completed', refundStatus: 'Completed', refundedAt: new Date() };
+  if (status === 'REJECTED') update = { returnStatus: 'Rejected', orderStatus: 'Return Rejected', rejectionReason: refund.rejectionReason || refund.remarks || '' };
+  if (!update) return;
+  await Order.updateOne(orderQuery, { $set: update });
+};
+
 export const processRefund = async (req, res, next) => {
   try {
     const scope = req.scope || { isAll: true };
     const { id } = req.params;
-    const { status, gatewayRefundId, remarks } = req.body;
+    const { status, gatewayRefundId, remarks } = req.body || {};
 
     if (!['APPROVED', 'PROCESSING', 'COMPLETED', 'REJECTED'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid refund status.' });
     }
-
-    const refund = await RefundRequest.findById(id);
-    if (!refund) {
+    if (!mongoose.Types.ObjectId.isValid(String(id))) {
       return res.status(404).json({ success: false, message: 'Refund request not found' });
     }
-    if (['COMPLETED', 'REJECTED'].includes(refund.status)) {
-      return res.status(409).json({ success: false, message: `Refund is already ${refund.status} and cannot be changed.` });
+    const gatewayRef = String(gatewayRefundId || '').trim();
+    // Online (Razorpay) orders: the refund is sent through the gateway. Typing a reference does NOT mark it paid.
+    if (status === 'COMPLETED' || status === 'PROCESSING') {
+      const pre = mongoose.Types.ObjectId.isValid(String(id)) ? await RefundRequest.findById(id) : null;
+      if (pre && !['COMPLETED', 'REJECTED'].includes(pre.status)) {
+        let inScope = true;
+        if (!scope.isAll) {
+          const od = await Order.findOne({ $or: [{ orderId: pre.orderId }, ...(pre.order ? [{ _id: pre.order }] : [])] }).lean();
+          inScope = !!od && (await orderInScope(scope, od));
+        }
+        if (!inScope) return res.status(404).json({ success: false, message: 'Refund request not found' });
+        const ctx = await gatewayContextForRefund(pre);
+        if (ctx.eligible) {
+          try {
+            const updated = await initiateGatewayRefund(pre._id, { actor: treasuryActor(req) });
+            await logAudit({
+              actorId: req.user.id, actorEmail: req.user.email, action: 'INITIATE_GATEWAY_REFUND', targetEntity: 'RefundRequest',
+              targetId: pre.refundId, amount: pre.amount, previousValue: { status: pre.status }, newValue: { status: updated.status, razorpayRefundId: updated.gatewayRefund?.razorpayRefundId },
+              ipAddress: req.ip, userAgent: req.headers['user-agent'], remarks: remarks || 'Refund sent to Razorpay',
+            });
+            return res.status(200).json({
+              success: true,
+              gateway: true,
+              message: updated.status === 'COMPLETED'
+                ? `Refund #${updated.refundId} was processed by Razorpay.`
+                : `Refund #${updated.refundId} was sent to Razorpay. It will be marked Refunded when Razorpay confirms it.`,
+              refund: updated,
+            });
+          } catch (e) {
+            return res.status(e.status || 502).json({ success: false, message: e.message });
+          }
+        }
+      }
+    }
+    if (status === 'REJECTED' || status === 'APPROVED') {
+      const pre = mongoose.Types.ObjectId.isValid(String(id)) ? await RefundRequest.findById(id).lean() : null;
+      if (pre && ['initiating', 'initiated', 'processed'].includes(pre.gatewayRefund?.status) && status === 'REJECTED') {
+        return res.status(409).json({ success: false, message: 'A gateway refund is already in progress for this request and cannot be rejected.' });
+      }
+    }
+    if (status === 'COMPLETED' && !gatewayRef) {
+      return res.status(400).json({ success: false, message: 'Enter the gateway refund ID to mark this refund as completed.' });
     }
 
-    // Verify authorized scope on the parent order
-    if (!scope.isAll && scope.city) {
+    const existing = await RefundRequest.findById(id);
+    // Out-of-scope refunds are reported as not found (never disclose another brand's record)
+    if (!existing) return res.status(404).json({ success: false, message: 'Refund request not found' });
+    if (!scope.isAll) {
       const orderDoc = await Order.findOne({
-        $or: [{ orderId: refund.orderId }, { _id: refund.order }],
+        $or: [{ orderId: existing.orderId }, ...(existing.order ? [{ _id: existing.order }] : [])],
       }).lean();
-      if (orderDoc && !getCityRegex(scope.city).test(orderDoc.shippingAddress?.city)) {
-        return res.status(403).json({ success: false, message: 'Forbidden: Cannot process refund for order outside authorized region.' });
+      if (!orderDoc || !(await orderInScope(scope, orderDoc))) {
+        return res.status(404).json({ success: false, message: 'Refund request not found' });
+      }
+    }
+    if (['COMPLETED', 'REJECTED'].includes(existing.status)) {
+      return res.status(409).json({ success: false, message: `Refund is already ${existing.status} and cannot be changed.` });
+    }
+    const allowedFrom = Object.keys(REFUND_TRANSITIONS).filter((from) => REFUND_TRANSITIONS[from].includes(status));
+    if (!allowedFrom.includes(existing.status)) {
+      return res.status(409).json({ success: false, message: `A refund in status ${existing.status} cannot move to ${status}.` });
+    }
+
+    // Atomic compare-and-set: two admins acting at once cannot both complete (and double-ledger) a refund.
+    const set = { status, processedBy: req.user.id, processedAt: new Date() };
+    if (gatewayRef) set.gatewayRefundId = gatewayRef;
+    if (remarks) set.remarks = String(remarks).trim();
+    if (status === 'REJECTED') set.rejectionReason = String(remarks || '').trim();
+    const refund = await RefundRequest.findOneAndUpdate(
+      { _id: id, status: existing.status },
+      { $set: set },
+      { new: true }
+    );
+    if (!refund) {
+      return res.status(409).json({ success: false, message: 'This refund was just updated by someone else. Reload and try again.' });
+    }
+    const previousStatus = existing.status;
+
+    if (status === 'COMPLETED') {
+      try {
+        await PlatformLedger.create({
+          transactionId: `TXN-LED-REF-${Date.now().toString().slice(-6)}${Math.floor(100 + Math.random() * 900)}`,
+          category: 'REFUND',
+          type: 'DEBIT',
+          amount: refund.amount,
+          source: 'PLATFORM_TREASURY',
+          destination: 'USER',
+          entityType: 'USER',
+          entityId: String(refund.userId || ''),
+          entityName: refund.userName || 'Customer',
+          referenceModel: 'RefundRequest',
+          referenceId: refund.refundId,
+          referenceObjId: refund._id,
+          status: 'SUCCESS',
+          description: `Order Refund #${refund.refundId} processed. Ref: ${gatewayRef || 'Direct'}`,
+          metadata: { gatewayRefundId: gatewayRef, remarks, brandId: scope.brandId, city: scope.city },
+        });
+      } catch (ledgerError) {
+        // Never leave a refund marked paid without its ledger entry
+        await RefundRequest.updateOne({ _id: refund._id, status: 'COMPLETED' }, { $set: { status: previousStatus, processedAt: null } });
+        throw ledgerError;
       }
     }
 
-    const previousStatus = refund.status;
-    refund.status = status;
-    if (gatewayRefundId) refund.gatewayRefundId = gatewayRefundId;
-    if (remarks) refund.remarks = remarks;
-    refund.processedBy = req.user.id;
-    refund.processedAt = new Date();
-    await refund.save();
-
-    if (status === 'COMPLETED') {
-      const ledgerTxnId = `TXN-LED-REF-${Date.now().toString().slice(-6)}`;
-      await PlatformLedger.create({
-        transactionId: ledgerTxnId,
-        category: 'REFUND',
-        type: 'DEBIT',
-        amount: refund.amount,
-        source: 'PLATFORM_TREASURY',
-        destination: 'USER',
-        entityType: 'USER',
-        entityId: String(refund.userId || ''),
-        entityName: refund.userName || 'Customer',
-        referenceModel: 'RefundRequest',
-        referenceId: refund.refundId,
-        referenceObjId: refund._id,
-        status: 'SUCCESS',
-        description: `Order Refund #${refund.refundId} processed. Ref: ${gatewayRefundId || 'Direct'}`,
-        metadata: { gatewayRefundId, remarks, brandId: scope.brandId, city: scope.city },
-      });
+    // Optional treasury posting for refunds paid outside the gateway (COD / bank transfer / cash)
+    if (status === 'COMPLETED' && req.body?.treasuryAccountId && refund.refundMode !== 'RAZORPAY') {
+      await ensureTreasuryIndexes();
+      const acc = await TreasuryAccount.findById(req.body.treasuryAccountId);
+      const allowed = acc && acc.isActive && ['CASH', 'CURRENT', 'SAVINGS', 'ESCROW'].includes(acc.type) && (scope.isAll || acc.brandId === scope.brandId);
+      if (allowed) {
+        await postEntry({
+          description: `Refund #${refund.refundId} paid manually (${gatewayRef})`, sourceModule: 'MANUAL', sourceRef: refund.refundId,
+          idempotencyKey: `manual-refund:${refund._id}`, actor: treasuryActor(req), entryDate: new Date(),
+          lines: [
+            { systemCode: 'CUSTOMER_REFUNDS', brandId: acc.brandId, debitPaise: Math.round(refund.amount * 100) },
+            { accountId: acc._id, creditPaise: Math.round(refund.amount * 100) },
+          ],
+        });
+        await RefundRequest.updateOne({ _id: refund._id }, { $set: { treasuryAccountId: acc._id } });
+      }
     }
+    await syncOrderWithRefund(refund, status);
 
     await logAudit({
       actorId: req.user.id,
@@ -1513,7 +1536,7 @@ export const processRefund = async (req, res, next) => {
       targetId: refund.refundId,
       amount: refund.amount,
       previousValue: { status: previousStatus },
-      newValue: { status, gatewayRefundId },
+      newValue: { status, gatewayRefundId: gatewayRef },
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],
       remarks: remarks || `Refund updated to ${status}`,

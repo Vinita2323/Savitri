@@ -535,38 +535,6 @@ export const toggleSellerStatus = async (req, res, next) => {
   }
 };
 
-// Update seller commission percentage (%)
-export const updateSellerCommission = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { commissionPercentage } = req.body;
-
-    const commRate = Number(commissionPercentage);
-    if (isNaN(commRate) || commRate < 0 || commRate > 100) {
-      return res.status(400).json({ success: false, message: 'Please enter a valid commission percentage between 0 and 100' });
-    }
-
-    const seller = await Seller.findById(id);
-    if (!seller || !sellerInScope(req.scope, seller)) {
-      return res.status(404).json({ success: false, message: 'Seller not found' });
-    }
-
-    seller.commissionPercentage = commRate;
-    await seller.save();
-    invalidateSellersCache();
-
-    console.log(`[Admin] Updated Seller "${seller.businessName}" Commission Percentage to ${commRate}%`);
-
-    res.status(200).json({
-      success: true,
-      message: `Commission percentage updated to ${commRate}% for ${seller.businessName || 'Seller'}`,
-      seller,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 // Delete Seller
 export const deleteSeller = async (req, res, next) => {
   try {
@@ -1023,13 +991,16 @@ export const updateReturnOrderStatus = async (req, res, next) => {
 };
 
 // Update Seller Details (Admin)
+// Profile fields ONLY. Commission and wallet balance are deliberately not editable here:
+//  - commission: dedicated, audited workflow (PUT /api/admin/sellers/:id/commission)
+//  - wallet balance: ledger-based adjustments only (POST /api/super-admin/financial-adjustments)
 export const updateSellerDetails = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, storeName, commission, balance } = req.body;
+    const { name, storeName, commission, balance } = req.body || {};
 
-    if (!id) {
-      return res.status(400).json({ success: false, message: 'Seller ID is required' });
+    if (!id || !mongoose.Types.ObjectId.isValid(String(id))) {
+      return res.status(404).json({ success: false, message: 'Seller not found' });
     }
 
     const seller = await Seller.findById(id);
@@ -1037,32 +1008,24 @@ export const updateSellerDetails = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Seller not found' });
     }
 
-    // Update fields if provided
-    if (name) seller.ownerName = name;
-    if (storeName) seller.businessName = storeName;
-
-    // Accept "10", "10%", empty — never write NaN to Mongo
-    if (commission !== undefined && commission !== null && String(commission).trim() !== '') {
-      const commissionNum = Number(String(commission).replace(/%/g, '').trim());
-      if (Number.isNaN(commissionNum)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Commission must be a valid number',
-        });
-      }
-      seller.commissionPercentage = Math.max(0, Math.min(100, commissionNum));
+    const present = (v) => v !== undefined && v !== null && String(v).trim() !== '';
+    const num = (v) => Number(String(v).replace(/[%₹,\s]/g, '').trim());
+    // Clients may echo the current values back; only an actual CHANGE is refused.
+    if (present(commission) && num(commission) !== Number(seller.commissionPercentage)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Seller commission cannot be changed here. Use the commission management workflow (it is audited).',
+      });
+    }
+    if (present(balance) && num(balance) !== Number(seller.walletBalance || 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Wallet balance cannot be edited directly. Use a ledger-based wallet adjustment with a reason.',
+      });
     }
 
-    if (balance !== undefined && balance !== null && String(balance).trim() !== '') {
-      const balanceNum = Number(String(balance).replace(/[₹,\s]/g, '').trim());
-      if (Number.isNaN(balanceNum)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Wallet balance must be a valid number',
-        });
-      }
-      seller.walletBalance = balanceNum;
-    }
+    if (name) seller.ownerName = String(name).trim();
+    if (storeName) seller.businessName = String(storeName).trim();
 
     await seller.save();
     invalidateSellersCache();
@@ -1076,7 +1039,7 @@ export const updateSellerDetails = async (req, res, next) => {
         businessName: seller.businessName,
         commissionPercentage: seller.commissionPercentage,
         walletBalance: seller.walletBalance,
-      }
+      },
     });
   } catch (error) {
     next(error);
@@ -1239,6 +1202,18 @@ export const processCaptainCashSettlement = async (req, res, next) => {
       settlement.outstandingBefore = currentOutstanding;
       settlement.outstandingAfter = newOutstanding;
       await settlement.save();
+
+      // COD cash handed in by the captain: queue it for the cash / bank account it was received into
+      try {
+        const { queueUnlinked, brandForCaptain } = await import('../services/treasuryInbox.js');
+        await queueUnlinked({
+          brandId: await brandForCaptain(captain), source: 'COD_CASH', sourceRef: String(settlement.settlementId || settlement._id),
+          amountPaise: Math.round(settleAmount * 100), direction: 'CREDIT', description: `COD cash handed in by ${captain.name || 'captain'} (${settlement.settlementId || ''})`,
+          date: now, suggestedCategory: 'COD Collection',
+        });
+      } catch (err) {
+        console.warn('[Treasury] Could not queue COD cash settlement:', err.message);
+      }
 
       // Record in Platform Central Ledger
       try {

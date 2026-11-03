@@ -70,6 +70,8 @@ const challanItemSchema = new mongoose.Schema({
 
 const deliveryChallanSchema = new mongoose.Schema(
   {
+    // Owning brand/region. Set by the server from the active scope - never from the request body.
+    brandId: { type: String, index: true },
     challanNumber: {
       type: String,
       required: true,
@@ -254,6 +256,7 @@ const deliveryChallanSchema = new mongoose.Schema(
 );
 
 // Targeted query indexes
+deliveryChallanSchema.index({ brandId: 1, createdAt: -1 });
 deliveryChallanSchema.index({ client: 1, createdAt: -1 });
 deliveryChallanSchema.index({ order: 1, createdAt: -1 });
 deliveryChallanSchema.index({ status: 1, createdAt: -1 });

@@ -276,7 +276,7 @@ export const CreateDeliveryChallan = ({ onNavigate }) => {
       shippingAddress;
 
     return {
-      challanNumber: challanNumber.trim(),
+      // The number is allocated by the server when the challan is saved.
       challanDate: new Date(challanDate),
       dispatchDate: new Date(dispatchDate),
       expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate) : null,
@@ -785,8 +785,9 @@ export const CreateDeliveryChallan = ({ onNavigate }) => {
                 <label className="block text-[11px] font-bold text-slate-500 uppercase">Challan Number</label>
                 <input
                   type="text"
-                  value={challanNumber}
-                  onChange={(e) => setChallanNumber(e.target.value)}
+                  value={challanNumber ? `${challanNumber} (assigned on save)` : 'Assigned on save'}
+                  readOnly
+                  title="The number is assigned by the server when the challan is saved"
                   className="font-mono font-bold text-sm text-[#1A2E0A] bg-transparent border-none outline-none"
                 />
               </div>

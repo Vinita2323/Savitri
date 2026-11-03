@@ -31,7 +31,7 @@ export const LinkTransactionModal = ({ unlinkedItem, isOpen, onClose }) => {
 
   if (!isOpen || !unlinkedItem) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -41,7 +41,7 @@ export const LinkTransactionModal = ({ unlinkedItem, isOpen, onClose }) => {
     }
 
     try {
-      linkUnlinkedTransaction(unlinkedItem.id, {
+      await linkUnlinkedTransaction(unlinkedItem.id, {
         targetAccountId,
         category,
         referenceNumber: referenceNumber.trim(),

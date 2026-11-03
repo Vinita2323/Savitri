@@ -11,8 +11,6 @@ import {
   processPayout,
   getSellerSettlements,
   getCaptainSettlements,
-  getAllCommissions,
-  updateSellerCommission,
   createFinancialAdjustment,
   getFinancialAdjustments,
   getRefunds,
@@ -25,6 +23,13 @@ import {
   adjustSuperAdminInventoryStock,
   getSuperAdminDeliveryPartners,
 } from '../controllers/superAdminFinancialController.js';
+import {
+  listSellerCommissions,
+  getCommissionHistory,
+  setSellerCommission,
+  resetSellerCommission,
+  getSellerCommissionHistory,
+} from '../controllers/sellerCommissionController.js';
 
 const router = express.Router();
 
@@ -56,8 +61,12 @@ router.get('/settlements/sellers', superAdminAuth, getSellerSettlements);
 router.get('/settlements/captains', superAdminAuth, getCaptainSettlements);
 
 // Commission Authority
-router.get('/commissions', superAdminAuth, getAllCommissions);
-router.put('/sellers/:sellerId/commission', superAdminAuth, updateSellerCommission);
+// Seller commissions: Admin and Super Admin both manage them (brand scope enforced in the controller)
+router.get('/commissions', payoutAuth, listSellerCommissions);
+router.get('/commissions/history', payoutAuth, getCommissionHistory);
+router.put('/sellers/:sellerId/commission', payoutAuth, setSellerCommission);
+router.post('/sellers/:sellerId/commission/reset', payoutAuth, resetSellerCommission);
+router.get('/sellers/:sellerId/commission/history', payoutAuth, getSellerCommissionHistory);
 
 // Financial Adjustments
 router.get('/financial-adjustments', superAdminAuth, getFinancialAdjustments);

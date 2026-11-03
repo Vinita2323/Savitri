@@ -8,7 +8,6 @@ import {
   getAllSellers,
   toggleSellerStatus,
   deleteSeller,
-  updateSellerCommission,
   updateSellerDetails,
   getAllCaptains,
   toggleCaptainStatus,
@@ -23,6 +22,7 @@ import {
   getCaptainCashSettlements,
   processCaptainCashSettlement,
 } from '../controllers/adminController.js';
+import { setSellerCommission, resetSellerCommission, getSellerCommissionHistory } from '../controllers/sellerCommissionController.js';
 import { getAdminProfile, updateAdminProfile } from '../controllers/adminAuthController.js';
 
 const router = express.Router();
@@ -53,9 +53,10 @@ router.get('/sellers', getAllSellers);
 router.put('/sellers/:id/status', toggleSellerStatus);
 router.put('/sellers/:id/details', updateSellerDetails);
 router.delete('/sellers/:id', deleteSeller);
-// Seller Commission Updates
-// Commission rates are a privileged financial setting: Super Admin only (admins use the read-only views).
-router.put('/sellers/:id/commission', protect('super_admin'), updateSellerCommission);
+// Seller commission management - Admin and Super Admin, brand-scoped, always audited.
+router.put('/sellers/:id/commission', setSellerCommission);
+router.post('/sellers/:id/commission/reset', resetSellerCommission);
+router.get('/sellers/:id/commission/history', getSellerCommissionHistory);
 
 // Captain Management
 router.get('/captains', getAllCaptains);

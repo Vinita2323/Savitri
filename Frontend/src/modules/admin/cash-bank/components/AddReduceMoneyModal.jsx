@@ -52,7 +52,7 @@ export const AddReduceMoneyModal = ({ isOpen, onClose, defaultAccountId }) => {
   const isMoneyIn = type === 'money_in';
   const projectedBal = isMoneyIn ? currentBal + numAmount : currentBal - numAmount;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -72,7 +72,7 @@ export const AddReduceMoneyModal = ({ isOpen, onClose, defaultAccountId }) => {
     }
 
     try {
-      addTransaction({
+      await addTransaction({
         accountId,
         type,
         amount: numAmount,

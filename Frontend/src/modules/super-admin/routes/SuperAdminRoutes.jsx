@@ -95,8 +95,9 @@ const SuperAdminQuotationWrapper = ({ Component }) => {
 const SuperAdminDeliveryChallanWrapper = ({ Component }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { selectedBrandId } = useSuperAdmin();
   return (
-    <DeliveryChallanProvider>
+    <DeliveryChallanProvider key={selectedBrandId}>
       <Component
         onNavigate={(tab, data) => {
           const cleanTab = tab ? tab.replace(/^delivery_challans/, 'delivery-challans') : 'delivery-challans';
@@ -108,13 +109,18 @@ const SuperAdminDeliveryChallanWrapper = ({ Component }) => {
   );
 };
 
+const SuperAdminCashBankWrapper = () => {
+  const { selectedBrandId } = useSuperAdmin();
+  return <CashBankPage brandKey={selectedBrandId} />;
+};
+
 const SuperAdminProformaInvoiceWrapper = ({ Component }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { selectedBrandId } = useSuperAdmin();
   return (
     <QuotationProvider brandKey={selectedBrandId}>
-      <ProformaInvoiceProvider>
+      <ProformaInvoiceProvider key={selectedBrandId}>
         <Component
           onNavigate={(tab, data) => {
             const cleanTab = tab
@@ -157,7 +163,7 @@ const SuperAdminRoutesContent = () => {
         >
           <Route index element={<Navigate to="/super-admin/dashboard" replace />} />
           <Route path="/dashboard" element={<SuperAdminDashboard />} />
-          <Route path="/cash-bank" element={<CashBankPage />} />
+          <Route path="/cash-bank" element={<SuperAdminCashBankWrapper />} />
           <Route path="/transactions" element={<SuperAdminTransactions />} />
           <Route path="/brands/:brandSlug/seller-payouts" element={<Navigate to="/super-admin/payouts/sellers" replace />} />
           <Route path="/brands/:brandSlug/seller-payouts/:sellerId" element={<Navigate to="/super-admin/payouts/sellers" replace />} />

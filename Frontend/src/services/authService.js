@@ -1306,9 +1306,14 @@ export const adminService = {
     const response = await API.put(`/admin/sellers/${id}/status`, { status });
     return response.data;
   },
-  updateSellerCommission: async (id, commissionPercentage) => {
+  updateSellerCommission: async (id, commissionPercentage, remarks = '') => {
     clearAdminClientCache('sellers');
-    const response = await API.put(`/admin/sellers/${id}/commission`, { commissionPercentage });
+    const response = await API.put(`/admin/sellers/${id}/commission`, { commissionPercentage, remarks });
+    return response.data;
+  },
+  resetSellerCommission: async (id, remarks = '') => {
+    clearAdminClientCache('sellers');
+    const response = await API.post(`/admin/sellers/${id}/commission/reset`, { remarks });
     return response.data;
   },
   updateSellerDetails: async (id, details) => {

@@ -4,7 +4,6 @@ import {
   Plus,
   ArrowRightLeft,
   PlusCircle,
-  RotateCcw,
   CheckCircle2,
   Info,
 } from 'lucide-react';
@@ -16,9 +15,11 @@ import { AddAccountModal } from '../components/AddAccountModal';
 import { AddReduceMoneyModal } from '../components/AddReduceMoneyModal';
 import { TransferMoneyModal } from '../components/TransferMoneyModal';
 import { LinkTransactionModal } from '../components/LinkTransactionModal';
+import { TreasurySummary } from '../components/TreasurySummary';
+import { RazorpayPanel } from '../components/RazorpayPanel';
 
 const CashBankContent = () => {
-  const { isUnlinkedSelected, resetDemoData, toast } = useCashBank();
+  const { isUnlinkedSelected, isRazorpaySelected, toast, loading, loadError, refresh, accounts } = useCashBank();
 
   // Modal open states
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
@@ -53,16 +54,6 @@ const CashBankContent = () => {
     setIsLinkModalOpen(true);
   };
 
-  const handleConfirmReset = () => {
-    if (
-      window.confirm(
-        'Reset all Cash and Bank demo data to default sample balances and transactions?'
-      )
-    ) {
-      resetDemoData();
-    }
-  };
-
   return (
     <div className="w-full p-4 sm:p-6 space-y-5">
       {/* Toast Notification */}
@@ -84,22 +75,12 @@ const CashBankContent = () => {
             Cash and Bank
           </h1>
           <p className="text-xs text-slate-500 font-normal mt-0.5">
-            Manage cash vaults, bank accounts, fund transfers, and ledger history
+            Cash vaults, bank accounts, Razorpay clearing and settlements, fund transfers and the double-entry ledger
           </p>
         </div>
 
         {/* Global Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          <button
-            type="button"
-            onClick={handleConfirmReset}
-            className="px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1 cursor-pointer"
-            title="Reset demo data"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Reset</span>
-          </button>
-
           <button
             type="button"
             onClick={() => handleOpenTransfer('')}
@@ -129,6 +110,21 @@ const CashBankContent = () => {
         </div>
       </div>
 
+      {loadError && (
+        <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center justify-between gap-2 text-xs font-medium">
+          <span>{loadError}</span>
+          <button type="button" onClick={() => refresh()} className="cursor-pointer rounded-lg border border-rose-200 bg-white px-3 py-1 text-rose-700">Retry</button>
+        </div>
+      )}
+
+      <TreasurySummary />
+
+      {!loading && accounts.filter((a) => a.type === 'cash' || a.type === 'bank').length === 0 && !loadError && (
+        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs">
+          No cash or bank accounts yet for this brand. Use <strong>Add Account</strong> to create your Cash in Hand and bank accounts - their opening balances become the first journal entries.
+        </div>
+      )}
+
       {/* Main Two-Panel Layout */}
       <div className="flex flex-col lg:flex-row items-start gap-5">
         {/* Left Panel: Account Overview & Account Selector */}
@@ -138,7 +134,9 @@ const CashBankContent = () => {
 
         {/* Right Panel: Transaction Table OR Unlinked Transactions Panel */}
         <div className="flex-1 min-w-0 w-full">
-          {isUnlinkedSelected ? (
+          {isRazorpaySelected ? (
+            <RazorpayPanel />
+          ) : isUnlinkedSelected ? (
             <UnlinkedTransactionsPanel onOpenLinkModal={handleOpenLinkModal} />
           ) : (
             <TransactionPanel />
@@ -177,9 +175,9 @@ const CashBankContent = () => {
   );
 };
 
-export const CashBankPage = () => {
+export const CashBankPage = ({ brandKey }) => {
   return (
-    <CashBankProvider>
+    <CashBankProvider key={brandKey || 'default'}>
       <CashBankContent />
     </CashBankProvider>
   );

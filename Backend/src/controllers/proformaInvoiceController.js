@@ -3,7 +3,24 @@ import ProformaInvoice from '../models/ProformaInvoice.model.js';
 import User from '../models/User.model.js';
 import Product from '../models/Product.model.js';
 import Order from '../models/Order.model.js';
+import Quotation from '../models/Quotation.model.js';
+import Counter, { nextSequence } from '../models/Counter.model.js';
 import { sendProformaInvoiceEmail } from '../services/proformaInvoiceEmailService.js';
+
+// ── Brand scoping ─────────────────────────────────────────────────────────────
+// Every read/write is confined to the brand selected in the panel (req.scope). A document that
+// belongs to another brand is reported as 404, never 403, so its existence is not disclosed.
+const scopeFilter = (req) => (!req.scope || req.scope.isAll ? {} : { brandId: req.scope.brandId });
+const withScope = (req, q) => (Object.keys(scopeFilter(req)).length ? { $and: [scopeFilter(req), q] } : q);
+const findScoped = (req, ref) => {
+  const key = String(ref || '').trim();
+  const or = [{ proformaNumber: key.toUpperCase() }];
+  if (mongoose.Types.ObjectId.isValid(key)) or.push({ _id: key });
+  return ProformaInvoice.findOne(withScope(req, { $or: or }));
+};
+const actorName = (req) => req.user?.email || req.user?.name || (req.user?.role === 'super_admin' ? 'Super Admin' : 'Admin');
+const actorOf = (req) => ({ userId: String(req.user?.id || ''), name: actorName(req), role: req.user?.role || '' });
+const notFound = (res) => res.status(404).json({ success: false, message: 'Proforma Invoice not found.' });
 
 /**
  * Server-side mathematical validation and calculation helper.
@@ -140,27 +157,21 @@ export const computeProformaFinancials = (
  * Generate sequential unique Proforma Number: PI-YYYY-XXXX
  */
 export const generateNextProformaNumber = async () => {
-  const currentYear = new Date().getFullYear();
-  const prefix = `PI-${currentYear}-`;
-
-  const latestDoc = await ProformaInvoice.findOne({
-    proformaNumber: new RegExp(`^${prefix}\\d+`, 'i'),
-  })
-    .sort({ proformaNumber: -1 })
-    .lean();
-
-  let nextSequence = 1;
-  if (latestDoc && latestDoc.proformaNumber) {
-    const parts = latestDoc.proformaNumber.split('-');
-    if (parts.length >= 3) {
-      const num = parseInt(parts[2], 10);
-      if (!isNaN(num)) {
-        nextSequence = num + 1;
-      }
-    }
+  const year = new Date().getFullYear();
+  // Atomic counter: concurrent requests can never receive the same number (no reliance on a unique index).
+  for (let i = 0; i < 20; i++) {
+    const seq = await nextSequence(`proforma-${year}`);
+    const number = `PI-${year}-${String(seq).padStart(4, '0')}`;
+    if (!(await ProformaInvoice.exists({ proformaNumber: number }))) return number;
   }
+  throw new Error('Could not allocate a proforma number.');
+};
 
-  return `${prefix}${String(nextSequence).padStart(4, '0')}`;
+/** Preview of the next number (does not reserve it). */
+const peekNextProformaNumber = async () => {
+  const year = new Date().getFullYear();
+  const c = await Counter.findById(`proforma-${year}`).lean();
+  return `PI-${year}-${String((c?.seq || 0) + 1).padStart(4, '0')}`;
 };
 
 /**
@@ -168,7 +179,7 @@ export const generateNextProformaNumber = async () => {
  */
 export const getNextProformaNumberHandler = async (req, res, next) => {
   try {
-    const proformaNumber = await generateNextProformaNumber();
+    const proformaNumber = await peekNextProformaNumber();
     res.status(200).json({
       success: true,
       proformaNumber,
@@ -318,7 +329,7 @@ export const getProformaInvoices = async (req, res, next) => {
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
     const skip = (pageNum - 1) * limitNum;
 
-    const filter = {};
+    const filter = { ...scopeFilter(req) };
 
     // Automatic expiration: if validity date has passed and document is Draft, Issued, or Sent
     const now = new Date();
@@ -342,7 +353,7 @@ export const getProformaInvoices = async (req, res, next) => {
 
     // Search filter
     if (search && search.trim()) {
-      const term = search.trim();
+      const term = String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
         { proformaNumber: { $regex: term, $options: 'i' } },
         { 'clientSnapshot.companyName': { $regex: term, $options: 'i' } },
@@ -361,10 +372,6 @@ export const getProformaInvoices = async (req, res, next) => {
     // Payment status filter
     if (paymentStatus && paymentStatus !== 'all') {
       filter.paymentStatus = paymentStatus;
-    }
-
-    if (req.scope && !req.scope.isAll && req.scope.city) {
-      filter['clientSnapshot.shippingAddress.city'] = new RegExp(`^${req.scope.city.trim()}$`, 'i');
     }
 
     // Date range filter on issueDate
@@ -391,6 +398,7 @@ export const getProformaInvoices = async (req, res, next) => {
 
     // KPI Metrics for dashboard cards
     const [stats] = await ProformaInvoice.aggregate([
+      { $match: scopeFilter(req) },
       {
         $group: {
           _id: null,
@@ -442,20 +450,10 @@ export const getProformaInvoices = async (req, res, next) => {
  */
 export const getProformaInvoiceById = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    let invoice;
-
-    if (mongoose.Types.ObjectId.isValid(id)) {
-      invoice = await ProformaInvoice.findById(id).lean();
-    } else {
-      invoice = await ProformaInvoice.findOne({ proformaNumber: id.toUpperCase() }).lean();
-    }
+    const invoice = await findScoped(req, req.params.id).lean();
 
     if (!invoice) {
-      return res.status(404).json({
-        success: false,
-        message: 'Proforma Invoice not found.',
-      });
+      return notFound(res);
     }
 
     res.status(200).json({
@@ -495,6 +493,13 @@ export const createProformaInvoice = async (req, res, next) => {
       status = 'Draft',
     } = req.body;
 
+    if (!req.scope || req.scope.isAll || !req.scope.brandId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Select a specific brand/region before creating a Proforma Invoice (not "All Regions").',
+      });
+    }
+
     // Validate client details
     if (!clientSnapshot || !clientSnapshot.companyName || !clientSnapshot.phone || !clientSnapshot.email) {
       return res.status(400).json({
@@ -521,12 +526,17 @@ export const createProformaInvoice = async (req, res, next) => {
     }
 
     // Proforma number assignment & uniqueness
-    let docNumber = customNumber && customNumber.trim() ? customNumber.trim().toUpperCase() : await generateNextProformaNumber();
+    // The number is always allocated by the server (a client-supplied number is ignored).
+    void customNumber;
+    const docNumber = await generateNextProformaNumber();
 
-    const existing = await ProformaInvoice.findOne({ proformaNumber: docNumber });
-    if (existing) {
-      // Re-generate if conflict
-      docNumber = await generateNextProformaNumber();
+    // A referenced quotation must exist in this brand.
+    let refQuote = null;
+    if (referenceQuotation?.quotationNumber) {
+      refQuote = await Quotation.findOne(withScope(req, { quotationNumber: String(referenceQuotation.quotationNumber) })).lean();
+      if (!refQuote) {
+        return res.status(400).json({ success: false, message: 'The referenced quotation was not found in this brand.' });
+      }
     }
 
     const buyerState =
@@ -551,6 +561,7 @@ export const createProformaInvoice = async (req, res, next) => {
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     const newInvoice = new ProformaInvoice({
+      brandId: req.scope.brandId,
       proformaNumber: docNumber,
       issueDate: issueDate ? new Date(issueDate) : new Date(),
       validUntil: validUntilDate,
@@ -562,8 +573,8 @@ export const createProformaInvoice = async (req, res, next) => {
         email: clientSnapshot.email.trim().toLowerCase(),
       },
       referenceQuotation: {
-        quotationNumber: referenceQuotation?.quotationNumber || '',
-        quotationId: referenceQuotation?.quotationId || '',
+        quotationNumber: refQuote ? refQuote.quotationNumber : '',
+        quotationId: refQuote ? String(refQuote._id) : '',
         quotationDate: referenceQuotation?.quotationDate || null,
       },
       referenceOrder: {
@@ -580,17 +591,13 @@ export const createProformaInvoice = async (req, res, next) => {
       status: status === 'Issued' ? 'Issued' : 'Draft',
       paymentStatus,
       emailStatus: 'Not Sent',
-      createdBy: {
-        userId: req.user?.id || '',
-        name: req.user?.name || 'Super Admin',
-        role: req.user?.role || 'super-admin',
-      },
+      createdBy: actorOf(req),
       auditLog: [
         {
           action: status === 'Issued' ? 'Created and Issued' : 'Created as Draft',
           status: status === 'Issued' ? 'Issued' : 'Draft',
           paymentStatus,
-          changedBy: req.user?.name || 'Super Admin',
+          changedBy: actorName(req),
           details: `Document #${docNumber} created with Grand Total ₹${summary.grandTotal}`,
         },
       ],
@@ -621,13 +628,10 @@ export const createProformaInvoice = async (req, res, next) => {
 export const updateProformaInvoice = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const invoice = await ProformaInvoice.findById(id);
+    const invoice = await findScoped(req, id);
 
     if (!invoice) {
-      return res.status(404).json({
-        success: false,
-        message: 'Proforma Invoice not found.',
-      });
+      return notFound(res);
     }
 
     if (invoice.status !== 'Draft') {
@@ -718,7 +722,7 @@ export const updateProformaInvoice = async (req, res, next) => {
       action: 'Updated Draft',
       status: invoice.status,
       paymentStatus: invoice.paymentStatus,
-      changedBy: req.user?.name || 'Super Admin',
+      changedBy: actorName(req),
       details: 'Draft details and calculations updated.',
     });
 
@@ -743,12 +747,9 @@ export const sendProformaEmailHandler = async (req, res, next) => {
     const { id } = req.params;
     const { recipientEmail, recipientName, emailSubject, emailBody, pdfBase64 } = req.body;
 
-    const invoice = await ProformaInvoice.findById(id);
+    const invoice = await findScoped(req, id);
     if (!invoice) {
-      return res.status(404).json({
-        success: false,
-        message: 'Proforma Invoice not found.',
-      });
+      return notFound(res);
     }
 
     if (invoice.status === 'Cancelled') {
@@ -807,11 +808,7 @@ export const sendProformaEmailHandler = async (req, res, next) => {
       status: result.success ? 'Sent' : 'Failed',
       messageId: result.messageId || '',
       errorDetails: result.error || '',
-      sentBy: {
-        userId: req.user?.id || '',
-        name: req.user?.name || 'Super Admin',
-        role: req.user?.role || 'super-admin',
-      },
+      sentBy: actorOf(req),
     };
 
     invoice.emailHistory.push(emailHistoryEntry);
@@ -848,7 +845,7 @@ export const sendProformaEmailHandler = async (req, res, next) => {
         action: 'Email Sent',
         status: invoice.status,
         paymentStatus: invoice.paymentStatus,
-        changedBy: req.user?.name || 'Super Admin',
+        changedBy: actorName(req),
         details: `Dispatched email to ${targetEmail} (messageId: ${result.messageId})`,
       });
 
@@ -866,7 +863,7 @@ export const sendProformaEmailHandler = async (req, res, next) => {
         action: 'Email Delivery Failed',
         status: invoice.status,
         paymentStatus: invoice.paymentStatus,
-        changedBy: req.user?.name || 'Super Admin',
+        changedBy: actorName(req),
         details: `SMTP rejected message: ${result.error}`,
       });
       await invoice.save();
@@ -893,12 +890,9 @@ export const recordConfirmationHandler = async (req, res, next) => {
     const { id } = req.params;
     const { poNumber, confirmedBy, confirmedAt, expectedPaymentDate, notes } = req.body;
 
-    const invoice = await ProformaInvoice.findById(id);
+    const invoice = await findScoped(req, id);
     if (!invoice) {
-      return res.status(404).json({
-        success: false,
-        message: 'Proforma Invoice not found.',
-      });
+      return notFound(res);
     }
 
     if (invoice.status === 'Cancelled') {
@@ -915,11 +909,7 @@ export const recordConfirmationHandler = async (req, res, next) => {
       poNumber: (poNumber || '').trim(),
       expectedPaymentDate: expectedPaymentDate ? new Date(expectedPaymentDate) : null,
       notes: (notes || '').trim(),
-      recordedBy: {
-        userId: req.user?.id || '',
-        name: req.user?.name || 'Super Admin',
-        role: req.user?.role || 'super-admin',
-      },
+      recordedBy: actorOf(req),
     };
 
     if (invoice.status !== 'Converted to Invoice') {
@@ -930,7 +920,7 @@ export const recordConfirmationHandler = async (req, res, next) => {
       action: 'Client Confirmation Recorded',
       status: invoice.status,
       paymentStatus: invoice.paymentStatus,
-      changedBy: req.user?.name || 'Super Admin',
+      changedBy: actorName(req),
       details: `PO Reference: ${poNumber || 'Confirmed without PO'} by ${confirmedBy || 'Client'}`,
     });
 
@@ -955,12 +945,9 @@ export const recordPaymentHandler = async (req, res, next) => {
     const { id } = req.params;
     const { amount, paymentDate, paymentType, paymentMethod, referenceNumber, bankName, notes } = req.body;
 
-    const invoice = await ProformaInvoice.findById(id);
+    const invoice = await findScoped(req, id);
     if (!invoice) {
-      return res.status(404).json({
-        success: false,
-        message: 'Proforma Invoice not found.',
-      });
+      return notFound(res);
     }
 
     if (invoice.status === 'Cancelled') {
@@ -978,6 +965,15 @@ export const recordPaymentHandler = async (req, res, next) => {
       });
     }
 
+    const alreadyPaid = (invoice.paymentRecords || []).reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+    const outstanding = Math.round((invoice.summary.grandTotal - alreadyPaid) * 100) / 100;
+    if (payAmount > outstanding + 0.005) {
+      return res.status(400).json({
+        success: false,
+        message: `Payment of ₹${payAmount} exceeds the outstanding balance of ₹${Math.max(0, outstanding)}.`,
+      });
+    }
+
     const newPaymentRecord = {
       paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
       amount: Math.round(payAmount * 100) / 100,
@@ -986,11 +982,7 @@ export const recordPaymentHandler = async (req, res, next) => {
       referenceNumber: (referenceNumber || '').trim(),
       bankName: (bankName || '').trim(),
       notes: (notes || '').trim(),
-      recordedBy: {
-        userId: req.user?.id || '',
-        name: req.user?.name || 'Super Admin',
-        role: req.user?.role || 'super-admin',
-      },
+      recordedBy: actorOf(req),
     };
 
     invoice.paymentRecords.push(newPaymentRecord);
@@ -1016,7 +1008,7 @@ export const recordPaymentHandler = async (req, res, next) => {
       action: 'Payment Recorded',
       status: invoice.status,
       paymentStatus: invoice.paymentStatus,
-      changedBy: req.user?.name || 'Super Admin',
+      changedBy: actorName(req),
       details: `Received ₹${payAmount} via ${paymentMethod || 'NEFT/RTGS'} (Ref: ${referenceNumber || 'N/A'}). Balance: ₹${balanceDue}`,
     });
 
@@ -1041,12 +1033,9 @@ export const cancelProformaInvoiceHandler = async (req, res, next) => {
     const { id } = req.params;
     const { reason } = req.body;
 
-    const invoice = await ProformaInvoice.findById(id);
+    const invoice = await findScoped(req, id);
     if (!invoice) {
-      return res.status(404).json({
-        success: false,
-        message: 'Proforma Invoice not found.',
-      });
+      return notFound(res);
     }
 
     if (invoice.status === 'Cancelled') {
@@ -1066,11 +1055,7 @@ export const cancelProformaInvoiceHandler = async (req, res, next) => {
     invoice.status = 'Cancelled';
     invoice.cancellation = {
       cancelledAt: new Date(),
-      cancelledBy: {
-        userId: req.user?.id || '',
-        name: req.user?.name || 'Super Admin',
-        role: req.user?.role || 'super-admin',
-      },
+      cancelledBy: actorOf(req),
       reason: (reason || 'Cancelled by Super Admin').trim(),
     };
 
@@ -1078,7 +1063,7 @@ export const cancelProformaInvoiceHandler = async (req, res, next) => {
       action: 'Cancelled',
       status: 'Cancelled',
       paymentStatus: invoice.paymentStatus,
-      changedBy: req.user?.name || 'Super Admin',
+      changedBy: actorName(req),
       details: `Document cancelled. Reason: ${reason || 'Not specified'}`,
     });
 
@@ -1101,7 +1086,7 @@ export const cancelProformaInvoiceHandler = async (req, res, next) => {
 export const duplicateProformaInvoiceHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const source = await ProformaInvoice.findById(id).lean();
+    const source = await findScoped(req, id).lean();
 
     if (!source) {
       return res.status(404).json({
@@ -1116,6 +1101,7 @@ export const duplicateProformaInvoiceHandler = async (req, res, next) => {
 
     const duplicated = new ProformaInvoice({
       ...source,
+      brandId: source.brandId,
       _id: undefined,
       proformaNumber: nextDocNumber,
       issueDate: today,
@@ -1149,17 +1135,13 @@ export const duplicateProformaInvoiceHandler = async (req, res, next) => {
         balanceDue: source.summary.grandTotal,
       },
       notes: `${source.notes ? source.notes + ' ' : ''}(Duplicated from ${source.proformaNumber})`,
-      createdBy: {
-        userId: req.user?.id || '',
-        name: req.user?.name || 'Super Admin',
-        role: req.user?.role || 'super-admin',
-      },
+      createdBy: actorOf(req),
       auditLog: [
         {
           action: 'Duplicated from ' + source.proformaNumber,
           status: 'Draft',
           paymentStatus: 'Unpaid',
-          changedBy: req.user?.name || 'Super Admin',
+          changedBy: actorName(req),
           details: `Duplicated as new draft #${nextDocNumber}`,
         },
       ],
@@ -1184,13 +1166,10 @@ export const duplicateProformaInvoiceHandler = async (req, res, next) => {
 export const convertToInvoiceHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const invoice = await ProformaInvoice.findById(id);
+    const invoice = await findScoped(req, id);
 
     if (!invoice) {
-      return res.status(404).json({
-        success: false,
-        message: 'Proforma Invoice not found.',
-      });
+      return notFound(res);
     }
 
     if (invoice.status === 'Cancelled') {

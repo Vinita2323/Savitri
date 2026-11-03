@@ -44,7 +44,7 @@ const refundRequestSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['REQUESTED', 'APPROVED', 'PROCESSING', 'COMPLETED', 'REJECTED'],
+      enum: ['REQUESTED', 'APPROVED', 'PROCESSING', 'COMPLETED', 'REJECTED', 'FAILED'],
       default: 'REQUESTED',
       index: true,
     },
@@ -73,6 +73,25 @@ const refundRequestSchema = new mongoose.Schema(
       ref: 'Admin',
       default: null,
     },
+    // How the money goes back to the customer.
+    //  RAZORPAY - refunded through the gateway (Razorpay refund API); completed ONLY by Razorpay's own
+    //             processed confirmation, never by an admin typing a reference.
+    //  MANUAL   - paid outside the gateway (COD / bank transfer); admin records the payment.
+    //  WALLET   - credited to the customer's in-app wallet (item returns); no money leaves the company.
+    refundMode: { type: String, enum: ['RAZORPAY', 'MANUAL', 'WALLET'], default: 'MANUAL', index: true },
+    source: { type: String, enum: ['CUSTOMER_RETURN', 'ITEM_RETURN', 'GATEWAY_DASHBOARD'], default: 'CUSTOMER_RETURN' },
+    gatewayRefund: {
+      razorpayPaymentId: { type: String, default: '' },
+      razorpayRefundId: { type: String, default: '', index: true },
+      status: { type: String, enum: ['', 'initiating', 'initiated', 'processed', 'failed'], default: '' },
+      amountPaise: { type: Number, default: 0 },
+      attempts: { type: Number, default: 0 },
+      initiatedAt: { type: Date },
+      processedAt: { type: Date },
+      failureReason: { type: String, default: '' },
+      initiatedBy: { id: String, email: String, role: String },
+    },
+    treasuryAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'TreasuryAccount', default: null },
     processedAt: {
       type: Date,
       default: null,

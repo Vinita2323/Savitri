@@ -192,6 +192,12 @@ export const ProformaInvoiceList = ({ onNavigate }) => {
           <span>{actionSuccess}</span>
         </div>
       )}
+      {error && (
+        <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center justify-between gap-2 text-xs font-medium">
+          <span className="flex items-center gap-2"><AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />{error}</span>
+          <button type="button" onClick={loadData} className="cursor-pointer rounded-lg border border-rose-200 bg-white px-3 py-1 text-rose-700">Retry</button>
+        </div>
+      )}
       {actionError && (
         <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-2 text-xs font-medium animate-in fade-in">
           <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
