@@ -54,11 +54,11 @@ const VerifyOtp = () => {
       await fetchCart();
 
       // 3. Handle pending actions
-      const pendingRaw = localStorage.getItem('shippnex_pending_action');
+      const pendingRaw = localStorage.getItem('savitri_pending_action');
       if (pendingRaw) {
         try {
           const pending = JSON.parse(pendingRaw);
-          localStorage.removeItem('shippnex_pending_action');
+          localStorage.removeItem('savitri_pending_action');
 
           if (pending.type === 'ADD_TO_CART' && pending.product) {
             await addToCart(pending.product, pending.quantity || 1);
@@ -78,9 +78,9 @@ const VerifyOtp = () => {
       }
 
       // Check expired redirect
-      const expRedir = sessionStorage.getItem('shippnex_auth_expired_redirect');
+      const expRedir = sessionStorage.getItem('savitri_auth_expired_redirect');
       if (expRedir) {
-        sessionStorage.removeItem('shippnex_auth_expired_redirect');
+        sessionStorage.removeItem('savitri_auth_expired_redirect');
         navigate(expRedir, { replace: true });
         return;
       }

@@ -20,8 +20,8 @@ function readStoredLocation() {
 
 function initialLocation() {
   try {
-    if (localStorage.getItem('shippnex_user_token')) {
-      const raw = localStorage.getItem('shippnex_saved_addresses');
+    if (localStorage.getItem('savitri_user_token')) {
+      const raw = localStorage.getItem('savitri_saved_addresses');
       if (raw == null) return null;
       const addresses = JSON.parse(raw);
       if (!Array.isArray(addresses) || addresses.length === 0) {
@@ -43,7 +43,7 @@ export const LocationProvider = ({ children }) => {
 
   useEffect(() => {
     const syncFromStorage = (event) => {
-      if (event?.type === 'shippnex_location_changed') {
+      if (event?.type === 'savitri_location_changed') {
         const next = event.detail ?? null;
         setCurrentLocation(isDeliverableLocation(next) ? next : null);
         return;
@@ -51,10 +51,10 @@ export const LocationProvider = ({ children }) => {
       setCurrentLocation(readStoredLocation());
     };
 
-    window.addEventListener('shippnex_location_changed', syncFromStorage);
+    window.addEventListener('savitri_location_changed', syncFromStorage);
     window.addEventListener('storage', syncFromStorage);
     return () => {
-      window.removeEventListener('shippnex_location_changed', syncFromStorage);
+      window.removeEventListener('savitri_location_changed', syncFromStorage);
       window.removeEventListener('storage', syncFromStorage);
     };
   }, []);
@@ -68,7 +68,7 @@ export const LocationProvider = ({ children }) => {
       localStorage.removeItem('userLocation');
     }
     try {
-      window.dispatchEvent(new CustomEvent('shippnex_location_changed', { detail: next }));
+      window.dispatchEvent(new CustomEvent('savitri_location_changed', { detail: next }));
     } catch (e) {}
   };
 
@@ -76,7 +76,7 @@ export const LocationProvider = ({ children }) => {
     setCurrentLocation(null);
     localStorage.removeItem('userLocation');
     try {
-      window.dispatchEvent(new CustomEvent('shippnex_location_changed', { detail: null }));
+      window.dispatchEvent(new CustomEvent('savitri_location_changed', { detail: null }));
     } catch (e) {}
   };
 

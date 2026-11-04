@@ -61,7 +61,7 @@ const TransportRegistration = () => {
         phone: formData.mobile.trim(),
         city: formData.city.trim(),
       });
-      localStorage.setItem('shippnex_transport_registered', 'true');
+      localStorage.setItem('savitri_transport_registered', 'true');
       navigate('/transport');
     } catch (err) {
       console.error('Registration save error:', err);

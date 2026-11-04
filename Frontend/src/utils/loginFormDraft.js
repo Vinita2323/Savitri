@@ -30,6 +30,6 @@ export const clearLoginDraft = (storageKey) => {
   }
 };
 
-export const USER_LOGIN_DRAFT_KEY = 'shippnex_user_login_draft';
-export const SELLER_LOGIN_DRAFT_KEY = 'shippnex_seller_login_draft';
-export const CAPTAIN_LOGIN_DRAFT_KEY = 'shippnex_captain_login_draft';
+export const USER_LOGIN_DRAFT_KEY = 'savitri_user_login_draft';
+export const SELLER_LOGIN_DRAFT_KEY = 'savitri_seller_login_draft';
+export const CAPTAIN_LOGIN_DRAFT_KEY = 'savitri_captain_login_draft';

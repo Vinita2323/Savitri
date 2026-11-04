@@ -1,5 +1,5 @@
 {
-  "name": "shippnex-backend",
+  "name": "savitri-backend",
   "version": "1.0.0",
   "description": "Backend API server for Shippnex logistics platform",
   "main": "src/server.js",

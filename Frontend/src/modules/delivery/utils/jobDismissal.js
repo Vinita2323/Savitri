@@ -4,7 +4,7 @@
  * Ensures popups NEVER reappear on any screen once a job is accepted, rejected, or closed.
  */
 
-const DISMISSED_JOBS_STORAGE_KEY = 'shippnex_captain_dismissed_jobs';
+const DISMISSED_JOBS_STORAGE_KEY = 'savitri_captain_dismissed_jobs';
 
 export const getDismissedJobIds = () => {
   try {

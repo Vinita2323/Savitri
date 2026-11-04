@@ -10,7 +10,7 @@ export const useTransport = () => {
   return context;
 };
 
-const DRAFT_STORAGE_KEY = 'shippnex_transport_draft';
+const DRAFT_STORAGE_KEY = 'savitri_transport_draft';
 
 const defaultDraft = {
   pickup: null,

@@ -49,9 +49,9 @@ const Profile = () => {
   });
   
   const getUserDisplayName = () => {
-    const storedName = localStorage.getItem('shippnex_user_name');
+    const storedName = localStorage.getItem('savitri_user_name');
     if (storedName) return storedName;
-    const userDataRaw = localStorage.getItem('shippnex_user_data');
+    const userDataRaw = localStorage.getItem('savitri_user_data');
     if (userDataRaw) {
       try {
         const u = JSON.parse(userDataRaw);

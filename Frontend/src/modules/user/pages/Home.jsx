@@ -99,14 +99,14 @@ const Home = () => {
 
   useEffect(() => {
     let cancelled = false;
-    if (!localStorage.getItem('shippnex_user_token')) return undefined;
+    if (!localStorage.getItem('savitri_user_token')) return undefined;
     (async () => {
       try {
         const res = await addressService.getAddresses();
         if (cancelled || !res?.success || !Array.isArray(res.addresses)) return;
-        localStorage.setItem('shippnex_saved_addresses', JSON.stringify(res.addresses));
+        localStorage.setItem('savitri_saved_addresses', JSON.stringify(res.addresses));
         if (res.addresses.length === 0) {
-          const hasSelectedLocation = localStorage.getItem('userLocation') && localStorage.getItem('shippnex_selected_checkout_address');
+          const hasSelectedLocation = localStorage.getItem('userLocation') && localStorage.getItem('savitri_selected_checkout_address');
           if (!hasSelectedLocation) clearStoredUserLocation();
         } else {
           applySavedAddressesAsDeliveryLocation(res.addresses);
@@ -223,11 +223,11 @@ const Home = () => {
     const handleLocChange = () => {
       loadAllHomeData();
     };
-    window.addEventListener('shippnex_location_changed', handleLocChange);
+    window.addEventListener('savitri_location_changed', handleLocChange);
 
     return () => {
       isMounted = false;
-      window.removeEventListener('shippnex_location_changed', handleLocChange);
+      window.removeEventListener('savitri_location_changed', handleLocChange);
     };
   }, [userLat, userLng]);
 
@@ -259,9 +259,9 @@ const Home = () => {
   // Hide bottom nav while searching so the mobile keyboard does not cover footer actions
   useEffect(() => {
     const active = searchFocused || Boolean(String(searchQuery || '').trim());
-    window.dispatchEvent(new CustomEvent('shippnex_search_ui', { detail: { active } }));
+    window.dispatchEvent(new CustomEvent('savitri_search_ui', { detail: { active } }));
     return () => {
-      window.dispatchEvent(new CustomEvent('shippnex_search_ui', { detail: { active: false } }));
+      window.dispatchEvent(new CustomEvent('savitri_search_ui', { detail: { active: false } }));
     };
   }, [searchFocused, searchQuery]);
 

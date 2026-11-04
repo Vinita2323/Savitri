@@ -5,14 +5,14 @@ export const superAdminService = {
   login: async (credentials) => {
     const response = await API.post('/auth/super-admin/login', credentials);
     if (response.data?.success && response.data.token) {
-      localStorage.setItem('shippnex_super_admin_token', response.data.token);
-      localStorage.setItem('shippnex_admin_token', response.data.token);
+      localStorage.setItem('savitri_super_admin_token', response.data.token);
+      localStorage.setItem('savitri_admin_token', response.data.token);
       if (response.data.superAdmin) {
-        localStorage.setItem('shippnex_super_admin_data', JSON.stringify(response.data.superAdmin));
-        localStorage.setItem('shippnex_admin_data', JSON.stringify(response.data.superAdmin));
+        localStorage.setItem('savitri_super_admin_data', JSON.stringify(response.data.superAdmin));
+        localStorage.setItem('savitri_admin_data', JSON.stringify(response.data.superAdmin));
       }
-      localStorage.setItem('shippnex_super_admin_session', '1');
-      localStorage.setItem('shippnex_admin_session', '1');
+      localStorage.setItem('savitri_super_admin_session', '1');
+      localStorage.setItem('savitri_admin_session', '1');
     }
     return response.data;
   },

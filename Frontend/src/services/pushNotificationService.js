@@ -2,7 +2,7 @@ import { messaging, getToken, onMessage } from '../firebase';
 import { isSupported } from 'firebase/messaging';
 import { getBaseApiUrl } from './api';
 
-const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BEpfQY8Farcg3X9t88x_yH0vOxuuXhaeLP6_EPcDS2gpSXVBEdstE-PyJnTHSiUCjWvIvlzNjhNJGOfgZ88pw_0';
+const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BHuEE0Ix49FxOXd4U9GC_n4UAwk6_B3giHUnp0jQ7AkX5xLZkdO_eSjgSjdpupyeY2H3cTQlfJrbjsN2okzwWFg';
 const API_URL = getBaseApiUrl();
 
 /**

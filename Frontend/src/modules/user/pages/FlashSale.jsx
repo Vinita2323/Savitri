@@ -100,11 +100,11 @@ const FlashSale = () => {
     const handleLocChange = () => {
       fetchFlashProducts();
     };
-    window.addEventListener('shippnex_location_changed', handleLocChange);
+    window.addEventListener('savitri_location_changed', handleLocChange);
 
     return () => {
       isMounted = false;
-      window.removeEventListener('shippnex_location_changed', handleLocChange);
+      window.removeEventListener('savitri_location_changed', handleLocChange);
     };
   }, [userLat, userLng]);
 

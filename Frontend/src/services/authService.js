@@ -6,12 +6,12 @@ import { applySavedAddressesAsDeliveryLocation, clearStoredUserLocation } from '
 const saveCaptainAuthSession = (token, captain) => {
   if (token) {
     try {
-      localStorage.setItem('shippnex_captain_token', token);
+      localStorage.setItem('savitri_captain_token', token);
     } catch (e) {
       // Storage quota reached: remove bulky items and retry
       try {
-        localStorage.removeItem('shippnex_captain_data');
-        localStorage.setItem('shippnex_captain_token', token);
+        localStorage.removeItem('savitri_captain_data');
+        localStorage.setItem('savitri_captain_token', token);
       } catch (innerErr) {
         console.error('Failed to set captain token in localStorage:', innerErr);
       }
@@ -27,9 +27,9 @@ const saveCaptainAuthSession = (token, captain) => {
       delete safeData.otp;
       delete safeData.otpExpiry;
 
-      localStorage.setItem('shippnex_captain_data', JSON.stringify(safeData));
-      if (safeData.name) localStorage.setItem('shippnex_captain_name', safeData.name);
-      if (safeData.phone) localStorage.setItem('shippnex_captain_phone', safeData.phone);
+      localStorage.setItem('savitri_captain_data', JSON.stringify(safeData));
+      if (safeData.name) localStorage.setItem('savitri_captain_name', safeData.name);
+      if (safeData.phone) localStorage.setItem('savitri_captain_phone', safeData.phone);
     } catch (err) {
       console.warn('LocalStorage quota reached when saving captain data; falling back to minimal record:', err);
       try {
@@ -41,9 +41,9 @@ const saveCaptainAuthSession = (token, captain) => {
           status: captain.status,
           role: captain.role || 'captain',
         };
-        localStorage.setItem('shippnex_captain_data', JSON.stringify(minimalData));
-        if (captain.name) localStorage.setItem('shippnex_captain_name', captain.name);
-        if (captain.phone) localStorage.setItem('shippnex_captain_phone', captain.phone);
+        localStorage.setItem('savitri_captain_data', JSON.stringify(minimalData));
+        if (captain.name) localStorage.setItem('savitri_captain_name', captain.name);
+        if (captain.phone) localStorage.setItem('savitri_captain_phone', captain.phone);
       } catch (fallbackErr) {
         console.error('Failed to store minimal captain data in localStorage:', fallbackErr);
       }
@@ -61,18 +61,18 @@ export const authService = {
   verifyUserOtp: async (phone, otp) => {
     const response = await API.post('/auth/user/verify-otp', { phone, otp });
     if (response.data.token) {
-      localStorage.setItem('shippnex_user_token', response.data.token);
-      localStorage.setItem('shippnex_user_data', JSON.stringify(response.data.user));
+      localStorage.setItem('savitri_user_token', response.data.token);
+      localStorage.setItem('savitri_user_data', JSON.stringify(response.data.user));
       const uName = response.data.user?.name || response.data.user?.phone || 'User';
-      localStorage.setItem('shippnex_user_name', uName);
+      localStorage.setItem('savitri_user_name', uName);
       if (response.data.user?.email) {
-        localStorage.setItem('shippnex_user_email', response.data.user.email);
+        localStorage.setItem('savitri_user_email', response.data.user.email);
       }
       if (response.data.user?.phone) {
-        localStorage.setItem('shippnex_user_phone', response.data.user.phone);
+        localStorage.setItem('savitri_user_phone', response.data.user.phone);
       }
       if (response.data.user?.addresses && Array.isArray(response.data.user.addresses)) {
-        localStorage.setItem('shippnex_saved_addresses', JSON.stringify(response.data.user.addresses));
+        localStorage.setItem('savitri_saved_addresses', JSON.stringify(response.data.user.addresses));
         if (response.data.user.addresses.length > 0) {
           applySavedAddressesAsDeliveryLocation(response.data.user.addresses);
         } else {
@@ -104,8 +104,8 @@ export const authService = {
     try {
       const response = await API.post('/auth/seller/verify-otp', { phone, otp });
       if (response.data.token) {
-        localStorage.setItem('shippnex_seller_token', response.data.token);
-        localStorage.setItem('shippnex_seller_data', JSON.stringify(response.data.seller));
+        localStorage.setItem('savitri_seller_token', response.data.token);
+        localStorage.setItem('savitri_seller_data', JSON.stringify(response.data.seller));
         // Register FCM Push Token on login (SOP Step 7)
         registerFCMToken(true, 'seller').catch(() => {});
       }
@@ -121,12 +121,12 @@ export const authService = {
   sellerLogin: async (phone, password) => {
     const response = await API.post('/auth/seller/login', { phone, password });
     if (response.data.token) {
-      localStorage.setItem('shippnex_seller_token', response.data.token);
-      localStorage.setItem('shippnex_seller_data', JSON.stringify(response.data.seller));
+      localStorage.setItem('savitri_seller_token', response.data.token);
+      localStorage.setItem('savitri_seller_data', JSON.stringify(response.data.seller));
       if (response.data.requiresMembership) {
-        localStorage.setItem('shippnex_seller_requires_membership', '1');
+        localStorage.setItem('savitri_seller_requires_membership', '1');
       } else {
-        localStorage.removeItem('shippnex_seller_requires_membership');
+        localStorage.removeItem('savitri_seller_requires_membership');
       }
       registerFCMToken(true, 'seller').catch(() => {});
     }
@@ -136,8 +136,8 @@ export const authService = {
   sellerResetPassword: async (phone, otp, newPassword) => {
     const response = await API.post('/auth/seller/reset-password', { phone, otp, newPassword });
     if (response.data.token) {
-      localStorage.setItem('shippnex_seller_token', response.data.token);
-      localStorage.setItem('shippnex_seller_data', JSON.stringify(response.data.seller));
+      localStorage.setItem('savitri_seller_token', response.data.token);
+      localStorage.setItem('savitri_seller_data', JSON.stringify(response.data.seller));
       registerFCMToken(true, 'seller').catch(() => {});
     }
     return response.data;
@@ -146,7 +146,7 @@ export const authService = {
   getSellerProfile: async () => {
     const response = await API.get('/auth/seller/profile');
     if (response.data.seller) {
-      localStorage.setItem('shippnex_seller_data', JSON.stringify(response.data.seller));
+      localStorage.setItem('savitri_seller_data', JSON.stringify(response.data.seller));
     }
     return response.data;
   },
@@ -154,7 +154,7 @@ export const authService = {
   updateSellerProfile: async (profileData) => {
     const response = await API.put('/auth/seller/profile', profileData);
     if (response.data.seller) {
-      localStorage.setItem('shippnex_seller_data', JSON.stringify(response.data.seller));
+      localStorage.setItem('savitri_seller_data', JSON.stringify(response.data.seller));
     }
     return response.data;
   },
@@ -162,7 +162,7 @@ export const authService = {
   updateSellerOnlineStatus: async (isOnline) => {
     const response = await API.put('/auth/seller/status', { isOnline });
     if (response.data.seller) {
-      localStorage.setItem('shippnex_seller_data', JSON.stringify(response.data.seller));
+      localStorage.setItem('savitri_seller_data', JSON.stringify(response.data.seller));
     }
     try {
       window.dispatchEvent(new CustomEvent('seller_status_changed', { detail: { isOnline: response.data.isOnline } }));
@@ -224,15 +224,15 @@ export const authService = {
     const response = await API.post('/auth/admin/login', { email, password, rememberMe: Boolean(rememberMe) });
     if (response.data?.success && response.data.admin) {
       if (response.data.token) {
-        localStorage.setItem('shippnex_admin_token', response.data.token);
+        localStorage.setItem('savitri_admin_token', response.data.token);
         if (response.data.admin.role === 'super_admin') {
-          localStorage.setItem('shippnex_super_admin_token', response.data.token);
-          localStorage.setItem('shippnex_super_admin_data', JSON.stringify(response.data.admin));
-          localStorage.setItem('shippnex_super_admin_session', '1');
+          localStorage.setItem('savitri_super_admin_token', response.data.token);
+          localStorage.setItem('savitri_super_admin_data', JSON.stringify(response.data.admin));
+          localStorage.setItem('savitri_super_admin_session', '1');
         }
       }
-      localStorage.setItem('shippnex_admin_data', JSON.stringify(response.data.admin));
-      localStorage.setItem('shippnex_admin_session', '1');
+      localStorage.setItem('savitri_admin_data', JSON.stringify(response.data.admin));
+      localStorage.setItem('savitri_admin_session', '1');
       registerFCMToken(true, 'admin').catch(() => {});
     }
     return response.data;
@@ -241,8 +241,8 @@ export const authService = {
   getAdminProfile: async () => {
     const response = await API.get('/auth/admin/profile');
     if (response.data && response.data.admin) {
-      localStorage.setItem('shippnex_admin_data', JSON.stringify(response.data.admin));
-      localStorage.setItem('shippnex_admin_session', '1');
+      localStorage.setItem('savitri_admin_data', JSON.stringify(response.data.admin));
+      localStorage.setItem('savitri_admin_session', '1');
       try {
         window.dispatchEvent(new Event('admin_profile_updated'));
       } catch (e) {}
@@ -253,9 +253,9 @@ export const authService = {
   updateAdminProfile: async (profileData) => {
     const response = await API.put('/auth/admin/profile', profileData);
     if (response.data && response.data.admin) {
-      localStorage.setItem('shippnex_admin_data', JSON.stringify(response.data.admin));
+      localStorage.setItem('savitri_admin_data', JSON.stringify(response.data.admin));
       if (response.data.token) {
-        localStorage.setItem('shippnex_admin_token', response.data.token);
+        localStorage.setItem('savitri_admin_token', response.data.token);
       }
       try {
         window.dispatchEvent(new Event('admin_profile_updated'));
@@ -269,9 +269,9 @@ export const authService = {
       await API.post('/auth/admin/logout');
     } catch (e) {}
     removeFCMToken('admin').catch(() => {});
-    localStorage.removeItem('shippnex_admin_token');
-    localStorage.removeItem('shippnex_admin_data');
-    localStorage.removeItem('shippnex_admin_session');
+    localStorage.removeItem('savitri_admin_token');
+    localStorage.removeItem('savitri_admin_data');
+    localStorage.removeItem('savitri_admin_session');
   },
 
   // User in-app notifications
@@ -301,34 +301,34 @@ export const authService = {
 
     if (role === 'user') {
       disconnectUserSocket();
-      localStorage.removeItem('shippnex_user_token');
-      localStorage.removeItem('shippnex_user_data');
-      localStorage.removeItem('shippnex_user_name');
-      localStorage.removeItem('shippnex_user_email');
-      localStorage.removeItem('shippnex_user_phone');
-      localStorage.removeItem('shippnex_user_dob');
-      localStorage.removeItem('shippnex_saved_addresses');
-      localStorage.removeItem('shippnex_selected_checkout_address');
-      localStorage.removeItem('shippnex_pending_action');
+      localStorage.removeItem('savitri_user_token');
+      localStorage.removeItem('savitri_user_data');
+      localStorage.removeItem('savitri_user_name');
+      localStorage.removeItem('savitri_user_email');
+      localStorage.removeItem('savitri_user_phone');
+      localStorage.removeItem('savitri_user_dob');
+      localStorage.removeItem('savitri_saved_addresses');
+      localStorage.removeItem('savitri_selected_checkout_address');
+      localStorage.removeItem('savitri_pending_action');
       clearStoredUserLocation();
-      sessionStorage.removeItem('shippnex_auth_expired_redirect');
+      sessionStorage.removeItem('savitri_auth_expired_redirect');
     } else if (role === 'seller') {
-      localStorage.removeItem('shippnex_seller_token');
-      localStorage.removeItem('shippnex_seller_data');
-      localStorage.removeItem('shippnex_seller_requires_membership');
+      localStorage.removeItem('savitri_seller_token');
+      localStorage.removeItem('savitri_seller_data');
+      localStorage.removeItem('savitri_seller_requires_membership');
     } else if (role === 'captain') {
-      localStorage.removeItem('shippnex_captain_token');
-      localStorage.removeItem('shippnex_captain_data');
+      localStorage.removeItem('savitri_captain_token');
+      localStorage.removeItem('savitri_captain_data');
     } else if (role === 'admin') {
       API.post('/auth/admin/logout').catch(() => {});
-      localStorage.removeItem('shippnex_admin_token');
-      localStorage.removeItem('shippnex_admin_data');
-      localStorage.removeItem('shippnex_admin_session');
+      localStorage.removeItem('savitri_admin_token');
+      localStorage.removeItem('savitri_admin_data');
+      localStorage.removeItem('savitri_admin_session');
     } else if (role === 'super_admin') {
       API.post('/auth/super-admin/logout').catch(() => {});
-      localStorage.removeItem('shippnex_super_admin_token');
-      localStorage.removeItem('shippnex_super_admin_data');
-      localStorage.removeItem('shippnex_super_admin_session');
+      localStorage.removeItem('savitri_super_admin_token');
+      localStorage.removeItem('savitri_super_admin_data');
+      localStorage.removeItem('savitri_super_admin_session');
     }
   },
 };
@@ -564,14 +564,14 @@ let userOrdersClientCache = { data: null, timestamp: 0 };
 export const clearUserOrdersCache = () => {
   userOrdersClientCache = { data: null, timestamp: 0 };
   try {
-    sessionStorage.removeItem('shippnex_user_orders_cache');
+    sessionStorage.removeItem('savitri_user_orders_cache');
   } catch (e) {}
 };
 
 export const getCachedUserOrders = () => {
   if (userOrdersClientCache.data) return userOrdersClientCache.data;
   try {
-    const raw = sessionStorage.getItem('shippnex_user_orders_cache');
+    const raw = sessionStorage.getItem('savitri_user_orders_cache');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.orders)) {
@@ -609,7 +609,7 @@ export const orderService = {
     if (response.data && response.data.success) {
       userOrdersClientCache = { data: response.data, timestamp: now };
       try {
-        sessionStorage.setItem('shippnex_user_orders_cache', JSON.stringify(response.data));
+        sessionStorage.setItem('savitri_user_orders_cache', JSON.stringify(response.data));
       } catch (e) {}
     }
     return response.data;
@@ -789,7 +789,7 @@ export const clearAdminClientCache = (key) => {
 let captainDashboardClientCache = {
   data: (() => {
     try {
-      const saved = sessionStorage.getItem('shippnex_captain_dashboard_cache');
+      const saved = sessionStorage.getItem('savitri_captain_dashboard_cache');
       return saved ? JSON.parse(saved) : null;
     } catch (e) {
       return null;
@@ -801,14 +801,14 @@ let captainDashboardClientCache = {
 export const clearCaptainDashboardClientCache = () => {
   captainDashboardClientCache = { data: null, timestamp: 0 };
   try {
-    sessionStorage.removeItem('shippnex_captain_dashboard_cache');
+    sessionStorage.removeItem('savitri_captain_dashboard_cache');
   } catch (e) {}
 };
 
 export const getCachedCaptainDashboard = () => {
   if (captainDashboardClientCache.data) return captainDashboardClientCache.data;
   try {
-    const saved = sessionStorage.getItem('shippnex_captain_dashboard_cache');
+    const saved = sessionStorage.getItem('savitri_captain_dashboard_cache');
     if (saved) {
       const parsed = JSON.parse(saved);
       captainDashboardClientCache = { data: parsed, timestamp: Date.now() };
@@ -891,7 +891,7 @@ export const captainService = {
     if (response.data && response.data.success) {
       captainDashboardClientCache = { data: response.data, timestamp: now };
       try {
-        sessionStorage.setItem('shippnex_captain_dashboard_cache', JSON.stringify(response.data));
+        sessionStorage.setItem('savitri_captain_dashboard_cache', JSON.stringify(response.data));
       } catch (e) {}
     }
     return response.data;

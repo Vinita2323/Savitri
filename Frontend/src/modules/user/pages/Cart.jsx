@@ -204,9 +204,9 @@ const Cart = () => {
                   <button 
                     className="w-full bg-[#79B433] hover:bg-[#689A2B] text-white border-none rounded-xl p-3.5 text-sm font-black cursor-pointer shadow-lg shadow-orange-500/20 transition-all active:scale-[0.98]" 
                     onClick={() => {
-                      const token = localStorage.getItem('shippnex_user_token');
+                      const token = localStorage.getItem('savitri_user_token');
                       if (!token) {
-                        localStorage.setItem('shippnex_pending_action', JSON.stringify({ type: 'CHECKOUT', returnUrl: '/checkout' }));
+                        localStorage.setItem('savitri_pending_action', JSON.stringify({ type: 'CHECKOUT', returnUrl: '/checkout' }));
                         navigate('/login');
                       } else {
                         navigate('/checkout');
@@ -237,9 +237,9 @@ const Cart = () => {
           <button 
             className="w-full bg-[#79B433] text-white border-none rounded-xl p-4 text-[15px] font-bold cursor-pointer shadow-[0_4px_12px_rgba(255,85,0,0.2)] transition-transform duration-200 active:scale-[0.98]" 
             onClick={() => {
-              const token = localStorage.getItem('shippnex_user_token');
+              const token = localStorage.getItem('savitri_user_token');
               if (!token) {
-                localStorage.setItem('shippnex_pending_action', JSON.stringify({ type: 'CHECKOUT', returnUrl: '/checkout' }));
+                localStorage.setItem('savitri_pending_action', JSON.stringify({ type: 'CHECKOUT', returnUrl: '/checkout' }));
                 navigate('/login');
               } else {
                 navigate('/checkout');

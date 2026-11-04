@@ -70,39 +70,39 @@ API.interceptors.request.use(
     // Browser path takes priority over request URL so /admin panel always uses admin token
     // (even when it calls /super-admin/* endpoints that are now dual-role accessible)
     if (requestUrl.includes('/user/notifications') || requestUrl.includes('/user/notifications/')) {
-      token = localStorage.getItem('shippnex_user_token');
+      token = localStorage.getItem('savitri_user_token');
     } else if (currentPath.startsWith('/super-admin')) {
-      token = localStorage.getItem('shippnex_super_admin_token') || localStorage.getItem('shippnex_admin_token');
+      token = localStorage.getItem('savitri_super_admin_token') || localStorage.getItem('savitri_admin_token');
     } else if (currentPath.startsWith('/admin')) {
-      token = localStorage.getItem('shippnex_admin_token') || localStorage.getItem('shippnex_super_admin_token');
+      token = localStorage.getItem('savitri_admin_token') || localStorage.getItem('savitri_super_admin_token');
     } else if (requestUrl.includes('/super-admin')) {
-      token = localStorage.getItem('shippnex_super_admin_token') || localStorage.getItem('shippnex_admin_token');
+      token = localStorage.getItem('savitri_super_admin_token') || localStorage.getItem('savitri_admin_token');
     } else if (requestUrl.includes('/admin')) {
-      token = localStorage.getItem('shippnex_admin_token') || localStorage.getItem('shippnex_super_admin_token');
+      token = localStorage.getItem('savitri_admin_token') || localStorage.getItem('savitri_super_admin_token');
     } else if (requestUrl.includes('/captain') || currentPath.startsWith('/captain') || currentPath.startsWith('/delivery')) {
-      token = localStorage.getItem('shippnex_captain_token');
+      token = localStorage.getItem('savitri_captain_token');
     } else if (requestUrl.includes('/seller') || currentPath.startsWith('/seller')) {
-      token = localStorage.getItem('shippnex_seller_token');
+      token = localStorage.getItem('savitri_seller_token');
     } else if (
       requestUrl.includes('/cart') ||
       requestUrl.includes('/wishlist') ||
       requestUrl.includes('/user/') ||
       requestUrl.includes('/auth/user')
     ) {
-      token = localStorage.getItem('shippnex_user_token');
+      token = localStorage.getItem('savitri_user_token');
     } else if (requestUrl.includes('/transport') || currentPath.startsWith('/transport')) {
       token =
-        localStorage.getItem('shippnex_user_token') ||
-        localStorage.getItem('shippnex_seller_token') ||
-        localStorage.getItem('shippnex_super_admin_token') ||
-        localStorage.getItem('shippnex_admin_token');
+        localStorage.getItem('savitri_user_token') ||
+        localStorage.getItem('savitri_seller_token') ||
+        localStorage.getItem('savitri_super_admin_token') ||
+        localStorage.getItem('savitri_admin_token');
     } else {
       token =
-        localStorage.getItem('shippnex_user_token') ||
-        localStorage.getItem('shippnex_seller_token') ||
-        localStorage.getItem('shippnex_captain_token') ||
-        localStorage.getItem('shippnex_admin_token') ||
-        localStorage.getItem('shippnex_super_admin_token');
+        localStorage.getItem('savitri_user_token') ||
+        localStorage.getItem('savitri_seller_token') ||
+        localStorage.getItem('savitri_captain_token') ||
+        localStorage.getItem('savitri_admin_token') ||
+        localStorage.getItem('savitri_super_admin_token');
     }
 
     if (token && token !== 'null' && token !== 'undefined' && token.trim()) {
@@ -112,7 +112,7 @@ API.interceptors.request.use(
     // Attach Brand / Region Scoping headers for Super Admin requests
     const activeBrandId =
       typeof sessionStorage !== 'undefined'
-        ? sessionStorage.getItem('shippnex_super_admin_brand')
+        ? sessionStorage.getItem('savitri_super_admin_brand')
         : null;
     if (activeBrandId) {
       config.headers['X-Brand-Id'] = activeBrandId;
@@ -135,7 +135,7 @@ const isStaleBrandResponse = (config) => {
   const sent = config?.headers?.['X-Brand-Id'];
   if (!sent) return false;
   try {
-    const current = sessionStorage.getItem('shippnex_super_admin_brand');
+    const current = sessionStorage.getItem('savitri_super_admin_brand');
     return Boolean(current) && current !== sent;
   } catch {
     return false;
@@ -152,41 +152,41 @@ API.interceptors.response.use(
 
       if (currentPath.startsWith('/super-admin')) {
         if (!currentPath.startsWith('/super-admin/login')) {
-          localStorage.removeItem('shippnex_super_admin_token');
-          localStorage.removeItem('shippnex_super_admin_data');
-          localStorage.removeItem('shippnex_super_admin_session');
-          sessionStorage.setItem('shippnex_super_admin_auth_expired_redirect', currentPath);
+          localStorage.removeItem('savitri_super_admin_token');
+          localStorage.removeItem('savitri_super_admin_data');
+          localStorage.removeItem('savitri_super_admin_session');
+          sessionStorage.setItem('savitri_super_admin_auth_expired_redirect', currentPath);
           window.location.href = '/super-admin/login';
         }
       } else if (currentPath.startsWith('/seller')) {
         // Only redirect if on a protected seller page
         if (!currentPath.startsWith('/seller/login') && !currentPath.startsWith('/seller/register') && !currentPath.startsWith('/seller/under-review') && !currentPath.startsWith('/seller/terms') && !currentPath.startsWith('/seller/privacy')) {
-          localStorage.removeItem('shippnex_seller_token');
-          localStorage.removeItem('shippnex_seller_data');
-          sessionStorage.setItem('shippnex_seller_auth_expired_redirect', currentPath);
+          localStorage.removeItem('savitri_seller_token');
+          localStorage.removeItem('savitri_seller_data');
+          sessionStorage.setItem('savitri_seller_auth_expired_redirect', currentPath);
           window.location.href = '/seller/login';
         }
       } else if (currentPath.startsWith('/captain') || currentPath.startsWith('/delivery')) {
         if (!currentPath.startsWith('/captain/login') && !currentPath.startsWith('/captain/register') && !currentPath.startsWith('/captain/under-review')) {
-          localStorage.removeItem('shippnex_captain_token');
-          localStorage.removeItem('shippnex_captain_data');
-          sessionStorage.setItem('shippnex_captain_auth_expired_redirect', currentPath);
+          localStorage.removeItem('savitri_captain_token');
+          localStorage.removeItem('savitri_captain_data');
+          sessionStorage.setItem('savitri_captain_auth_expired_redirect', currentPath);
           window.location.href = '/captain/login';
         }
       } else if (currentPath.startsWith('/admin')) {
         if (!currentPath.startsWith('/admin/login')) {
-          localStorage.removeItem('shippnex_admin_token');
-          localStorage.removeItem('shippnex_admin_data');
-          localStorage.removeItem('shippnex_admin_session');
-          sessionStorage.setItem('shippnex_admin_auth_expired_redirect', currentPath);
+          localStorage.removeItem('savitri_admin_token');
+          localStorage.removeItem('savitri_admin_data');
+          localStorage.removeItem('savitri_admin_session');
+          sessionStorage.setItem('savitri_admin_auth_expired_redirect', currentPath);
           window.location.href = '/admin/login';
         }
       } else {
         // Consumer / Customer
         if (!currentPath.startsWith('/login') && !currentPath.startsWith('/verify-otp') && !currentPath.startsWith('/register')) {
-          localStorage.removeItem('shippnex_user_token');
-          localStorage.removeItem('shippnex_user_data');
-          sessionStorage.setItem('shippnex_auth_expired_redirect', currentPath);
+          localStorage.removeItem('savitri_user_token');
+          localStorage.removeItem('savitri_user_data');
+          sessionStorage.setItem('savitri_auth_expired_redirect', currentPath);
           window.location.href = '/login';
         }
       }

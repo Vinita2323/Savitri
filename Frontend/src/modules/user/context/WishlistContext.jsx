@@ -4,7 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 
 const WishlistContext = createContext();
 
-const GUEST_WISHLIST_KEY = 'shippnex_guest_wishlist';
+const GUEST_WISHLIST_KEY = 'savitri_guest_wishlist';
 
 export const useWishlist = () => {
   const context = useContext(WishlistContext);
@@ -54,7 +54,7 @@ export const WishlistProvider = ({ children }) => {
       return;
     }
 
-    const userToken = typeof window !== 'undefined' ? localStorage.getItem('shippnex_user_token') : null;
+    const userToken = typeof window !== 'undefined' ? localStorage.getItem('savitri_user_token') : null;
 
     if (userToken && userRole !== 'admin' && userRole !== 'seller' && userRole !== 'captain' && userRole !== 'super_admin') {
       try {
@@ -65,7 +65,7 @@ export const WishlistProvider = ({ children }) => {
         }
       } catch (err) {
         if (err?.response?.status === 401) {
-          localStorage.removeItem('shippnex_user_token');
+          localStorage.removeItem('savitri_user_token');
           setWishlistItems([]);
         } else if (err?.response?.status !== 403) {
           console.error('Failed to load server wishlist:', err);

@@ -98,7 +98,7 @@ const Checkout = () => {
 
   // Load addresses from backend / localStorage
   const loadAddresses = async () => {
-    const currentName = localStorage.getItem('shippnex_user_name') || '';
+    const currentName = localStorage.getItem('savitri_user_name') || '';
     const cleanCurrentName = currentName && currentName !== 'User' && currentName !== 'Customer' ? currentName : '';
 
     const normalizeAddress = (a) => {
@@ -116,9 +116,9 @@ const Checkout = () => {
       if (res && res.success && Array.isArray(res.addresses)) {
         fetchedAddresses = res.addresses.map(normalizeAddress);
         loadedFromServer = true;
-        localStorage.setItem('shippnex_saved_addresses', JSON.stringify(fetchedAddresses));
+        localStorage.setItem('savitri_saved_addresses', JSON.stringify(fetchedAddresses));
         if (fetchedAddresses.length === 0) {
-          localStorage.removeItem('shippnex_selected_checkout_address');
+          localStorage.removeItem('savitri_selected_checkout_address');
         }
       }
     } catch (err) {
@@ -126,7 +126,7 @@ const Checkout = () => {
     }
 
     if (!loadedFromServer && fetchedAddresses.length === 0) {
-      const saved = localStorage.getItem('shippnex_saved_addresses');
+      const saved = localStorage.getItem('savitri_saved_addresses');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -141,7 +141,7 @@ const Checkout = () => {
       setAddresses(fetchedAddresses);
 
       // Check if there is an active selection in localStorage
-      const savedSelStr = localStorage.getItem('shippnex_selected_checkout_address');
+      const savedSelStr = localStorage.getItem('savitri_selected_checkout_address');
       if (savedSelStr) {
         try {
           const parsedSel = JSON.parse(savedSelStr);
@@ -161,7 +161,7 @@ const Checkout = () => {
 
       const def = fetchedAddresses.find((a) => a.isDefault) || fetchedAddresses[0];
       setSelectedAddress(def);
-      localStorage.setItem('shippnex_selected_checkout_address', JSON.stringify(def));
+      localStorage.setItem('savitri_selected_checkout_address', JSON.stringify(def));
     } else {
       setAddresses([]);
       setSelectedAddress(null);
@@ -169,10 +169,10 @@ const Checkout = () => {
   };
 
   useEffect(() => {
-    const userDataStr = localStorage.getItem('shippnex_user_data');
-    let name = localStorage.getItem('shippnex_user_name') || '';
-    let phone = localStorage.getItem('shippnex_user_phone') || '';
-    let email = localStorage.getItem('shippnex_user_email') || '';
+    const userDataStr = localStorage.getItem('savitri_user_data');
+    let name = localStorage.getItem('savitri_user_name') || '';
+    let phone = localStorage.getItem('savitri_user_phone') || '';
+    let email = localStorage.getItem('savitri_user_email') || '';
 
     if (userDataStr) {
       try {
@@ -220,18 +220,18 @@ const Checkout = () => {
     const cleanEmail = profileForm.email.trim();
     const cleanPhone = profileForm.phone.trim() || userPhone;
 
-    localStorage.setItem('shippnex_user_name', cleanName);
-    localStorage.setItem('shippnex_user_email', cleanEmail);
-    localStorage.setItem('shippnex_user_phone', cleanPhone);
+    localStorage.setItem('savitri_user_name', cleanName);
+    localStorage.setItem('savitri_user_email', cleanEmail);
+    localStorage.setItem('savitri_user_phone', cleanPhone);
 
-    const userDataStr = localStorage.getItem('shippnex_user_data');
+    const userDataStr = localStorage.getItem('savitri_user_data');
     if (userDataStr) {
       try {
         const u = JSON.parse(userDataStr);
         u.name = cleanName;
         u.email = cleanEmail;
         u.phone = cleanPhone;
-        localStorage.setItem('shippnex_user_data', JSON.stringify(u));
+        localStorage.setItem('savitri_user_data', JSON.stringify(u));
       } catch (err) {}
     }
 
@@ -247,7 +247,7 @@ const Checkout = () => {
         phone: selectedAddress.phone || cleanPhone,
       };
       setSelectedAddress(updatedSel);
-      localStorage.setItem('shippnex_selected_checkout_address', JSON.stringify(updatedSel));
+      localStorage.setItem('savitri_selected_checkout_address', JSON.stringify(updatedSel));
     }
 
     setAddresses((prevAddrs) =>
@@ -264,7 +264,7 @@ const Checkout = () => {
 
   const handleSelectAddress = (addr) => {
     setSelectedAddress(addr);
-    localStorage.setItem('shippnex_selected_checkout_address', JSON.stringify(addr));
+    localStorage.setItem('savitri_selected_checkout_address', JSON.stringify(addr));
     setIsAddressModalOpen(false);
   };
 
@@ -292,7 +292,7 @@ const Checkout = () => {
 
       // Automatically set newly created address as selected address for Checkout
       setSelectedAddress(created);
-      localStorage.setItem('shippnex_selected_checkout_address', JSON.stringify(created));
+      localStorage.setItem('savitri_selected_checkout_address', JSON.stringify(created));
 
       await loadAddresses();
       setIsNewAddressModalOpen(false);
@@ -305,7 +305,7 @@ const Checkout = () => {
         phone: newAddrForm.phone || userPhone,
       };
       setSelectedAddress(fallbackCreated);
-      localStorage.setItem('shippnex_selected_checkout_address', JSON.stringify(fallbackCreated));
+      localStorage.setItem('savitri_selected_checkout_address', JSON.stringify(fallbackCreated));
       setIsNewAddressModalOpen(false);
     }
   };
@@ -369,7 +369,7 @@ const Checkout = () => {
       }
 
       const contact = indianMobile(selectedAddress?.phone || profileForm.phone || userPhone);
-      const email = usableEmail(profileForm.email || localStorage.getItem('shippnex_user_email') || selectedAddress?.email);
+      const email = usableEmail(profileForm.email || localStorage.getItem('savitri_user_email') || selectedAddress?.email);
       const notCompleted = 'Payment was not completed. Your order has not been placed.';
       const paymentFailed = 'Payment failed. Your order has not been placed. Please try again.';
       const razorpayOrderId = razorpayOrderRes.razorpayOrderId || razorpayOrderRes.orderId;
@@ -568,12 +568,12 @@ const Checkout = () => {
       const res = await orderService.placeOrder(orderPayload);
       if (res && res.success && res.order) {
         if (res.user) {
-          if (res.user.name) localStorage.setItem('shippnex_user_name', res.user.name);
-          if (res.user.email) localStorage.setItem('shippnex_user_email', res.user.email);
-          if (res.user.phone) localStorage.setItem('shippnex_user_phone', res.user.phone);
-          localStorage.setItem('shippnex_user_data', JSON.stringify(res.user));
+          if (res.user.name) localStorage.setItem('savitri_user_name', res.user.name);
+          if (res.user.email) localStorage.setItem('savitri_user_email', res.user.email);
+          if (res.user.phone) localStorage.setItem('savitri_user_phone', res.user.phone);
+          localStorage.setItem('savitri_user_data', JSON.stringify(res.user));
           if (res.user.addresses && Array.isArray(res.user.addresses)) {
-            localStorage.setItem('shippnex_saved_addresses', JSON.stringify(res.user.addresses));
+            localStorage.setItem('savitri_saved_addresses', JSON.stringify(res.user.addresses));
           }
         }
         if (selectedPayment === 'WALLET' && typeof res.walletBalance === 'number') {

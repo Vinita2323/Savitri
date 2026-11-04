@@ -12,8 +12,8 @@ const BottomNav = () => {
 
   useEffect(() => {
     const onSearchUi = (e) => setHideForSearch(Boolean(e?.detail?.active));
-    window.addEventListener('shippnex_search_ui', onSearchUi);
-    return () => window.removeEventListener('shippnex_search_ui', onSearchUi);
+    window.addEventListener('savitri_search_ui', onSearchUi);
+    return () => window.removeEventListener('savitri_search_ui', onSearchUi);
   }, []);
 
   if (hideForSearch) return null;

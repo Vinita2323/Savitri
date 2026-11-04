@@ -90,8 +90,8 @@ const CaptainDeleteAccount = () => {
     }
   };
 
-  const captainName = profile?.name || localStorage.getItem('shippnex_captain_name') || 'Captain Partner';
-  const captainPhone = profile?.phone || localStorage.getItem('shippnex_captain_phone') || '';
+  const captainName = profile?.name || localStorage.getItem('savitri_captain_name') || 'Captain Partner';
+  const captainPhone = profile?.phone || localStorage.getItem('savitri_captain_phone') || '';
   const walletBal = profile?.walletBalance || 0;
 
   return (

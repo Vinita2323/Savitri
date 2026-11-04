@@ -22,7 +22,7 @@ import RatingBreakdownModal from '../../../components/RatingBreakdownModal';
 const CaptainProfile = () => {
   const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(() => {
-    const saved = localStorage.getItem('shippnex_captain_online');
+    const saved = localStorage.getItem('savitri_captain_online');
     return saved !== null ? saved === 'true' : true;
   });
   const [profile, setProfile] = useState(null);
@@ -44,9 +44,9 @@ const CaptainProfile = () => {
         setProfile(res.captain);
         const onlineState = res.captain.isOnline !== undefined ? res.captain.isOnline : true;
         setIsOnline(onlineState);
-        localStorage.setItem('shippnex_captain_online', String(onlineState));
-        localStorage.setItem('shippnex_captain_name', res.captain.name || '');
-        localStorage.setItem('shippnex_captain_phone', res.captain.phone || '');
+        localStorage.setItem('savitri_captain_online', String(onlineState));
+        localStorage.setItem('savitri_captain_name', res.captain.name || '');
+        localStorage.setItem('savitri_captain_phone', res.captain.phone || '');
       }
     } catch (err) {
       console.error('Fetch profile error:', err);
@@ -60,19 +60,19 @@ const CaptainProfile = () => {
     if (toggleLoading) return;
     const newStatus = !isOnline;
     setIsOnline(newStatus);
-    localStorage.setItem('shippnex_captain_online', String(newStatus));
+    localStorage.setItem('savitri_captain_online', String(newStatus));
     setToggleLoading(true);
     setToggleError('');
     try {
       const res = await captainService.updateOnlineStatus(newStatus);
       if (res && res.isOnline !== undefined) {
         setIsOnline(Boolean(res.isOnline));
-        localStorage.setItem('shippnex_captain_online', String(res.isOnline));
+        localStorage.setItem('savitri_captain_online', String(res.isOnline));
       }
     } catch (err) {
       console.error('Failed to update online status:', err);
       setIsOnline(!newStatus);
-      localStorage.setItem('shippnex_captain_online', String(!newStatus));
+      localStorage.setItem('savitri_captain_online', String(!newStatus));
       const msg = err?.response?.data?.message || err?.message || 'Failed to update online status';
       setToggleError(msg);
       setTimeout(() => setToggleError(''), 5000);
@@ -196,8 +196,8 @@ const CaptainProfile = () => {
     },
   ];
 
-  const captainName = profile?.name || localStorage.getItem('shippnex_captain_name') || 'Captain Partner';
-  const captainPhone = profile?.phone || localStorage.getItem('shippnex_captain_phone') || '';
+  const captainName = profile?.name || localStorage.getItem('savitri_captain_name') || 'Captain Partner';
+  const captainPhone = profile?.phone || localStorage.getItem('savitri_captain_phone') || '';
 
   return (
     <div className="min-h-screen bg-[#f8fafc] font-sans pb-28 text-slate-800 flex flex-col justify-between">

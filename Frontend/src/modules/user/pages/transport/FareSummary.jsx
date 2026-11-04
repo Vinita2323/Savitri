@@ -305,9 +305,9 @@ const FareSummary = () => {
       }
 
       // Step B: Setup Razorpay Modal Options with prefilled customer details
-      const userName = localStorage.getItem('shippnex_user_name') || '';
-      const userEmail = localStorage.getItem('shippnex_user_email') || '';
-      const userPhone = localStorage.getItem('shippnex_user_phone') || '';
+      const userName = localStorage.getItem('savitri_user_name') || '';
+      const userEmail = localStorage.getItem('savitri_user_email') || '';
+      const userPhone = localStorage.getItem('savitri_user_phone') || '';
 
       const razorpayOptions = {
         key: orderData.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_TgHKKogdCDai1c',

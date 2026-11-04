@@ -8,7 +8,7 @@ const MEMBERSHIP_ENFORCEMENT_CUTOFF = new Date('2026-10-09T00:00:00.000Z');
 
 const isLegacySellerFromStorage = () => {
   try {
-    const raw = localStorage.getItem('shippnex_seller_data');
+    const raw = localStorage.getItem('savitri_seller_data');
     if (!raw) return false;
     const seller = JSON.parse(raw);
     if (seller?.createdAt && new Date(seller.createdAt) < MEMBERSHIP_ENFORCEMENT_CUTOFF) {
@@ -36,7 +36,7 @@ const SellerMembershipGate = () => {
       setChecking(true);
 
       if (isLegacySellerFromStorage()) {
-        localStorage.removeItem('shippnex_seller_requires_membership');
+        localStorage.removeItem('savitri_seller_requires_membership');
         if (!cancelled) {
           setNeedsMembership(false);
           setChecking(false);
@@ -56,14 +56,14 @@ const SellerMembershipGate = () => {
         if (!cancelled) {
           setNeedsMembership(!active);
           if (active) {
-            localStorage.removeItem('shippnex_seller_requires_membership');
+            localStorage.removeItem('savitri_seller_requires_membership');
           } else {
-            localStorage.setItem('shippnex_seller_requires_membership', '1');
+            localStorage.setItem('savitri_seller_requires_membership', '1');
           }
         }
       } catch {
         if (!cancelled) {
-          setNeedsMembership(localStorage.getItem('shippnex_seller_requires_membership') === '1');
+          setNeedsMembership(localStorage.getItem('savitri_seller_requires_membership') === '1');
         }
       } finally {
         if (!cancelled) setChecking(false);

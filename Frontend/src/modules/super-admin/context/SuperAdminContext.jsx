@@ -12,9 +12,9 @@ export const SuperAdminProvider = ({ children }) => {
   const [sessionValid, setSessionValid] = useState(() => {
     try {
       const hasToken =
-        Boolean(localStorage.getItem('shippnex_super_admin_token')) ||
-        Boolean(localStorage.getItem('shippnex_admin_token'));
-      const hasSession = localStorage.getItem('shippnex_super_admin_session') === '1';
+        Boolean(localStorage.getItem('savitri_super_admin_token')) ||
+        Boolean(localStorage.getItem('savitri_admin_token'));
+      const hasSession = localStorage.getItem('savitri_super_admin_session') === '1';
       return hasToken || hasSession;
     } catch {
       return false;
@@ -24,7 +24,7 @@ export const SuperAdminProvider = ({ children }) => {
 
   const [superAdmin, setSuperAdmin] = useState(() => {
     try {
-      const stored = localStorage.getItem('shippnex_super_admin_data');
+      const stored = localStorage.getItem('savitri_super_admin_data');
       return stored ? JSON.parse(stored) : null;
     } catch {
       return null;
@@ -57,7 +57,7 @@ export const SuperAdminProvider = ({ children }) => {
 
   const [selectedBrandId, setSelectedBrandIdState] = useState(() => {
     try {
-      return sessionStorage.getItem('shippnex_super_admin_brand') || 'ALL';
+      return sessionStorage.getItem('savitri_super_admin_brand') || 'ALL';
     } catch {
       return 'ALL';
     }
@@ -66,7 +66,7 @@ export const SuperAdminProvider = ({ children }) => {
   const setSelectedBrandId = useCallback((id) => {
     setSelectedBrandIdState(id);
     try {
-      sessionStorage.setItem('shippnex_super_admin_brand', id);
+      sessionStorage.setItem('savitri_super_admin_brand', id);
     } catch {
       /* ignore private-mode storage failures */
     }
@@ -97,7 +97,7 @@ export const SuperAdminProvider = ({ children }) => {
       const fallbackId = firstActive ? (firstActive.brandId || firstActive.id) : 'ALL';
       setSelectedBrandIdState(fallbackId);
       try {
-        sessionStorage.setItem('shippnex_super_admin_brand', fallbackId);
+        sessionStorage.setItem('savitri_super_admin_brand', fallbackId);
       } catch {}
     }
   }, [brands, selectedBrandId]);
@@ -172,7 +172,7 @@ export const SuperAdminProvider = ({ children }) => {
           );
           const fallback = nextActive ? (nextActive.brandId || nextActive.id) : 'ALL';
           try {
-            sessionStorage.setItem('shippnex_super_admin_brand', fallback);
+            sessionStorage.setItem('savitri_super_admin_brand', fallback);
           } catch {}
           return fallback;
         }
@@ -220,9 +220,9 @@ export const SuperAdminProvider = ({ children }) => {
       }
 
       const storedToken =
-        localStorage.getItem('shippnex_super_admin_token') ||
-        localStorage.getItem('shippnex_admin_token');
-      const hasSession = localStorage.getItem('shippnex_super_admin_session') === '1';
+        localStorage.getItem('savitri_super_admin_token') ||
+        localStorage.getItem('savitri_admin_token');
+      const hasSession = localStorage.getItem('savitri_super_admin_session') === '1';
 
       if (!storedToken && !hasSession) {
         if (!cancelled) {
@@ -238,8 +238,8 @@ export const SuperAdminProvider = ({ children }) => {
           setSuperAdmin(res.data.superAdmin);
           setSessionValid(true);
           setSuperAdminSessionValid?.(true);
-          localStorage.setItem('shippnex_super_admin_session', '1');
-          localStorage.setItem('shippnex_super_admin_data', JSON.stringify(res.data.superAdmin));
+          localStorage.setItem('savitri_super_admin_session', '1');
+          localStorage.setItem('savitri_super_admin_data', JSON.stringify(res.data.superAdmin));
         } else if (!cancelled) {
           setSessionValid(false);
           setSuperAdminSessionValid?.(false);
@@ -248,8 +248,8 @@ export const SuperAdminProvider = ({ children }) => {
         if (!cancelled) {
           setSessionValid(false);
           setSuperAdminSessionValid?.(false);
-          localStorage.removeItem('shippnex_super_admin_token');
-          localStorage.removeItem('shippnex_super_admin_session');
+          localStorage.removeItem('savitri_super_admin_token');
+          localStorage.removeItem('savitri_super_admin_session');
         }
       } finally {
         if (!cancelled) setSessionChecking(false);
@@ -263,11 +263,11 @@ export const SuperAdminProvider = ({ children }) => {
 
   const login = useCallback((adminData, token = null) => {
     if (token) {
-      localStorage.setItem('shippnex_super_admin_token', token);
-      localStorage.setItem('shippnex_admin_token', token);
+      localStorage.setItem('savitri_super_admin_token', token);
+      localStorage.setItem('savitri_admin_token', token);
     }
-    localStorage.setItem('shippnex_super_admin_data', JSON.stringify(adminData));
-    localStorage.setItem('shippnex_super_admin_session', '1');
+    localStorage.setItem('savitri_super_admin_data', JSON.stringify(adminData));
+    localStorage.setItem('savitri_super_admin_session', '1');
     setSuperAdmin(adminData);
     setSessionValid(true);
     setSuperAdminSessionValid?.(true);
@@ -279,12 +279,12 @@ export const SuperAdminProvider = ({ children }) => {
     } catch (e) {}
     // Login mirrors the token/session into the admin keys, so clear both sets.
     [
-      'shippnex_super_admin_token',
-      'shippnex_super_admin_data',
-      'shippnex_super_admin_session',
-      'shippnex_admin_token',
-      'shippnex_admin_data',
-      'shippnex_admin_session',
+      'savitri_super_admin_token',
+      'savitri_super_admin_data',
+      'savitri_super_admin_session',
+      'savitri_admin_token',
+      'savitri_admin_data',
+      'savitri_admin_session',
     ].forEach((key) => localStorage.removeItem(key));
     setSuperAdmin(null);
     setSessionValid(false);
@@ -296,8 +296,8 @@ export const SuperAdminProvider = ({ children }) => {
     <SuperAdminContext.Provider
       value={{
         token:
-          localStorage.getItem('shippnex_super_admin_token') ||
-          localStorage.getItem('shippnex_admin_token') ||
+          localStorage.getItem('savitri_super_admin_token') ||
+          localStorage.getItem('savitri_admin_token') ||
           (sessionValid ? 'session' : null),
         superAdmin,
         sidebarOpen,

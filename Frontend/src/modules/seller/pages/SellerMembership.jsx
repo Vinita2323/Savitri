@@ -43,7 +43,7 @@ const SellerMembership = () => {
 
   const sellerData = (() => { 
     try { 
-      return JSON.parse(localStorage.getItem('shippnex_seller_data') || '{}'); 
+      return JSON.parse(localStorage.getItem('savitri_seller_data') || '{}'); 
     } catch { 
       return {}; 
     } 
@@ -130,7 +130,7 @@ const SellerMembership = () => {
 
             const res = await fn(verificationPayload);
             if (res.success) {
-              localStorage.removeItem('shippnex_seller_requires_membership');
+              localStorage.removeItem('savitri_seller_requires_membership');
               setSuccessMsg(`🎉 Payment successful! Your "${selectedPlan.name}" has been activated instantly.`);
               setShowCheckoutModal(false);
               setSelectedPlan(null);

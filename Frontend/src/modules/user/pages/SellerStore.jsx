@@ -45,7 +45,7 @@ export const SellerStore = () => {
   // Helper for saved favorite stores
   const getFavoriteStores = () => {
     try {
-      const saved = localStorage.getItem('shippnex_favorite_stores');
+      const saved = localStorage.getItem('savitri_favorite_stores');
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
       return [];
@@ -77,7 +77,7 @@ export const SellerStore = () => {
 
     if (existingIndex > -1) {
       favs.splice(existingIndex, 1);
-      localStorage.setItem('shippnex_favorite_stores', JSON.stringify(favs));
+      localStorage.setItem('savitri_favorite_stores', JSON.stringify(favs));
       setIsFavoriteStore(false);
       showNotification(`Removed "${seller.businessName}" from favorite stores`, 'info');
     } else {
@@ -94,13 +94,13 @@ export const SellerStore = () => {
         addedAt: new Date().toISOString(),
       };
       favs.unshift(storeObj);
-      localStorage.setItem('shippnex_favorite_stores', JSON.stringify(favs));
+      localStorage.setItem('savitri_favorite_stores', JSON.stringify(favs));
       setIsFavoriteStore(true);
       showNotification(`❤️ Added "${seller.businessName}" to favorite stores!`, 'wishlist');
     }
 
     try {
-      window.dispatchEvent(new Event('shippnex_favorite_stores_updated'));
+      window.dispatchEvent(new Event('savitri_favorite_stores_updated'));
     } catch (e) {}
   };
 
@@ -165,11 +165,11 @@ export const SellerStore = () => {
     const handleLocChange = () => {
       fetchStore();
     };
-    window.addEventListener('shippnex_location_changed', handleLocChange);
+    window.addEventListener('savitri_location_changed', handleLocChange);
 
     return () => {
       isMounted = false;
-      window.removeEventListener('shippnex_location_changed', handleLocChange);
+      window.removeEventListener('savitri_location_changed', handleLocChange);
     };
   }, [sellerId, userLat, userLng]);
 

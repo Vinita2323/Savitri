@@ -20,7 +20,7 @@ export class ErrorBoundary extends React.Component {
        error?.message?.includes('Importing a module script failed'));
                               
     if (isChunkLoadError) {
-      const chunkFailedKey = 'shippnex_chunk_failed_reload';
+      const chunkFailedKey = 'savitri_chunk_failed_reload';
       if (!sessionStorage.getItem(chunkFailedKey)) {
         sessionStorage.setItem(chunkFailedKey, 'true');
         window.location.reload(true);

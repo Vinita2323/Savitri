@@ -25,7 +25,7 @@ const Inventory = () => {
     try {
       let sellerData = null;
       try {
-        const cached = localStorage.getItem('shippnex_seller_data');
+        const cached = localStorage.getItem('savitri_seller_data');
         if (cached) sellerData = JSON.parse(cached);
       } catch (e) {}
 
@@ -132,14 +132,14 @@ const Inventory = () => {
     }
 
     // Update in localStorage custom products
-    const localProds = JSON.parse(localStorage.getItem('shippnex_custom_products') || '[]');
+    const localProds = JSON.parse(localStorage.getItem('savitri_custom_products') || '[]');
     const updatedLocal = localProds.map(p => {
       if ((p._id || p.id) === adjustModalItem.id || p.name === adjustModalItem.name) {
         return { ...p, stock: newAvailable };
       }
       return p;
     });
-    localStorage.setItem('shippnex_custom_products', JSON.stringify(updatedLocal));
+    localStorage.setItem('savitri_custom_products', JSON.stringify(updatedLocal));
 
     setAdjusting(false);
     setAdjustModalItem(null);
@@ -165,14 +165,14 @@ const Inventory = () => {
       } catch (e) {}
     }
 
-    const localProds = JSON.parse(localStorage.getItem('shippnex_custom_products') || '[]');
+    const localProds = JSON.parse(localStorage.getItem('savitri_custom_products') || '[]');
     const updatedLocal = localProds.map(p => {
       if ((p._id || p.id) === item.id || p.name === item.name) {
         return { ...p, stock: newAvailable };
       }
       return p;
     });
-    localStorage.setItem('shippnex_custom_products', JSON.stringify(updatedLocal));
+    localStorage.setItem('savitri_custom_products', JSON.stringify(updatedLocal));
   };
 
   const exportInventory = (format = 'csv') => {

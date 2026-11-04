@@ -61,7 +61,7 @@ export const AdminSidebar = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [adminUser, setAdminUser] = useState(() => {
     try {
-      const stored = localStorage.getItem('shippnex_admin_data') || localStorage.getItem('admin_user') || localStorage.getItem('adminUser') || localStorage.getItem('adminData');
+      const stored = localStorage.getItem('savitri_admin_data') || localStorage.getItem('admin_user') || localStorage.getItem('adminUser') || localStorage.getItem('adminData');
       return stored ? JSON.parse(stored) : null;
     } catch (e) {
       return null;
@@ -71,7 +71,7 @@ export const AdminSidebar = () => {
   useEffect(() => {
     const handleStorageChange = () => {
       try {
-        const stored = localStorage.getItem('shippnex_admin_data') || localStorage.getItem('admin_user') || localStorage.getItem('adminUser') || localStorage.getItem('adminData');
+        const stored = localStorage.getItem('savitri_admin_data') || localStorage.getItem('admin_user') || localStorage.getItem('adminUser') || localStorage.getItem('adminData');
         if (stored) setAdminUser(JSON.parse(stored));
       } catch (e) {}
     };
@@ -91,9 +91,9 @@ export const AdminSidebar = () => {
     try {
       await authService.adminLogout();
     } catch (e) {}
-    localStorage.removeItem('shippnex_admin_token');
-    localStorage.removeItem('shippnex_admin_data');
-    localStorage.removeItem('shippnex_admin_session');
+    localStorage.removeItem('savitri_admin_token');
+    localStorage.removeItem('savitri_admin_data');
+    localStorage.removeItem('savitri_admin_session');
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
     localStorage.removeItem('token');

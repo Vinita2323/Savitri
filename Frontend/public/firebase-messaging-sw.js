@@ -4,13 +4,13 @@ importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-comp
 
 // Firebase configuration (Live Project)
 const firebaseConfig = {
-  apiKey: "AIzaSyCmU2Q2FhjKfmvqlZG24RWnBBR9DhtZ_DI",
-  authDomain: "shippnex-f25bc.firebaseapp.com",
-  projectId: "shippnex-f25bc",
-  storageBucket: "shippnex-f25bc.firebasestorage.app",
-  messagingSenderId: "476273943325",
-  appId: "1:476273943325:web:ecc2922d24278a0c3977f4",
-  measurementId: "G-K19Y3NFK2H"
+  apiKey: "AIzaSyCTPH6aJv5ZVqJZvhzyoHq7ug5Vm-d-a18",
+  authDomain: "swdms-681e9.firebaseapp.com",
+  projectId: "swdms-681e9",
+  storageBucket: "swdms-681e9.firebasestorage.app",
+  messagingSenderId: "990297902089",
+  appId: "1:990297902089:web:e4bbb9309555826d8cbcd8",
+  measurementId: "G-B8BWS8KVNV"
 };
 
 try {

@@ -21,8 +21,8 @@ const CaptainOrderNotifier = () => {
 
   const checkIncomingGigs = useCallback(async () => {
     // Only check if captain token is present
-    const captainToken = localStorage.getItem('shippnex_captain_token');
-    const isOnline = localStorage.getItem('shippnex_captain_online') !== 'false';
+    const captainToken = localStorage.getItem('savitri_captain_token');
+    const isOnline = localStorage.getItem('savitri_captain_online') !== 'false';
     if (!captainToken || !isOnline) return;
 
     // If currently on dashboard, CaptainDashboard handles its own modal rendering

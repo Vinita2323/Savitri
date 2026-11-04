@@ -21,7 +21,7 @@ export const NotificationProvider = ({ children }) => {
 
   const isUserLoggedIn = Boolean(
     (typeof isRoleAuthenticated === 'function' && isRoleAuthenticated('user')) ||
-    (typeof window !== 'undefined' && localStorage.getItem('shippnex_user_token'))
+    (typeof window !== 'undefined' && localStorage.getItem('savitri_user_token'))
   );
 
   const refreshNotifications = useCallback(async () => {
@@ -32,7 +32,7 @@ export const NotificationProvider = ({ children }) => {
       pathname.startsWith('/seller') ||
       pathname.startsWith('/captain');
 
-    if (isAdminOrPartnerRoute || !localStorage.getItem('shippnex_user_token')) {
+    if (isAdminOrPartnerRoute || !localStorage.getItem('savitri_user_token')) {
       setNotifications([]);
       setUnreadCount(0);
       return;
@@ -94,7 +94,7 @@ export const NotificationProvider = ({ children }) => {
 
   // Initial fetch + Socket.IO realtime
   useEffect(() => {
-    const token = localStorage.getItem('shippnex_user_token');
+    const token = localStorage.getItem('savitri_user_token');
     if (!token || !isUserLoggedIn) {
       disconnectUserSocket();
       setNotifications([]);

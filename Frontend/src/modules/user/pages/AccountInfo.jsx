@@ -17,10 +17,10 @@ const AccountInfo = () => {
   const [pendingRequest, setPendingRequest] = useState(null);
 
   const [formData, setFormData] = useState(() => {
-    const userDataRaw = localStorage.getItem('shippnex_user_data');
-    let name = localStorage.getItem('shippnex_user_name');
-    let email = localStorage.getItem('shippnex_user_email');
-    let phone = localStorage.getItem('shippnex_user_phone');
+    const userDataRaw = localStorage.getItem('savitri_user_data');
+    let name = localStorage.getItem('savitri_user_name');
+    let email = localStorage.getItem('savitri_user_email');
+    let phone = localStorage.getItem('savitri_user_phone');
     if (userDataRaw) {
       try {
         const u = JSON.parse(userDataRaw);
@@ -33,7 +33,7 @@ const AccountInfo = () => {
       fullName: name && name !== 'User' && name !== 'Customer' ? name : '',
       email: email || '',
       phone: phone || '',
-      dob: localStorage.getItem('shippnex_user_dob') || ''
+      dob: localStorage.getItem('savitri_user_dob') || ''
     };
   });
 

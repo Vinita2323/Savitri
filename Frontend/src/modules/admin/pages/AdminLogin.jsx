@@ -28,8 +28,8 @@ export const AdminLogin = () => {
           return;
         }
       } catch (e) {
-        localStorage.removeItem('shippnex_admin_token');
-        localStorage.removeItem('shippnex_admin_session');
+        localStorage.removeItem('savitri_admin_token');
+        localStorage.removeItem('savitri_admin_session');
       } finally {
         if (!cancelled) setCheckingSession(false);
       }

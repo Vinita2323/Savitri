@@ -2,9 +2,9 @@ import { io } from 'socket.io-client';
 import { getBaseApiUrl } from './api';
 
 const TOKEN_KEYS = {
-  admin: ['shippnex_super_admin_token', 'shippnex_admin_token'],
-  seller: ['shippnex_seller_token'],
-  captain: ['shippnex_captain_token'],
+  admin: ['savitri_super_admin_token', 'savitri_admin_token'],
+  seller: ['savitri_seller_token'],
+  captain: ['savitri_captain_token'],
 };
 
 const readToken = (role) => {

@@ -18,7 +18,7 @@ const AddProduct = () => {
   // Get Logged-in Seller Info
   const [sellerInfo, setSellerInfo] = useState(() => {
     try {
-      const cached = localStorage.getItem('shippnex_seller_data');
+      const cached = localStorage.getItem('savitri_seller_data');
       return cached ? JSON.parse(cached) : null;
     } catch (e) {
       return null;
@@ -87,7 +87,7 @@ const AddProduct = () => {
         }
 
         if (!prod) {
-          const localProds = JSON.parse(localStorage.getItem('shippnex_custom_products') || '[]');
+          const localProds = JSON.parse(localStorage.getItem('savitri_custom_products') || '[]');
           prod = localProds.find(p => (p._id && p._id === editId) || p.id === editId || p.sku === editId);
         }
 
@@ -411,11 +411,11 @@ const AddProduct = () => {
           variants: syncedVariants
         };
 
-        const existingLocal = JSON.parse(localStorage.getItem('shippnex_custom_products') || '[]');
+        const existingLocal = JSON.parse(localStorage.getItem('savitri_custom_products') || '[]');
         const updatedLocal = existingLocal.map(p => 
           ((p._id && p._id === editId) || p.id === editId || p.sku === formData.sku) ? { ...p, ...targetObj } : p
         );
-        localStorage.setItem('shippnex_custom_products', JSON.stringify(updatedLocal));
+        localStorage.setItem('savitri_custom_products', JSON.stringify(updatedLocal));
 
         showToast(`Product "${formData.name}" updated successfully!`);
         setTimeout(() => {
@@ -447,9 +447,9 @@ const AddProduct = () => {
           variants: syncedVariants
         };
 
-        const existingLocal = JSON.parse(localStorage.getItem('shippnex_custom_products') || '[]');
+        const existingLocal = JSON.parse(localStorage.getItem('savitri_custom_products') || '[]');
         const updatedLocal = [newProductObj, ...existingLocal.filter(p => p.id !== newProductObj.id)];
-        localStorage.setItem('shippnex_custom_products', JSON.stringify(updatedLocal));
+        localStorage.setItem('savitri_custom_products', JSON.stringify(updatedLocal));
 
         setCreatedSuccessModal(newProductObj);
         showToast(`Product "${formData.name}" added and saved to DB!`);

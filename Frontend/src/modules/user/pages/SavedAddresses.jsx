@@ -38,9 +38,9 @@ const SavedAddresses = () => {
       if (res && res.success && Array.isArray(res.addresses)) {
         const formatted = formatAddresses(res.addresses);
         setAddresses(formatted);
-        localStorage.setItem('shippnex_saved_addresses', JSON.stringify(formatted));
+        localStorage.setItem('savitri_saved_addresses', JSON.stringify(formatted));
         if (formatted.length === 0) {
-          localStorage.removeItem('shippnex_selected_checkout_address');
+          localStorage.removeItem('savitri_selected_checkout_address');
         }
         return formatted;
       }
@@ -51,7 +51,7 @@ const SavedAddresses = () => {
     }
 
     // Fallback to local storage only when the server request fails
-    const saved = localStorage.getItem('shippnex_saved_addresses');
+    const saved = localStorage.getItem('savitri_saved_addresses');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -69,8 +69,8 @@ const SavedAddresses = () => {
   };
 
   useEffect(() => {
-    const name = localStorage.getItem('shippnex_user_name') || '';
-    const phone = localStorage.getItem('shippnex_user_phone') || '';
+    const name = localStorage.getItem('savitri_user_name') || '';
+    const phone = localStorage.getItem('savitri_user_phone') || '';
     setUserName(name);
     setUserPhone(phone);
     fetchUserAddresses();
@@ -90,9 +90,9 @@ const SavedAddresses = () => {
       updated[0].isDefault = true;
     }
     setAddresses(updated);
-    localStorage.setItem('shippnex_saved_addresses', JSON.stringify(updated));
+    localStorage.setItem('savitri_saved_addresses', JSON.stringify(updated));
     if (updated.length === 0) {
-      localStorage.removeItem('shippnex_selected_checkout_address');
+      localStorage.removeItem('savitri_selected_checkout_address');
       clearStoredUserLocation();
     }
   };
@@ -110,10 +110,10 @@ const SavedAddresses = () => {
       isDefault: (addr.id || addr._id) === id
     }));
     setAddresses(updated);
-    localStorage.setItem('shippnex_saved_addresses', JSON.stringify(updated));
+    localStorage.setItem('savitri_saved_addresses', JSON.stringify(updated));
     const def = updated.find(a => a.isDefault);
     if (def) {
-      localStorage.setItem('shippnex_selected_checkout_address', JSON.stringify(def));
+      localStorage.setItem('savitri_selected_checkout_address', JSON.stringify(def));
     }
   };
 

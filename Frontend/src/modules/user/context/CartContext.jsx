@@ -132,7 +132,7 @@ export const CartProvider = ({ children }) => {
       path.startsWith('/captain') ||
       path.startsWith('/delivery');
 
-    const userToken = typeof window !== 'undefined' ? localStorage.getItem('shippnex_user_token') : null;
+    const userToken = typeof window !== 'undefined' ? localStorage.getItem('savitri_user_token') : null;
 
     // Only fetch cart if not in a back-office portal and user token is actually present
     if (isPortalRoute || isAuthInitializing || !userToken || (userRole && userRole !== 'user')) {
@@ -148,7 +148,7 @@ export const CartProvider = ({ children }) => {
       }
     } catch (err) {
       if (err?.response?.status === 401) {
-        localStorage.removeItem('shippnex_user_token');
+        localStorage.removeItem('savitri_user_token');
         setCartItems([]);
       } else if (err?.response?.status !== 403) {
         console.error('Failed to fetch server cart:', err);
@@ -188,7 +188,7 @@ export const CartProvider = ({ children }) => {
       return Array.from(map.values());
     });
 
-    localStorage.setItem('shippnex_local_cart', JSON.stringify(formatted));
+    localStorage.setItem('savitri_local_cart', JSON.stringify(formatted));
   }, []);
 
   const runSync = useCallback(async (productId) => {
@@ -281,7 +281,7 @@ export const CartProvider = ({ children }) => {
         quantity,
         returnUrl: options.returnUrl || window.location.pathname,
       };
-      localStorage.setItem('shippnex_pending_action', JSON.stringify(pendingAction));
+      localStorage.setItem('savitri_pending_action', JSON.stringify(pendingAction));
       if (options.navigate) {
         options.navigate('/login');
       }

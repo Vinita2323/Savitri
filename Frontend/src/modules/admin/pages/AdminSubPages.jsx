@@ -1269,7 +1269,7 @@ export const SellerManagement = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `shippnex_seller_list_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `savitri_seller_list_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
   };
 
@@ -2536,7 +2536,7 @@ export const CaptainManagement = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `shippnex_delivery_boy_list_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `savitri_delivery_boy_list_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -3518,7 +3518,7 @@ export const BrandManagement = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `shippnex_brands_export_${new Date().toISOString().slice(0,10)}.csv`;
+    link.download = `savitri_brands_export_${new Date().toISOString().slice(0,10)}.csv`;
     link.click();
   };
 
@@ -4058,7 +4058,7 @@ export const CategoryManagement = ({ initialSubcategoriesOnly = false }) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `shippnex_categories_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `savitri_categories_export_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -4661,7 +4661,7 @@ export const ProductManagement = () => {
       console.warn('Error fetching products from API:', err.message);
     }
 
-    const localSaved = JSON.parse(localStorage.getItem('shippnex_custom_products') || '[]');
+    const localSaved = JSON.parse(localStorage.getItem('savitri_custom_products') || '[]');
 
     // 1. Convert API products from MongoDB as primary source of truth
     const combined = apiProducts.map(ap => ({
@@ -4746,9 +4746,9 @@ export const ProductManagement = () => {
           // Only remove from UI after successful backend deletion
           setProducts(prev => prev.filter(p => p.id !== id && p._id !== id));
           // Also remove from localStorage if it exists there
-          const localSaved = JSON.parse(localStorage.getItem('shippnex_custom_products') || '[]');
+          const localSaved = JSON.parse(localStorage.getItem('savitri_custom_products') || '[]');
           const updatedLocal = localSaved.filter(p => p.id !== id);
-          localStorage.setItem('shippnex_custom_products', JSON.stringify(updatedLocal));
+          localStorage.setItem('savitri_custom_products', JSON.stringify(updatedLocal));
           alert('Product deleted successfully!');
         } else {
           alert(res?.message || 'Failed to delete product. Please try again.');
@@ -4775,7 +4775,7 @@ export const ProductManagement = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `shippnex_stock_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `savitri_stock_export_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
   };
 
@@ -5358,7 +5358,7 @@ export const OrderManagement = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `shippnex_orders_${statusFilter.toLowerCase()}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `savitri_orders_${statusFilter.toLowerCase()}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -6178,7 +6178,7 @@ export const PaymentManagement = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `shippnex_fund_transfers_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `savitri_fund_transfers_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -7261,7 +7261,7 @@ export const AdminSellerTransactions = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `shippnex_seller_transactions_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `savitri_seller_transactions_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -7683,7 +7683,7 @@ export const AdminCashCollection = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `shippnex_cash_collections_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `savitri_cash_collections_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -9366,7 +9366,7 @@ export const AdminProfile = () => {
 
   const getInitialProfile = () => {
     try {
-      const stored = localStorage.getItem('shippnex_admin_data') || localStorage.getItem('admin_user') || localStorage.getItem('adminUser');
+      const stored = localStorage.getItem('savitri_admin_data') || localStorage.getItem('admin_user') || localStorage.getItem('adminUser');
       if (stored) {
         const parsed = JSON.parse(stored);
         const nameParts = (parsed.name || '').split(' ');
@@ -11501,9 +11501,9 @@ export const AddProductPage = () => {
         variants: syncedVariants
       };
 
-      const existingLocal = JSON.parse(localStorage.getItem('shippnex_custom_products') || '[]');
+      const existingLocal = JSON.parse(localStorage.getItem('savitri_custom_products') || '[]');
       const updatedLocal = [newProductObj, ...existingLocal.filter(p => p.id !== newProductObj.id)];
-      localStorage.setItem('shippnex_custom_products', JSON.stringify(updatedLocal));
+      localStorage.setItem('savitri_custom_products', JSON.stringify(updatedLocal));
 
       setCreatedSuccessModal(newProductObj);
       showToast(`Product "${formData.name}" ${editingProductData ? 'updated' : 'added'} successfully!`);

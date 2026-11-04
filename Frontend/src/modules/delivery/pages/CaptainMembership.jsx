@@ -35,7 +35,7 @@ const CaptainMembership = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [activeTab, setActiveTab] = useState('plans');
 
-  const captainData = (() => { try { return JSON.parse(localStorage.getItem('shippnex_captain_data') || '{}'); } catch { return {}; } })();
+  const captainData = (() => { try { return JSON.parse(localStorage.getItem('savitri_captain_data') || '{}'); } catch { return {}; } })();
 
   useEffect(() => { loadData(); }, []);
 

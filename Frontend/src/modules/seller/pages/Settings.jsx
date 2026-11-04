@@ -189,7 +189,7 @@ const Settings = () => {
 
   const applyCachedSellerFallback = () => {
     try {
-      const cached = localStorage.getItem('shippnex_seller_data');
+      const cached = localStorage.getItem('savitri_seller_data');
       if (!cached) return false;
       const parsed = JSON.parse(cached);
       if (parsed.brand && typeof parsed.brand === 'object') {

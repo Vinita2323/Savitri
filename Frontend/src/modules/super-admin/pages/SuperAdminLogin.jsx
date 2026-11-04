@@ -22,9 +22,9 @@ export const SuperAdminLogin = () => {
     let cancelled = false;
     const validate = async () => {
       const storedToken =
-        localStorage.getItem('shippnex_super_admin_token') ||
-        localStorage.getItem('shippnex_admin_token');
-      const hasSession = localStorage.getItem('shippnex_super_admin_session') === '1';
+        localStorage.getItem('savitri_super_admin_token') ||
+        localStorage.getItem('savitri_admin_token');
+      const hasSession = localStorage.getItem('savitri_super_admin_session') === '1';
 
       if (!storedToken && !hasSession) {
         if (!cancelled) setCheckingSession(false);
@@ -40,8 +40,8 @@ export const SuperAdminLogin = () => {
           return;
         }
       } catch (e) {
-        localStorage.removeItem('shippnex_super_admin_token');
-        localStorage.removeItem('shippnex_super_admin_session');
+        localStorage.removeItem('savitri_super_admin_token');
+        localStorage.removeItem('savitri_super_admin_session');
       } finally {
         if (!cancelled) setCheckingSession(false);
       }

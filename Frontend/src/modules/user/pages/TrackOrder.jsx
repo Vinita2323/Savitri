@@ -171,8 +171,8 @@ const TrackOrder = () => {
         const rated = Boolean(res?.hasUserRated || res?.userRating || res?.rating);
         setHasRatedDelivery(rated);
         setDeliveryUserRating(res?.userRating || res?.rating?.rating || null);
-        if (!rated && !sessionStorage.getItem(`shippnex_delivery_rate_prompt_${rideId}`)) {
-          sessionStorage.setItem(`shippnex_delivery_rate_prompt_${rideId}`, '1');
+        if (!rated && !sessionStorage.getItem(`savitri_delivery_rate_prompt_${rideId}`)) {
+          sessionStorage.setItem(`savitri_delivery_rate_prompt_${rideId}`, '1');
           setIsDeliveryRatingOpen(true);
         }
       } catch {
@@ -263,12 +263,12 @@ const TrackOrder = () => {
   const codCharge = order?.codCharge !== undefined ? Number(order.codCharge) : 0;
   const grandTotal = order?.grandTotal !== undefined ? Number(order.grandTotal) : (order?.total !== undefined ? Number(order.total) : (itemsTotal + shippingFee + codCharge));
   const shippingAddress = order?.shippingAddress || {
-    fullName: localStorage.getItem('shippnex_user_name') || 'Customer',
+    fullName: localStorage.getItem('savitri_user_name') || 'Customer',
     addressLine1: 'Sector 45, Near Film City',
     city: 'Noida',
     state: 'Uttar Pradesh',
     pincode: '201301',
-    phone: localStorage.getItem('shippnex_user_phone') || '+91 9876543210',
+    phone: localStorage.getItem('savitri_user_phone') || '+91 9876543210',
   };
   const paymentMethod = order?.paymentMethod || 'COD';
   const paymentStatus = order?.paymentStatus || (paymentMethod === 'COD' ? 'Pending' : 'Paid');

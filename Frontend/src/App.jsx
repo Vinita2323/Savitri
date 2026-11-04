@@ -48,14 +48,14 @@ function App() {
   
   // Bypass splash screen if accessing any specific sub-route or if splash has already been dismissed
   const isSpecificRoute = location.pathname !== '/' && location.pathname !== '';
-  const hasSeenSplash = typeof window !== 'undefined' && sessionStorage.getItem('shippnex_splash_seen') === 'true';
+  const hasSeenSplash = typeof window !== 'undefined' && sessionStorage.getItem('savitri_splash_seen') === 'true';
   const bypassSplash = isCaptainRoute || isSellerRoute || isAdminRoute || isSuperAdminRoute || isBrandSuperAdminRoute || isMyWillBookSuperAdminRoute || isSpecificRoute || hasSeenSplash;
 
   const [showSplash, setShowSplash] = useState(!bypassSplash);
 
   const handleGetStarted = () => {
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('shippnex_splash_seen', 'true');
+      sessionStorage.setItem('savitri_splash_seen', 'true');
     }
     setShowSplash(false);
   };

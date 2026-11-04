@@ -96,7 +96,7 @@ const Products = () => {
       // 1. Get logged-in seller info
       let sellerData = null;
       try {
-        const cached = localStorage.getItem('shippnex_seller_data');
+        const cached = localStorage.getItem('savitri_seller_data');
         if (cached) sellerData = JSON.parse(cached);
       } catch (e) {}
 
@@ -191,9 +191,9 @@ const Products = () => {
         await productService.deleteProduct(product._id);
       } catch (e) {}
     }
-    const localProds = JSON.parse(localStorage.getItem('shippnex_custom_products') || '[]');
+    const localProds = JSON.parse(localStorage.getItem('savitri_custom_products') || '[]');
     const updatedLocal = localProds.filter(p => (p._id || p.id) !== product.id && p.name !== product.name);
-    localStorage.setItem('shippnex_custom_products', JSON.stringify(updatedLocal));
+    localStorage.setItem('savitri_custom_products', JSON.stringify(updatedLocal));
     showToast(`Product "${product.name}" deleted successfully!`);
     fetchProducts();
   };
@@ -284,13 +284,13 @@ const Products = () => {
       }
 
       // Update local storage if present
-      const localProds = JSON.parse(localStorage.getItem('shippnex_custom_products') || '[]');
+      const localProds = JSON.parse(localStorage.getItem('savitri_custom_products') || '[]');
       const updatedLocal = localProds.map(p => 
         ((p._id && p._id === targetId) || p.id === targetId || p.sku === editFormData.sku)
           ? { ...p, ...updatePayload, id: p.id || targetId }
           : p
       );
-      localStorage.setItem('shippnex_custom_products', JSON.stringify(updatedLocal));
+      localStorage.setItem('savitri_custom_products', JSON.stringify(updatedLocal));
 
       // Update local state in products array
       setProducts(prev => prev.map(p => 

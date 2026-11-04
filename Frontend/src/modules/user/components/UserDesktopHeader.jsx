@@ -101,8 +101,8 @@ const UserDesktopHeader = () => {
     }
   };
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('shippnex_user_token') : null;
-  const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('shippnex_user_data') || '{}') : {};
+  const token = typeof window !== 'undefined' ? localStorage.getItem('savitri_user_token') : null;
+  const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('savitri_user_data') || '{}') : {};
   const isLoggedIn = Boolean(token);
 
   // Sync search query with URL if on search/home

@@ -11,7 +11,7 @@ export function isDeliverableLocation(loc) {
   const normalized = label.toLowerCase();
   let accountName = '';
   try {
-    accountName = String(localStorage.getItem('shippnex_user_name') || '').trim().toLowerCase();
+    accountName = String(localStorage.getItem('savitri_user_name') || '').trim().toLowerCase();
   } catch (e) {}
   const isNameOnly = normalized === accountName || normalized === 'user' || normalized === 'customer' || normalized === 'sarah jenkins';
   if (isNameOnly && !line) return false;
@@ -23,13 +23,13 @@ export function isDeliverableLocation(loc) {
 export function clearStoredUserLocation() {
   try {
     localStorage.removeItem('userLocation');
-    window.dispatchEvent(new CustomEvent('shippnex_location_changed', { detail: null }));
+    window.dispatchEvent(new CustomEvent('savitri_location_changed', { detail: null }));
   } catch (e) {}
 }
 
 function currentUserId() {
   try {
-    const raw = localStorage.getItem('shippnex_user_data');
+    const raw = localStorage.getItem('savitri_user_data');
     if (!raw) return '';
     const user = JSON.parse(raw);
     return String(user.id || user._id || '');
@@ -102,7 +102,7 @@ export function applySavedAddressesAsDeliveryLocation(addresses, { notify = true
         const matchesThisUser = belongsToUser && addresses.some((addr) => locationMatchesSavedAddress(stored, addr));
         let matchesSelected = false;
         try {
-          const selectedRaw = localStorage.getItem('shippnex_selected_checkout_address');
+          const selectedRaw = localStorage.getItem('savitri_selected_checkout_address');
           if (selectedRaw) {
             const selected = JSON.parse(selectedRaw);
             matchesSelected = locationMatchesSavedAddress(stored, {
@@ -115,7 +115,7 @@ export function applySavedAddressesAsDeliveryLocation(addresses, { notify = true
         } catch (e) {}
         if ((matchesThisUser || matchesSelected) && isDeliverableLocation(stored)) {
           if (notify) {
-            window.dispatchEvent(new CustomEvent('shippnex_location_changed', { detail: stored }));
+            window.dispatchEvent(new CustomEvent('savitri_location_changed', { detail: stored }));
           }
           return stored;
         }
@@ -123,7 +123,7 @@ export function applySavedAddressesAsDeliveryLocation(addresses, { notify = true
       localStorage.setItem('userLocation', JSON.stringify(loc));
     }
     if (notify) {
-      window.dispatchEvent(new CustomEvent('shippnex_location_changed', { detail: loc }));
+      window.dispatchEvent(new CustomEvent('savitri_location_changed', { detail: loc }));
     }
   } catch (e) {}
   return loc;
@@ -147,19 +147,19 @@ function findMatchingAddress(record, addresses) {
 export function syncSavedAddressesAfterChange(addresses) {
   if (!Array.isArray(addresses)) return null;
   try {
-    localStorage.setItem('shippnex_saved_addresses', JSON.stringify(addresses));
+    localStorage.setItem('savitri_saved_addresses', JSON.stringify(addresses));
 
-    const selectedRaw = localStorage.getItem('shippnex_selected_checkout_address');
+    const selectedRaw = localStorage.getItem('savitri_selected_checkout_address');
     if (selectedRaw) {
       const parsed = JSON.parse(selectedRaw);
       const match = findMatchingAddress(parsed, addresses);
       if (match) {
-        localStorage.setItem('shippnex_selected_checkout_address', JSON.stringify(match));
+        localStorage.setItem('savitri_selected_checkout_address', JSON.stringify(match));
       }
     } else {
       const fallback = pickDefaultSavedAddress(addresses);
       if (fallback) {
-        localStorage.setItem('shippnex_selected_checkout_address', JSON.stringify(fallback));
+        localStorage.setItem('savitri_selected_checkout_address', JSON.stringify(fallback));
       }
     }
 
@@ -171,7 +171,7 @@ export function syncSavedAddressesAfterChange(addresses) {
         const loc = addressToDeliveryLocation(match);
         if (loc && isDeliverableLocation(loc)) {
           localStorage.setItem('userLocation', JSON.stringify(loc));
-          window.dispatchEvent(new CustomEvent('shippnex_location_changed', { detail: loc }));
+          window.dispatchEvent(new CustomEvent('savitri_location_changed', { detail: loc }));
           return loc;
         }
       }

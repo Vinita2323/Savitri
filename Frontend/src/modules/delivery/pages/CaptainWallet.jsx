@@ -103,7 +103,7 @@ const CaptainWallet = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `shippnex_captain_wallet.csv`);
+    link.setAttribute('download', `savitri_captain_wallet.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

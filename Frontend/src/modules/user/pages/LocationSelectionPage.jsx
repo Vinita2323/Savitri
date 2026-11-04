@@ -44,13 +44,13 @@ const LocationSelectionPage = () => {
       const res = await addressService.getAddresses();
       if (res && res.success && Array.isArray(res.addresses)) {
         setSavedAddresses(res.addresses);
-        localStorage.setItem('shippnex_saved_addresses', JSON.stringify(res.addresses));
+        localStorage.setItem('savitri_saved_addresses', JSON.stringify(res.addresses));
         if (syncSelection) syncSavedAddressesAfterChange(res.addresses);
         return res.addresses;
       }
     } catch (err) {}
 
-    const saved = localStorage.getItem('shippnex_saved_addresses');
+    const saved = localStorage.getItem('savitri_saved_addresses');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -97,10 +97,10 @@ const LocationSelectionPage = () => {
       const pincode = detailed?.postalCode || detailed?.pincode || '';
       const addressLine1 = detailed?.formattedAddress || detailed?.address || `Current location (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
 
-      let fullName = localStorage.getItem('shippnex_user_name') || '';
-      let phone = localStorage.getItem('shippnex_user_phone') || '';
+      let fullName = localStorage.getItem('savitri_user_name') || '';
+      let phone = localStorage.getItem('savitri_user_phone') || '';
       try {
-        const userData = JSON.parse(localStorage.getItem('shippnex_user_data') || '{}');
+        const userData = JSON.parse(localStorage.getItem('savitri_user_data') || '{}');
         if (!fullName && userData.name) fullName = userData.name;
         if (!phone && userData.phone) phone = userData.phone;
       } catch (e) {}
@@ -110,7 +110,7 @@ const LocationSelectionPage = () => {
       let saved = savedAddresses.find((addr) => locationMatchesSavedAddress({ addressLine1, pincode }, addr)) || null;
       let addressList = savedAddresses;
 
-      if (!saved && localStorage.getItem('shippnex_user_token') && phone && city && state && pincode) {
+      if (!saved && localStorage.getItem('savitri_user_token') && phone && city && state && pincode) {
         try {
           const res = await addressService.addAddress({
             fullName,
@@ -148,7 +148,7 @@ const LocationSelectionPage = () => {
         location: saved?.location?.coordinates ? saved.location : point,
       };
 
-      localStorage.setItem('shippnex_selected_checkout_address', JSON.stringify(selected));
+      localStorage.setItem('savitri_selected_checkout_address', JSON.stringify(selected));
       if (saved && addressList.length > 0) syncSavedAddressesAfterChange(addressList);
 
       setLocation({
@@ -257,7 +257,7 @@ const LocationSelectionPage = () => {
   };
 
   const handleSelectSavedAddress = async (addr) => {
-    const savedName = localStorage.getItem('shippnex_user_name');
+    const savedName = localStorage.getItem('savitri_user_name');
     const cleanFullName = (!addr.fullName || addr.fullName === 'User' || addr.fullName === 'Customer')
       ? (savedName && savedName !== 'User' && savedName !== 'Customer' ? savedName : 'Customer')
       : addr.fullName;
@@ -290,7 +290,7 @@ const LocationSelectionPage = () => {
       state: addr.state || 'Madhya Pradesh',
       pincode: addr.pincode || addr.zip || '452001',
       fullName: cleanFullName,
-      phone: addr.phone || localStorage.getItem('shippnex_user_phone') || '',
+      phone: addr.phone || localStorage.getItem('savitri_user_phone') || '',
       ...(resolvedLat != null && resolvedLng != null ? {
         lat: Number(resolvedLat),
         lng: Number(resolvedLng),
@@ -299,7 +299,7 @@ const LocationSelectionPage = () => {
       } : {})
     };
     setLocation(locObj);
-    localStorage.setItem('shippnex_selected_checkout_address', JSON.stringify({ ...addr, fullName: cleanFullName }));
+    localStorage.setItem('savitri_selected_checkout_address', JSON.stringify({ ...addr, fullName: cleanFullName }));
     leaveLocationPage();
   };
 
@@ -442,7 +442,7 @@ const LocationSelectionPage = () => {
                       <div className="flex items-center justify-between">
                         <span className="text-[13px] font-bold text-slate-900">
                           {(!addr.fullName || addr.fullName === 'User' || addr.fullName === 'Customer')
-                            ? (localStorage.getItem('shippnex_user_name') && localStorage.getItem('shippnex_user_name') !== 'User' && localStorage.getItem('shippnex_user_name') !== 'Customer' ? localStorage.getItem('shippnex_user_name') : tag)
+                            ? (localStorage.getItem('savitri_user_name') && localStorage.getItem('savitri_user_name') !== 'User' && localStorage.getItem('savitri_user_name') !== 'Customer' ? localStorage.getItem('savitri_user_name') : tag)
                             : addr.fullName}
                         </span>
                         <span className="text-[10px] font-extrabold uppercase bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">

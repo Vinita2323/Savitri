@@ -876,7 +876,7 @@ const ActiveDelivery = () => {
               className="w-full h-full object-cover"
               alt="Captain Profile"
               src={
-                localStorage.getItem('shippnex_captain_avatar') ||
+                localStorage.getItem('savitri_captain_avatar') ||
                 'https://ui-avatars.com/api/?name=Captain&background=366b00&color=fff'
               }
             />

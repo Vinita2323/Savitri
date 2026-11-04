@@ -48,7 +48,7 @@ const Notifications = () => {
     markAllAsRead,
   } = useNotifications();
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('shippnex_user_token') : null;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('savitri_user_token') : null;
 
   useEffect(() => {
     if (token) refreshNotifications();

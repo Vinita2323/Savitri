@@ -70,11 +70,11 @@ const Categories = () => {
   const urlSubCategory = searchParams.get('subCategory');
 
   const [activeCategory, setActiveCategoryState] = useState(() => {
-    return urlCategory || sessionStorage.getItem('shippnex_active_cat') || 'All';
+    return urlCategory || sessionStorage.getItem('savitri_active_cat') || 'All';
   });
 
   const [activeSubCategory, setActiveSubCategoryState] = useState(() => {
-    return urlSubCategory || sessionStorage.getItem('shippnex_active_sub') || null;
+    return urlSubCategory || sessionStorage.getItem('savitri_active_sub') || null;
   });
 
   const [allCategories, setAllCategories] = useState([]);
@@ -88,25 +88,25 @@ const Categories = () => {
   useEffect(() => {
     if (urlCategory && urlCategory !== activeCategory) {
       setActiveCategoryState(urlCategory);
-      sessionStorage.setItem('shippnex_active_cat', urlCategory);
+      sessionStorage.setItem('savitri_active_cat', urlCategory);
     }
     if (urlSubCategory !== undefined && urlSubCategory !== activeSubCategory) {
       setActiveSubCategoryState(urlSubCategory || null);
       if (urlSubCategory) {
-        sessionStorage.setItem('shippnex_active_sub', urlSubCategory);
+        sessionStorage.setItem('savitri_active_sub', urlSubCategory);
       } else {
-        sessionStorage.removeItem('shippnex_active_sub');
+        sessionStorage.removeItem('savitri_active_sub');
       }
     }
   }, [urlCategory, urlSubCategory]);
 
   const setActiveCategory = (catName) => {
     setActiveCategoryState(catName);
-    sessionStorage.setItem('shippnex_active_cat', catName);
+    sessionStorage.setItem('savitri_active_cat', catName);
     
     // Clear subcategory when switching category
     setActiveSubCategoryState(null);
-    sessionStorage.removeItem('shippnex_active_sub');
+    sessionStorage.removeItem('savitri_active_sub');
 
     const newParams = new URLSearchParams(searchParams);
     if (catName === 'All') {
@@ -122,10 +122,10 @@ const Categories = () => {
     setActiveSubCategoryState(subCatName);
     const newParams = new URLSearchParams(searchParams);
     if (subCatName) {
-      sessionStorage.setItem('shippnex_active_sub', subCatName);
+      sessionStorage.setItem('savitri_active_sub', subCatName);
       newParams.set('subCategory', subCatName);
     } else {
-      sessionStorage.removeItem('shippnex_active_sub');
+      sessionStorage.removeItem('savitri_active_sub');
       newParams.delete('subCategory');
     }
     setSearchParams(newParams, { replace: true });
@@ -151,7 +151,7 @@ const Categories = () => {
             const match = list.find(c => c.name.toLowerCase().trim() === activeCategory.toLowerCase().trim());
             if (match && match.name !== activeCategory) {
               setActiveCategoryState(match.name);
-              sessionStorage.setItem('shippnex_active_cat', match.name);
+              sessionStorage.setItem('savitri_active_cat', match.name);
             }
           }
         } else {
@@ -211,11 +211,11 @@ const Categories = () => {
     const handleLocChange = () => {
       fetchCategoryProducts();
     };
-    window.addEventListener('shippnex_location_changed', handleLocChange);
+    window.addEventListener('savitri_location_changed', handleLocChange);
 
     return () => { 
       isMounted = false; 
-      window.removeEventListener('shippnex_location_changed', handleLocChange);
+      window.removeEventListener('savitri_location_changed', handleLocChange);
     };
   }, [activeCategory, activeSubCategory, userLat, userLng]);
 

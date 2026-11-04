@@ -13,7 +13,7 @@ const CaptainDashboard = () => {
 
   const [isOnline, setIsOnline] = useState(() => {
     if (cachedInit?.stats?.isOnline !== undefined) return cachedInit.stats.isOnline;
-    const saved = localStorage.getItem('shippnex_captain_online');
+    const saved = localStorage.getItem('savitri_captain_online');
     return saved !== null ? saved === 'true' : true;
   });
   const [activeDay, setActiveDay] = useState(() => {
@@ -60,7 +60,7 @@ const CaptainDashboard = () => {
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [locationError, setLocationError] = useState('');
   const [savedLocation, setSavedLocation] = useState(() => {
-    return localStorage.getItem('shippnex_captain_location') || null;
+    return localStorage.getItem('savitri_captain_location') || null;
   });
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const manualInputRef = useRef(null);
@@ -119,7 +119,7 @@ const CaptainDashboard = () => {
 
         if (dashData.stats.isOnline !== undefined) {
           setIsOnline(dashData.stats.isOnline);
-          localStorage.setItem('shippnex_captain_online', String(dashData.stats.isOnline));
+          localStorage.setItem('savitri_captain_online', String(dashData.stats.isOnline));
         }
 
         const today = new Date();
@@ -231,18 +231,18 @@ const CaptainDashboard = () => {
     e?.preventDefault?.();
     const newStatus = typeof e?.target?.checked === 'boolean' ? e.target.checked : !isOnline;
     setIsOnline(newStatus);
-    localStorage.setItem('shippnex_captain_online', String(newStatus));
+    localStorage.setItem('savitri_captain_online', String(newStatus));
     try {
       const res = await captainService.updateOnlineStatus(newStatus);
       if (res && res.isOnline !== undefined) {
         setIsOnline(Boolean(res.isOnline));
-        localStorage.setItem('shippnex_captain_online', String(res.isOnline));
+        localStorage.setItem('savitri_captain_online', String(res.isOnline));
       }
       fetchDashboard(true);
     } catch (err) {
       console.error('Status update error:', err);
       setIsOnline(!newStatus);
-      localStorage.setItem('shippnex_captain_online', String(!newStatus));
+      localStorage.setItem('savitri_captain_online', String(!newStatus));
       alert(err?.response?.data?.message || err?.message || 'Failed to update online status');
     }
   };
@@ -508,7 +508,7 @@ const CaptainDashboard = () => {
     if (!finalAddress) return;
 
     setSavedLocation(finalAddress);
-    localStorage.setItem('shippnex_captain_location', finalAddress);
+    localStorage.setItem('savitri_captain_location', finalAddress);
 
     if (finalLocation?.lat && finalLocation?.lng) {
       try {

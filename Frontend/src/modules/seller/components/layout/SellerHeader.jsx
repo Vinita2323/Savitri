@@ -8,7 +8,7 @@ const SellerHeader = ({ isSidebarOpen, toggleSidebar }) => {
   const navigate = useNavigate();
   const [seller, setSeller] = useState(() => {
     try {
-      const cached = localStorage.getItem('shippnex_seller_data');
+      const cached = localStorage.getItem('savitri_seller_data');
       return cached ? JSON.parse(cached) : null;
     } catch (e) {
       return null;
@@ -17,7 +17,7 @@ const SellerHeader = ({ isSidebarOpen, toggleSidebar }) => {
 
   const [isOnline, setIsOnline] = useState(() => {
     try {
-      const cached = localStorage.getItem('shippnex_seller_data');
+      const cached = localStorage.getItem('savitri_seller_data');
       if (cached) {
         const parsed = JSON.parse(cached);
         return parsed.isOnline !== undefined ? Boolean(parsed.isOnline) : true;

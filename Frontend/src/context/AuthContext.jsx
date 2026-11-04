@@ -14,14 +14,14 @@ export const AuthProvider = ({ children }) => {
 
   const computeRoleAndAuth = useCallback((preferredRole = null) => {
     try {
-      const userToken = localStorage.getItem('shippnex_user_token');
-      const sellerToken = localStorage.getItem('shippnex_seller_token');
-      const captainToken = localStorage.getItem('shippnex_captain_token');
-      const adminToken = localStorage.getItem('shippnex_admin_token');
-      const superAdminToken = localStorage.getItem('shippnex_super_admin_token');
-      const adminSession = localStorage.getItem('shippnex_admin_session') === '1' || adminSessionValid || Boolean(adminToken);
+      const userToken = localStorage.getItem('savitri_user_token');
+      const sellerToken = localStorage.getItem('savitri_seller_token');
+      const captainToken = localStorage.getItem('savitri_captain_token');
+      const adminToken = localStorage.getItem('savitri_admin_token');
+      const superAdminToken = localStorage.getItem('savitri_super_admin_token');
+      const adminSession = localStorage.getItem('savitri_admin_session') === '1' || adminSessionValid || Boolean(adminToken);
       const superAdminSession =
-        localStorage.getItem('shippnex_super_admin_session') === '1' || superAdminSessionValid || Boolean(superAdminToken);
+        localStorage.getItem('savitri_super_admin_session') === '1' || superAdminSessionValid || Boolean(superAdminToken);
 
       if (preferredRole === 'super_admin' && (superAdminSession || superAdminSessionValid || Boolean(superAdminToken))) {
         return { isAuth: true, role: 'super_admin' };
@@ -63,28 +63,28 @@ export const AuthProvider = ({ children }) => {
   const isRoleAuthenticated = useCallback((role) => {
     try {
       if (!role || role === 'user') {
-        return !!localStorage.getItem('shippnex_user_token');
+        return !!localStorage.getItem('savitri_user_token');
       }
       if (role === 'admin') {
         return (
           adminSessionValid === true ||
-          localStorage.getItem('shippnex_admin_session') === '1' ||
-          Boolean(localStorage.getItem('shippnex_admin_token'))
+          localStorage.getItem('savitri_admin_session') === '1' ||
+          Boolean(localStorage.getItem('savitri_admin_token'))
         );
       }
       if (role === 'super_admin') {
         return (
           superAdminSessionValid === true ||
-          localStorage.getItem('shippnex_super_admin_session') === '1' ||
-          Boolean(localStorage.getItem('shippnex_super_admin_token')) ||
-          Boolean(localStorage.getItem('shippnex_admin_token'))
+          localStorage.getItem('savitri_super_admin_session') === '1' ||
+          Boolean(localStorage.getItem('savitri_super_admin_token')) ||
+          Boolean(localStorage.getItem('savitri_admin_token'))
         );
       }
       if (role === 'seller') {
-        return !!localStorage.getItem('shippnex_seller_token');
+        return !!localStorage.getItem('savitri_seller_token');
       }
       if (role === 'captain') {
-        return !!localStorage.getItem('shippnex_captain_token');
+        return !!localStorage.getItem('savitri_captain_token');
       }
       return false;
     } catch (e) {
@@ -106,8 +106,8 @@ export const AuthProvider = ({ children }) => {
       const path = typeof window !== 'undefined' ? window.location.pathname : '';
 
       if (path.startsWith('/admin') && !path.startsWith('/admin/login')) {
-        const hasAdminToken = Boolean(localStorage.getItem('shippnex_admin_token')) || Boolean(localStorage.getItem('shippnex_super_admin_token'));
-        const hasAdminSession = localStorage.getItem('shippnex_admin_session') === '1';
+        const hasAdminToken = Boolean(localStorage.getItem('savitri_admin_token')) || Boolean(localStorage.getItem('savitri_super_admin_token'));
+        const hasAdminSession = localStorage.getItem('savitri_admin_session') === '1';
 
         if (!hasAdminToken && !hasAdminSession) {
           if (!cancelled) setAdminSessionValid(false);
@@ -124,22 +124,22 @@ export const AuthProvider = ({ children }) => {
             setUserRole('admin');
           } else if (!cancelled) {
             setAdminSessionValid(false);
-            localStorage.removeItem('shippnex_admin_session');
-            localStorage.removeItem('shippnex_admin_token');
+            localStorage.removeItem('savitri_admin_session');
+            localStorage.removeItem('savitri_admin_token');
           }
         } catch (e) {
           if (!cancelled) {
             setAdminSessionValid(false);
-            localStorage.removeItem('shippnex_admin_session');
-            localStorage.removeItem('shippnex_admin_token');
-            localStorage.removeItem('shippnex_admin_data');
+            localStorage.removeItem('savitri_admin_session');
+            localStorage.removeItem('savitri_admin_token');
+            localStorage.removeItem('savitri_admin_data');
           }
         }
       } else if (path.startsWith('/super-admin') && !path.startsWith('/super-admin/login')) {
         const hasSuperAdminToken =
-          Boolean(localStorage.getItem('shippnex_super_admin_token')) ||
-          Boolean(localStorage.getItem('shippnex_admin_token'));
-        const hasSuperAdminSession = localStorage.getItem('shippnex_super_admin_session') === '1';
+          Boolean(localStorage.getItem('savitri_super_admin_token')) ||
+          Boolean(localStorage.getItem('savitri_admin_token'));
+        const hasSuperAdminSession = localStorage.getItem('savitri_super_admin_session') === '1';
 
         if (!hasSuperAdminToken && !hasSuperAdminSession) {
           if (!cancelled) setSuperAdminSessionValid(false);
@@ -154,19 +154,19 @@ export const AuthProvider = ({ children }) => {
             setSuperAdminSessionValid(true);
             setIsAuthenticated(true);
             setUserRole('super_admin');
-            localStorage.setItem('shippnex_super_admin_session', '1');
-            localStorage.setItem('shippnex_super_admin_data', JSON.stringify(res.data.superAdmin));
+            localStorage.setItem('savitri_super_admin_session', '1');
+            localStorage.setItem('savitri_super_admin_data', JSON.stringify(res.data.superAdmin));
           } else if (!cancelled) {
             setSuperAdminSessionValid(false);
-            localStorage.removeItem('shippnex_super_admin_session');
-            localStorage.removeItem('shippnex_super_admin_token');
+            localStorage.removeItem('savitri_super_admin_session');
+            localStorage.removeItem('savitri_super_admin_token');
           }
         } catch (e) {
           if (!cancelled) {
             setSuperAdminSessionValid(false);
-            localStorage.removeItem('shippnex_super_admin_session');
-            localStorage.removeItem('shippnex_super_admin_token');
-            localStorage.removeItem('shippnex_super_admin_data');
+            localStorage.removeItem('savitri_super_admin_session');
+            localStorage.removeItem('savitri_super_admin_token');
+            localStorage.removeItem('savitri_super_admin_data');
           }
         }
       } else {
@@ -184,30 +184,30 @@ export const AuthProvider = ({ children }) => {
 
   const logout = (role = 'user') => {
     if (role === 'user' || !role) {
-      localStorage.removeItem('shippnex_user_token');
-      localStorage.removeItem('shippnex_user_data');
-      localStorage.removeItem('shippnex_user_name');
-      localStorage.removeItem('shippnex_user_email');
-      localStorage.removeItem('shippnex_user_phone');
+      localStorage.removeItem('savitri_user_token');
+      localStorage.removeItem('savitri_user_data');
+      localStorage.removeItem('savitri_user_name');
+      localStorage.removeItem('savitri_user_email');
+      localStorage.removeItem('savitri_user_phone');
       clearStoredUserLocation();
     } else if (role === 'seller') {
-      localStorage.removeItem('shippnex_seller_token');
-      localStorage.removeItem('shippnex_seller_data');
-      localStorage.removeItem('shippnex_seller_requires_membership');
+      localStorage.removeItem('savitri_seller_token');
+      localStorage.removeItem('savitri_seller_data');
+      localStorage.removeItem('savitri_seller_requires_membership');
     } else if (role === 'captain') {
-      localStorage.removeItem('shippnex_captain_token');
-      localStorage.removeItem('shippnex_captain_data');
+      localStorage.removeItem('savitri_captain_token');
+      localStorage.removeItem('savitri_captain_data');
     } else if (role === 'admin') {
       authService.adminLogout?.().catch(() => {});
-      localStorage.removeItem('shippnex_admin_token');
-      localStorage.removeItem('shippnex_admin_data');
-      localStorage.removeItem('shippnex_admin_session');
+      localStorage.removeItem('savitri_admin_token');
+      localStorage.removeItem('savitri_admin_data');
+      localStorage.removeItem('savitri_admin_session');
       setAdminSessionValid(false);
     } else if (role === 'super_admin') {
       API.post('/auth/super-admin/logout').catch(() => {});
-      localStorage.removeItem('shippnex_super_admin_token');
-      localStorage.removeItem('shippnex_super_admin_data');
-      localStorage.removeItem('shippnex_super_admin_session');
+      localStorage.removeItem('savitri_super_admin_token');
+      localStorage.removeItem('savitri_super_admin_data');
+      localStorage.removeItem('savitri_super_admin_session');
       setSuperAdminSessionValid(false);
     }
 

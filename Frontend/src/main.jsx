@@ -9,7 +9,7 @@ window.addEventListener('vite:preloadError', (event) => {
   event.preventDefault();
   
   // Guard against infinite reloads by using sessionStorage
-  const chunkFailedKey = 'shippnex_chunk_failed_reload';
+  const chunkFailedKey = 'savitri_chunk_failed_reload';
   if (!sessionStorage.getItem(chunkFailedKey)) {
     sessionStorage.setItem(chunkFailedKey, 'true');
     window.location.reload(true); // Force reload to fetch the latest index.html

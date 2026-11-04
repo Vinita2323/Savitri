@@ -1,5 +1,5 @@
-export const ADMIN_AUTH_COOKIE = 'shippnex_admin_token';
-export const SUPER_ADMIN_AUTH_COOKIE = 'shippnex_super_admin_token';
+export const ADMIN_AUTH_COOKIE = 'savitri_admin_token';
+export const SUPER_ADMIN_AUTH_COOKIE = 'savitri_super_admin_token';
 
 export const ADMIN_SESSION_TTL = '8h';
 export const ADMIN_REMEMBER_TTL = '30d';
