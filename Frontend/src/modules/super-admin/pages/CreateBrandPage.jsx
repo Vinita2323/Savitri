@@ -87,9 +87,10 @@ export const CreateBrandPage = () => {
     locality: '',
     address: '',
     pincode: '',
-    latitude: 22.7196,
-    longitude: 75.8577,
+    latitude: '',
+    longitude: '',
     operatingRadiusKm: 25,
+    serviceCoverage: 'RADIUS',
 
     // Section C: Business Contact
     contactPerson: '',
@@ -151,9 +152,10 @@ export const CreateBrandPage = () => {
             locality: b.locality || '',
             address: b.address || '',
             pincode: b.pincode || '',
-            latitude: b.coordinates?.latitude || b.location?.coordinates?.[1] || 22.7196,
-            longitude: b.coordinates?.longitude || b.location?.coordinates?.[0] || 75.8577,
+            latitude: b.coordinates?.latitude ?? b.location?.coordinates?.[1] ?? '',
+            longitude: b.coordinates?.longitude ?? b.location?.coordinates?.[0] ?? '',
             operatingRadiusKm: b.operatingRadiusKm !== undefined ? b.operatingRadiusKm : 25,
+            serviceCoverage: b.serviceCoverage === 'WHOLE_CITY' ? 'WHOLE_CITY' : 'RADIUS',
 
             contactPerson: b.contactPerson || '',
             contact: b.contact || '',
@@ -338,6 +340,18 @@ export const CreateBrandPage = () => {
       errors.pan = 'Enter a valid 10-character PAN (e.g. AABCF1234A)';
     }
 
+    const latN = parseFloat(formData.latitude);
+    const lngN = parseFloat(formData.longitude);
+    if (formData.latitude === '' || Number.isNaN(latN) || latN < -90 || latN > 90) {
+      errors.latitude = 'Latitude is required - search the address on the map or use GPS';
+    }
+    if (formData.longitude === '' || Number.isNaN(lngN) || lngN < -180 || lngN > 180) {
+      errors.longitude = 'Longitude is required - search the address on the map or use GPS';
+    }
+    if (!errors.latitude && !errors.longitude && Math.abs(latN - 22.7196) < 0.0005 && Math.abs(lngN - 75.8577) < 0.0005 && !/indore/i.test(formData.city)) {
+      errors.latitude = 'These are the default Indore coordinates but the city is ' + formData.city + ' - pick the real location on the map';
+    }
+
     if (formData.operatingRadiusKm < 1 || formData.operatingRadiusKm > 200) {
       errors.operatingRadiusKm = 'Operating radius must be between 1 and 200 km';
     }
@@ -352,7 +366,7 @@ export const CreateBrandPage = () => {
     setSuccessMsg('');
 
     if (!validateForm()) {
-      setErrorMsg('Please resolve the highlighted validation errors before submitting.');
+      setErrorMsg('Please resolve the validation errors before submitting.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -375,6 +389,7 @@ export const CreateBrandPage = () => {
       latitude: parseFloat(formData.latitude),
       longitude: parseFloat(formData.longitude),
       operatingRadiusKm: Number(formData.operatingRadiusKm),
+      serviceCoverage: formData.serviceCoverage === 'WHOLE_CITY' ? 'WHOLE_CITY' : 'RADIUS',
 
       contactPerson: formData.contactPerson.trim(),
       contact: formData.contact.replace(/\D/g, '').slice(-10),
@@ -929,6 +944,9 @@ export const CreateBrandPage = () => {
                         onChange={(e) => handleFieldChange('latitude', e.target.value)}
                         className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono font-bold text-slate-800 outline-none focus:border-[#79B433]"
                       />
+                      {validationErrors.latitude && (
+                        <p className="mt-1 text-[11px] font-semibold text-rose-600">{validationErrors.latitude}</p>
+                      )}
                     </div>
 
                     <div>
@@ -942,6 +960,9 @@ export const CreateBrandPage = () => {
                         onChange={(e) => handleFieldChange('longitude', e.target.value)}
                         className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono font-bold text-slate-800 outline-none focus:border-[#79B433]"
                       />
+                      {validationErrors.longitude && (
+                        <p className="mt-1 text-[11px] font-semibold text-rose-600">{validationErrors.longitude}</p>
+                      )}
                     </div>
 
                     <div>
@@ -959,6 +980,15 @@ export const CreateBrandPage = () => {
                         onChange={(e) => handleFieldChange('operatingRadiusKm', Number(e.target.value))}
                         className="mt-2.5 w-full accent-[#79B433]"
                       />
+                      <label className="mt-3 block text-xs font-bold text-slate-700">Seller eligibility</label>
+                      <select
+                        value={formData.serviceCoverage}
+                        onChange={(e) => handleFieldChange('serviceCoverage', e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#79B433]"
+                      >
+                        <option value="RADIUS">Only sellers within the radius of this location</option>
+                        <option value="WHOLE_CITY">All sellers in this city (ignore radius)</option>
+                      </select>
                     </div>
                   </div>
 

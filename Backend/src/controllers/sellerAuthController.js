@@ -12,6 +12,7 @@ import { invalidatePublicSellersCache } from '../routes/sellerRoutes.js';
 import SellerRegistrationFeeConfig from '../models/SellerRegistrationFeeConfig.model.js';
 import { hasRegistrationFeeCleared, isMembershipRequiredForSeller } from '../utils/sellerEligibility.js';
 import Brand from '../models/Brand.model.js';
+import { normalizeCity } from '../utils/cityNormalization.js';
 
 // Helper to ensure seller object always includes full associated brand details
 export const enrichSellerBrand = async (sellerDoc) => {
@@ -352,7 +353,7 @@ export const registerSeller = async (req, res, next) => {
       },
       warehouseLocation: {
         storeAddress: completeAddress,
-        city,
+        city: normalizeCity(city), // canonical name (e.g. "New Delhi" -> "Delhi")
         state,
         pincode,
         location: {

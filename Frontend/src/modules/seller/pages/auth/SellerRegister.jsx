@@ -6,6 +6,7 @@ import { MapService } from '../../../../services/MapService';
 import LocationSearchModal from '../../../../components/LocationSearchModal';
 import { loadRazorpaySdk } from '../../../../utils/razorpay';
 import { uploadRegistrationImage } from '../../../../utils/uploadRegistrationImage';
+import { normalizeCity, sameCity, isDelhiPincode } from '../../../../utils/cityNormalization';
 
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
@@ -184,10 +185,19 @@ const SellerRegister = () => {
 
   const effectiveCities = supportedCities.length > 0 ? supportedCities : DEFAULT_SUPPORTED_CITIES;
 
+  // Matches a reported city (Google may say "New Delhi", "North West Delhi" ...) against the supported list
+  // after normalisation. Returns the supported entry (canonical name) or null.
   const findSupportedCity = (name) => {
-    const query = String(name || '').trim().toLowerCase();
-    if (!query) return null;
-    return effectiveCities.find((c) => c.city.toLowerCase() === query);
+    if (!String(name || '').trim()) return null;
+    return effectiveCities.find((c) => sameCity(c.city, name)) || null;
+  };
+
+  // Valid, finite, in-range coordinates only. Missing coordinates must never reach brand matching.
+  const hasValidCoordinates = (lat, lng) => {
+    const la = Number(lat);
+    const lo = Number(lng);
+    return lat !== null && lat !== '' && lng !== null && lng !== '' && Number.isFinite(la) && Number.isFinite(lo)
+      && la >= -90 && la <= 90 && lo >= -180 && lo <= 180 && !(la === 0 && lo === 0);
   };
 
   // Auto-detect city & state from Indian 6-digit PIN code
@@ -199,6 +209,7 @@ const SellerRegister = () => {
     if (prefix3 === '462') return { city: 'Bhopal', state: 'Madhya Pradesh' };
     if (prefix3 === '482') return { city: 'Jabalpur', state: 'Madhya Pradesh' };
     if (prefix3 === '456') return { city: 'Ujjain', state: 'Madhya Pradesh' };
+    if (isDelhiPincode(cleanPin)) return { city: 'Delhi', state: 'Delhi' }; // 110001-110099 only
     return null;
   };
 
@@ -226,7 +237,7 @@ const SellerRegister = () => {
 
   useEffect(() => {
     const supported = findSupportedCity(formData.city);
-    if (!supported || !locationConfirmed || !formData.lat || !formData.lng) {
+    if (!supported || !locationConfirmed || !hasValidCoordinates(formData.lat, formData.lng)) {
       setBrandSearch({ status: 'idle', brands: [], error: '' });
       return undefined;
     }
@@ -235,7 +246,7 @@ const SellerRegister = () => {
     brandDiscoveryService
       .getEligibleBrands({ city: supported.city, latitude: formData.lat, longitude: formData.lng })
       .then((res) => {
-        if (!cancelled) setBrandSearch({ status: 'ready', brands: res?.brands || [], error: '' });
+        if (!cancelled) setBrandSearch({ status: 'ready', brands: res?.brands || [], error: '', misconfigured: Number(res?.misconfiguredBrands) || 0 });
       })
       .catch((err) => {
         if (cancelled) return;
@@ -328,7 +339,7 @@ const SellerRegister = () => {
       // If user types city, auto-normalize casing if matches a supported city
       if (name === 'city') {
         const matched = findSupportedCity(value);
-        if (matched && value.trim().toLowerCase() === matched.city.toLowerCase() && value !== matched.city) {
+        if (matched && normalizeCity(value).toLowerCase() === matched.city.toLowerCase() && value !== matched.city) {
           updated.city = matched.city;
         }
       }
@@ -651,8 +662,8 @@ const SellerRegister = () => {
         setErrorMessage('Enter a valid 6-digit PIN code. / वैध 6 अंकों का पिन कोड दर्ज करें।');
         return;
       }
-      if (!formData.lat || !formData.lng) {
-        setErrorMessage('Please set warehouse location via GPS or map search. / कृपया जीपीएस या मानचित्र से वेयरहाउस स्थान सेट करें।');
+      if (!hasValidCoordinates(formData.lat, formData.lng)) {
+        setErrorMessage('Please set warehouse location via GPS or map search. A typed address alone has no map position. / कृपया जीपीएस या मानचित्र से वेयरहाउस स्थान सेट करें।');
         return;
       }
       const supportedCity = findSupportedCity(formData.city);
@@ -711,6 +722,11 @@ const SellerRegister = () => {
       setStep(step + 1);
     } else {
       // Step 4: Seller Registration Fee Payment
+      // Never submit without a confirmed, valid map position and a selected brand (the server re-checks both).
+      if (!hasValidCoordinates(formData.lat, formData.lng) || !formData.brandId) {
+        setErrorMessage('Your warehouse map location and brand are required. Please go back and set them. / वेयरहाउस का मानचित्र स्थान और ब्रांड आवश्यक हैं।');
+        return;
+      }
       setIsSubmitting(true);
       setErrorMessage('');
       setPaymentErrorMessage('');
@@ -1227,7 +1243,7 @@ const SellerRegister = () => {
                       <button
                         type="button"
                         onClick={() => setLocationConfirmed(true)}
-                        disabled={!findSupportedCity(formData.city)}
+                        disabled={!findSupportedCity(formData.city) || !hasValidCoordinates(formData.lat, formData.lng)}
                         className="shrink-0 px-3 py-1.5 bg-[#79B433] text-white rounded-lg font-bold text-xs border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Confirm / पुष्टि करें
@@ -1263,7 +1279,14 @@ const SellerRegister = () => {
                     </div>
                   )}
 
-                  {brandSearch.status === 'ready' && brandSearch.brands.length === 0 && (
+                  {brandSearch.status === 'ready' && brandSearch.brands.length === 0 && brandSearch.misconfigured > 0 && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-medium">
+                      A brand exists in this city but its service area (map location) has not been configured by the administrator yet, so registrations cannot be matched. Please contact support.
+                      <span className="block text-rose-700/80 mt-0.5">इस शहर में ब्रांड मौजूद है, लेकिन उसका सेवा क्षेत्र अभी सेट नहीं है। कृपया सहायता से संपर्क करें।</span>
+                    </div>
+                  )}
+
+                  {brandSearch.status === 'ready' && brandSearch.brands.length === 0 && !(brandSearch.misconfigured > 0) && (
                     <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-medium">
                       No brands are currently accepting seller registrations at this location. Please verify your business address or contact support.
                       <span className="block text-amber-700/80 mt-0.5">इस स्थान पर कोई ब्रांड वर्तमान में विक्रेता पंजीकरण स्वीकार नहीं कर रहा है। कृपया अपना पता जांचें या सहायता से संपर्क करें।</span>
@@ -1284,7 +1307,12 @@ const SellerRegister = () => {
                               </div>
                             </div>
                             <div className="mt-2 text-[11px] text-slate-600 space-y-0.5">
-                              <p className="m-0">Distance: <strong>{b.distanceKm} km</strong> · Radius: <strong>{b.operatingRadiusKm} km</strong></p>
+                              <p className="m-0">
+                                {Number.isFinite(b.distanceKm) ? <>Distance: <strong>{b.distanceKm} km</strong></> : 'Distance not available'}
+                                {b.serviceCoverage === 'WHOLE_CITY'
+                                  ? <> · Service area: <strong>All of {b.city}</strong></>
+                                  : (Number.isFinite(b.operatingRadiusKm) ? <> · Radius: <strong>{b.operatingRadiusKm} km</strong></> : null)}
+                              </p>
                               <p className="m-0 text-emerald-700 font-semibold">Eligible at your location ✓</p>
                             </div>
                             <button

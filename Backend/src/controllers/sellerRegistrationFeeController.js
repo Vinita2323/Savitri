@@ -8,6 +8,7 @@ import { sendOtpSMS } from '../services/smsIndiaHubService.js';
 import { generateOtp } from '../utils/generateOtp.js';
 import { applyReferralCodeAtRegistration } from './referralController.js';
 import { validateBrandForRegistration } from '../utils/brandEligibility.js';
+import { normalizeCity } from '../utils/cityNormalization.js';
 
 // Helper: Normalize 10-digit phone
 const normalizePhone = (phone) => {
@@ -244,7 +245,7 @@ export const initiateRegistrationFeeOrder = async (req, res, next) => {
       brandId: validatedBrand.brandId,
       warehouseLocation: {
         storeAddress: completeAddress,
-        city,
+        city: normalizeCity(city), // canonical name (e.g. "New Delhi" -> "Delhi")
         state,
         pincode,
         locality: typeof req.body.locality === 'string' ? req.body.locality.trim().slice(0, 120) : '',

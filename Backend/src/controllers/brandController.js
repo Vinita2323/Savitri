@@ -1,12 +1,20 @@
 import Brand from '../models/Brand.model.js';
 import Seller from '../models/Seller.model.js';
 import { ensureBaselineBrands, canAccessAllBrands, isBrandAuthorizedForUser } from '../middleware/scopeMiddleware.js';
-import { findEligibleBrands, listRegistrationCities, parseLatLng } from '../utils/brandEligibility.js';
+import { findEligibleBrands, countMisconfiguredBrands, listRegistrationCities, parseLatLng } from '../utils/brandEligibility.js';
+import { normalizeCity } from '../utils/cityNormalization.js';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[6-9]\d{9}$/;
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+
+// The Create Brand form used to pre-fill Indore (22.7196, 75.8577). That point is only valid for an Indore brand.
+const INDORE_DEFAULT = { lat: 22.7196, lng: 75.8577 };
+const looksLikeUnsetIndoreDefault = (lat, lng, city) =>
+  Math.abs(lat - INDORE_DEFAULT.lat) < 0.0005 &&
+  Math.abs(lng - INDORE_DEFAULT.lng) < 0.0005 &&
+  !/indore/i.test(String(city || ''));
 
 export const getAllBrands = async (req, res, next) => {
   try {
@@ -109,7 +117,9 @@ export const getEligibleBrands = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Valid latitude and longitude are required.' });
     }
     const brands = await findEligibleBrands(city, loc.lat, loc.lng);
-    res.status(200).json({ success: true, count: brands.length, brands });
+    // When nothing matches, tell the client whether that is because a brand's service area is not configured
+    const misconfiguredBrands = brands.length === 0 ? await countMisconfiguredBrands(city) : 0;
+    res.status(200).json({ success: true, count: brands.length, brands, city: normalizeCity(city), misconfiguredBrands });
   } catch (err) {
     next(err);
   }
@@ -225,8 +235,14 @@ export const createBrand = async (req, res, next) => {
     }
 
     // 4. Validate coordinates & radius
-    const latNum = latitude !== undefined && latitude !== null && latitude !== '' ? parseFloat(latitude) : 22.7196;
-    const lngNum = longitude !== undefined && longitude !== null && longitude !== '' ? parseFloat(longitude) : 75.8577;
+    // Coordinates are mandatory: seller eligibility is decided by distance from this point, so a silent
+    // default (the old Indore fallback) would make the brand unreachable for sellers in its real city.
+    const hasValue = (v) => v !== undefined && v !== null && String(v).trim() !== '';
+    if (!hasValue(latitude) || !hasValue(longitude)) {
+      return res.status(400).json({ success: false, message: 'Latitude and longitude of the brand operating centre are required. Pick the location on the map.' });
+    }
+    const latNum = parseFloat(latitude);
+    const lngNum = parseFloat(longitude);
 
     if (isNaN(latNum) || latNum < -90 || latNum > 90) {
       return res.status(400).json({ success: false, message: 'Latitude must be a valid coordinate between -90 and 90.' });
@@ -235,10 +251,16 @@ export const createBrand = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Longitude must be a valid coordinate between -180 and 180.' });
     }
 
+    if (looksLikeUnsetIndoreDefault(latNum, lngNum, city)) {
+      return res.status(400).json({ success: false, message: `The coordinates are the default Indore location, but the brand city is "${city.trim()}". Select the real location on the map.` });
+    }
+
     const radiusNum = operatingRadiusKm !== undefined ? Number(operatingRadiusKm) : 25;
     if (isNaN(radiusNum) || radiusNum < 1 || radiusNum > 200) {
       return res.status(400).json({ success: false, message: 'Operating radius must be between 1 and 200 kilometers.' });
     }
+
+    const serviceCoverage = req.body.serviceCoverage === 'WHOLE_CITY' ? 'WHOLE_CITY' : 'RADIUS';
 
     // 5. Generate stable brandId
     const brandId = `brand_${cleanCode.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now().toString().slice(-4)}`;
@@ -264,6 +286,7 @@ export const createBrand = async (req, res, next) => {
         coordinates: [lngNum, latNum], // GeoJSON order: [longitude, latitude]
       },
       operatingRadiusKm: radiusNum,
+      serviceCoverage,
       contactPerson: contactPerson ? contactPerson.trim() : '',
       contact: cleanContact,
       email: cleanEmail,
@@ -338,6 +361,13 @@ export const updateBrand = async (req, res, next) => {
       const latNum = updateData.latitude !== undefined ? parseFloat(updateData.latitude) : existing.coordinates.latitude;
       const lngNum = updateData.longitude !== undefined ? parseFloat(updateData.longitude) : existing.coordinates.longitude;
 
+      const effectiveCity = updateData.city !== undefined ? updateData.city : existing.city;
+      if (isNaN(latNum) || isNaN(lngNum) || latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) {
+        return res.status(400).json({ success: false, message: 'Latitude and longitude must be valid coordinates.' });
+      }
+      if (looksLikeUnsetIndoreDefault(latNum, lngNum, effectiveCity)) {
+        return res.status(400).json({ success: false, message: `The coordinates are the default Indore location, but the brand city is "${effectiveCity}". Select the real location on the map.` });
+      }
       if (!isNaN(latNum) && !isNaN(lngNum)) {
         updateData.coordinates = { latitude: latNum, longitude: lngNum };
         updateData.location = {
@@ -347,11 +377,16 @@ export const updateBrand = async (req, res, next) => {
       }
     }
 
+    if (updateData.serviceCoverage !== undefined && !['RADIUS', 'WHOLE_CITY'].includes(updateData.serviceCoverage)) {
+      return res.status(400).json({ success: false, message: 'Service coverage must be RADIUS or WHOLE_CITY.' });
+    }
+
     if (updateData.operatingRadiusKm !== undefined) {
       const radiusNum = Number(updateData.operatingRadiusKm);
-      if (!isNaN(radiusNum) && radiusNum >= 1 && radiusNum <= 200) {
-        updateData.operatingRadiusKm = radiusNum;
+      if (isNaN(radiusNum) || radiusNum < 1 || radiusNum > 200) {
+        return res.status(400).json({ success: false, message: 'Operating radius must be a number between 1 and 200 kilometers.' });
       }
+      updateData.operatingRadiusKm = radiusNum;
     }
 
     const updated = await Brand.findByIdAndUpdate(existing._id, updateData, {

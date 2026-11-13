@@ -95,6 +95,10 @@ const brandSchema = new mongoose.Schema(
       latitude: { type: Number, default: 22.7196 },
       longitude: { type: Number, default: 75.8577 },
     },
+    // How seller eligibility is decided for this brand.
+    //  RADIUS     (default) - the seller must be within operatingRadiusKm of the brand's map location. Requires valid coordinates.
+    //  WHOLE_CITY - every seller in the brand's city is eligible. Must be chosen explicitly; missing coordinates never imply it.
+    serviceCoverage: { type: String, enum: ['RADIUS', 'WHOLE_CITY'], default: 'RADIUS' },
     location: {
       type: {
         type: String,
