@@ -138,6 +138,9 @@ const sellerNotificationSchema = new mongoose.Schema(
 
 sellerNotificationSchema.index({ sellerId: 1, status: 1, createdAt: -1 });
 sellerNotificationSchema.index({ sellerId: 1, settlementStatus: 1 });
+// getSellerNotifications queries { $or: [{ sellerId }, { sellerName }] } sorted by createdAt: both branches need an index
+sellerNotificationSchema.index({ sellerId: 1, createdAt: -1 });
+sellerNotificationSchema.index({ sellerName: 1, createdAt: -1 });
 sellerNotificationSchema.index({ settlementStatus: 1, createdAt: -1 });
 sellerNotificationSchema.index({ order: 1 });
 sellerNotificationSchema.index({ orderId: 1 });

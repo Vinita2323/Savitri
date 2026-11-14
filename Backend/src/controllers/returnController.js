@@ -385,9 +385,9 @@ export const cancelReturnRequest = async (req, res, next) => {
 export const getSellerReturns = async (req, res, next) => {
   try {
     const sellerId = req.user.id || req.user._id;
-    let seller = await Seller.findById(sellerId);
+    let seller = await Seller.findById(sellerId).select('businessName').lean();
     if (!seller) {
-      seller = await Seller.findOne({ phone: req.user.phone });
+      seller = await Seller.findOne({ phone: req.user.phone }).select('businessName').lean();
     }
 
     const sellerKey = seller ? String(seller._id) : sellerId;
@@ -407,7 +407,8 @@ export const getSellerReturns = async (req, res, next) => {
     const returns = await ReturnRequest.find(query)
       .populate('order', 'orderId orderStatus grandTotal createdAt paymentMethod')
       .populate('captain', 'name phone vehicleType')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.status(200).json({
       success: true,

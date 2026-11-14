@@ -321,6 +321,8 @@ returnRequestSchema.index({ order: 1, orderItemId: 1 });
 returnRequestSchema.index({ user: 1, createdAt: -1 });
 returnRequestSchema.index({ seller: 1, status: 1, createdAt: -1 });
 returnRequestSchema.index({ seller: 1, createdAt: -1 });
+// getSellerReturns queries { $or: [{ seller }, { sellerName }] } - every $or branch needs its own index or MongoDB scans the whole collection
+returnRequestSchema.index({ sellerName: 1, status: 1, createdAt: -1 });
 returnRequestSchema.index({ captain: 1, status: 1 });
 returnRequestSchema.index({ captain: 1, createdAt: -1 });
 returnRequestSchema.index({ status: 1, createdAt: -1 });
