@@ -24,6 +24,7 @@ export const uploadToCloudinary = async (fileStr, folder = 'savitri') => {
     const res = await client.uploader.upload(fileStr, {
       folder: `savitri/${folder}`,
       resource_type: 'auto',
+      timeout: 120000, // slow connections: the SDK default is 60s
     });
     return res;
   } catch (error) {

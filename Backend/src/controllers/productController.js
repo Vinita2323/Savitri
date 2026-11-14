@@ -63,7 +63,7 @@ const processImage = async (imgStr, folder = 'products') => {
       try {
         const uploadPromise = uploadToCloudinary(imgStr, folder);
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Cloudinary upload timed out (6s limit)')), 6000)
+          setTimeout(() => reject(new Error('Cloudinary upload timed out (120s limit)')), 120000)
         );
         const res = await Promise.race([uploadPromise, timeoutPromise]);
         if (res && res.secure_url) return res.secure_url;

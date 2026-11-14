@@ -454,11 +454,11 @@ export const productService = {
     return response.data;
   },
   createProduct: async (data) => {
-    const response = await API.post('/products', data);
+    const response = await API.post('/products', data, { timeout: 300000 }); // images are uploaded to Cloudinary before the response
     return response.data;
   },
   updateProduct: async (id, data) => {
-    const response = await API.put(`/products/${id}`, data);
+    const response = await API.put(`/products/${id}`, data, { timeout: 300000 });
     return response.data;
   },
   deleteProduct: async (id) => {
