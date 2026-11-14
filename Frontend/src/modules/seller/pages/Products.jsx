@@ -39,6 +39,9 @@ const Products = () => {
     unitType: 'kg'
   });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  // The product LIST api returns a slim record without the description, so the full product is fetched when a
+  // product is opened. 'loading' | 'ready' | 'failed' - the description is only ever saved when it was actually loaded.
+  const [descStatus, setDescStatus] = useState('ready');
 
   // View modal state
   const [viewingProduct, setViewingProduct] = useState(null);
@@ -215,6 +218,37 @@ const Products = () => {
       unitValue: product.unitValue || '1',
       unitType: product.unitType || 'kg'
     });
+    loadFullDescription(product);
+  };
+
+  // Fetches the full product (the list response omits the description) and fills it in without overwriting text the
+  // seller has already started typing.
+  const loadFullDescription = async (product) => {
+    const id = product?._id;
+    // The list record carries no description (the page maps it to ''), so an empty one means "not loaded yet"
+    if (product?.description || !id) {
+      setDescStatus('ready');
+      return;
+    }
+    setDescStatus('loading');
+    try {
+      const res = await productService.getProductById(id);
+      const full = res?.product || res;
+      const description = typeof full?.description === 'string' ? full.description : '';
+      setEditFormData((prev) => (prev.description ? prev : { ...prev, description }));
+      setEditingProduct((prev) => (prev && (prev._id === id) ? { ...prev, description } : prev));
+      setViewingProduct((prev) => (prev && (prev._id === id) ? { ...prev, description } : prev));
+      setProducts((prev) => prev.map((p) => (p._id === id ? { ...p, description } : p)));
+      setDescStatus('ready');
+    } catch (err) {
+      console.warn('Could not load the product description:', err.message);
+      setDescStatus('failed');
+    }
+  };
+
+  const handleOpenViewModal = (product) => {
+    setViewingProduct(product);
+    if (!product?.description) loadFullDescription(product);
   };
 
   const handleEditCategoryChange = (newCategory) => {
@@ -270,7 +304,7 @@ const Products = () => {
       stock: Number(editFormData.stock || 0),
       status: editFormData.status,
       mainImage: cleanMainImage,
-      description: editFormData.description,
+      ...(descStatus === 'ready' ? { description: editFormData.description } : {}), // never overwrite with an unloaded value
       unitValue: editFormData.unitValue,
       unitType: editFormData.unitType,
       unit: `${editFormData.unitValue || '1'} ${editFormData.unitType || 'kg'}`
@@ -307,7 +341,7 @@ const Products = () => {
               stock: Number(editFormData.stock || 0),
               status: editFormData.status,
               image: cleanMainImage,
-              description: editFormData.description
+              ...(descStatus === 'ready' ? { description: editFormData.description } : {})
             }
           : p
       ));
@@ -581,7 +615,7 @@ const Products = () => {
                   <td className="px-5 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button 
-                        onClick={() => setViewingProduct(product)}
+                        onClick={() => handleOpenViewModal(product)}
                         className="p-1.5 text-slate-500 hover:text-blue-600 bg-white rounded-md border border-slate-200 shadow-xs cursor-pointer transition-colors" 
                         title="View Product Details"
                       >
@@ -862,10 +896,16 @@ const Products = () => {
                 <textarea
                   rows={3}
                   value={editFormData.description}
+                  disabled={descStatus !== 'ready'}
                   onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                  placeholder="Provide a brief description of the product features, quality, specifications..."
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-[#ff7526] transition-all resize-none"
+                  placeholder={descStatus === 'loading' ? 'Loading description...' : 'Provide a brief description of the product features, quality, specifications...'}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-[#ff7526] transition-all resize-none disabled:bg-slate-50 disabled:text-slate-400"
                 />
+                {descStatus === 'failed' && (
+                  <p className="mt-1 text-[11px] font-medium text-amber-700">
+                    The description could not be loaded, so it stays unchanged when you save. Close and reopen this window to try again.
+                  </p>
+                )}
               </div>
 
               {/* Modal Footer Controls */}

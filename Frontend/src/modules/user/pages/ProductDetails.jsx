@@ -554,7 +554,7 @@ const ProductDetails = () => {
         {/* Title & Rating Header */}
         <div className="flex items-start justify-between gap-3 min-w-0 w-full">
           <div className="space-y-1 min-w-0 flex-1">
-            <h1 className="text-[18px] font-semibold text-slate-800 m-0 leading-snug break-words break-all [overflow-wrap:anywhere]">
+            <h1 className="text-[18px] font-semibold text-slate-800 m-0 leading-snug break-words [overflow-wrap:break-word] [text-wrap:pretty]">
               {product.name}
             </h1>
             <p className="text-[11px] font-medium text-slate-500 m-0 truncate">
@@ -904,15 +904,15 @@ const ProductDetails = () => {
             <div className="space-y-2.5 mt-1">
               {reviewsData.reviews.slice(0, 5).map((rev, rIdx) => (
                 <div key={rIdx} className="p-3 rounded-xl bg-white border border-slate-100 shadow-2xs space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-orange-100 text-[#F7941D] font-bold text-[10px] flex items-center justify-center">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-6 h-6 shrink-0 rounded-full bg-orange-100 text-[#F7941D] font-bold text-[10px] flex items-center justify-center">
                         {(rev.user?.name || 'U').charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-xs font-bold text-slate-800">{rev.user?.name || 'Verified Customer'}</span>
+                      <span className="text-xs font-bold text-slate-800 truncate">{rev.user?.name || 'Verified Customer'}</span>
                     </div>
 
-                    <span className="text-[10px] text-slate-400 font-medium">{rev.date}</span>
+                    <span className="text-[10px] text-slate-400 font-medium shrink-0 whitespace-nowrap">{rev.date}</span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -933,7 +933,7 @@ const ProductDetails = () => {
                   </div>
 
                   {rev.review && (
-                    <p className="text-xs text-slate-600 m-0 leading-relaxed font-normal break-words break-all [overflow-wrap:anywhere]">{rev.review}</p>
+                    <p className="text-xs text-slate-600 m-0 leading-relaxed font-normal break-words [overflow-wrap:break-word] [text-wrap:pretty]">{rev.review}</p>
                   )}
 
                   {rev.feedbackTags && rev.feedbackTags.length > 0 && (
