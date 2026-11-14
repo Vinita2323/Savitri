@@ -18,9 +18,9 @@ const connectDB = async () => {
       maxPoolSize: 50,
       minPoolSize: 5,
       maxIdleTimeMS: 30000,
-      serverSelectionTimeoutMS: 8000,
+      serverSelectionTimeoutMS: 30000, // tolerate slow or unstable networks
       socketTimeoutMS: 45000,
-      connectTimeoutMS: 10000,
+      connectTimeoutMS: 30000,
       family: 4,
       retryWrites: true,
       w: 'majority',
