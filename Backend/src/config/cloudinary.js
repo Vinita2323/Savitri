@@ -18,11 +18,11 @@ const getCloudinary = () => {
  * @param {string} folder - Destination subfolder in Cloudinary
  * @returns {Promise<object>} Upload result with secure_url, public_id, etc.
  */
-export const uploadToCloudinary = async (fileStr, folder = 'shippnex') => {
+export const uploadToCloudinary = async (fileStr, folder = 'savitri') => {
   try {
     const client = getCloudinary();
     const res = await client.uploader.upload(fileStr, {
-      folder: `shippnex/${folder}`,
+      folder: `savitri/${folder}`,
       resource_type: 'auto',
     });
     return res;
