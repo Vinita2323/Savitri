@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Heart, Star, Filter, Plus, Trash2, ShoppingBag, Layers, X, RefreshCw } from 'lucide-react';
 import { useWishlist } from '../context/WishlistContext';
@@ -51,6 +51,24 @@ const defaultSubCategoryMap = {
   ]
 };
 
+// The last product list for each category is kept for the session. Coming back from a product page shows it at once
+// (already scrolled to where the shopper was) and refreshes it quietly in the background.
+const productCacheKey = (cat, sub) => `savitri_cat_products:${cat || 'All'}|${sub || ''}`;
+const readProductCache = (cat, sub) => {
+  try {
+    const raw = sessionStorage.getItem(productCacheKey(cat, sub));
+    const list = raw ? JSON.parse(raw) : null;
+    return Array.isArray(list) && list.length > 0 ? list : null;
+  } catch {
+    return null;
+  }
+};
+const writeProductCache = (cat, sub, list) => {
+  try {
+    if (Array.isArray(list) && list.length > 0) sessionStorage.setItem(productCacheKey(cat, sub), JSON.stringify(list));
+  } catch { /* storage full or unavailable: the cache is optional */ }
+};
+
 const Categories = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -78,10 +96,41 @@ const Categories = () => {
   });
 
   const [allCategories, setAllCategories] = useState([]);
+
+  // ── Remember how far the shopper scrolled, so coming back from a product page lands in the same place ──
+  const mainRef = useRef(null);
+  const asideRef = useRef(null);
+  const scrollKey = `savitri_cat_scroll:${activeCategory}|${activeSubCategory || ''}`;
+  const initialScrollKey = useRef(scrollKey);
+  const restoredScroll = useRef(false);
+  const scrollKeyRef = useRef(scrollKey);
+  scrollKeyRef.current = scrollKey;
+
+  const saveScroll = () => {
+    try {
+      sessionStorage.setItem(
+        scrollKeyRef.current,
+        JSON.stringify({ main: mainRef.current?.scrollTop || 0, aside: asideRef.current?.scrollTop || 0, win: window.scrollY || 0 })
+      );
+    } catch { /* storage unavailable */ }
+  };
+
+  useEffect(() => {
+    let raf = 0;
+    const onWindowScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(saveScroll);
+    };
+    window.addEventListener('scroll', onWindowScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', onWindowScroll);
+    };
+  }, []);
   const [sidebarCategories, setSidebarCategories] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState(() => readProductCache(activeCategory, activeSubCategory) || []);
   const [loadingCategories, setLoadingCategories] = useState(true);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [loadingProducts, setLoadingProducts] = useState(() => !readProductCache(activeCategory, activeSubCategory));
   const [totalProductCount, setTotalProductCount] = useState(0);
 
   // Sync state if URL search parameters change externally
@@ -101,6 +150,7 @@ const Categories = () => {
   }, [urlCategory, urlSubCategory]);
 
   const setActiveCategory = (catName) => {
+    if (mainRef.current) mainRef.current.scrollTop = 0; // a newly chosen category starts at the top
     setActiveCategoryState(catName);
     sessionStorage.setItem('savitri_active_cat', catName);
     
@@ -119,6 +169,7 @@ const Categories = () => {
   };
 
   const setActiveSubCategory = (subCatName) => {
+    if (mainRef.current) mainRef.current.scrollTop = 0;
     setActiveSubCategoryState(subCatName);
     const newParams = new URLSearchParams(searchParams);
     if (subCatName) {
@@ -169,12 +220,35 @@ const Categories = () => {
     return () => { isMounted = false; };
   }, []);
 
+  useLayoutEffect(() => {
+    if (restoredScroll.current) return;
+    if (scrollKey !== initialScrollKey.current) {
+      restoredScroll.current = true; // the shopper changed category before the list loaded: start at the top
+      return;
+    }
+    if (loadingProducts || products.length === 0) return;
+    restoredScroll.current = true;
+    let saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem(scrollKey) || 'null'); } catch { saved = null; }
+    if (!saved) return;
+    // runs before paint: the page is drawn already scrolled, never at the top first
+    if (mainRef.current) mainRef.current.scrollTop = saved.main || 0;
+    if (asideRef.current) asideRef.current.scrollTop = saved.aside || 0;
+    if (saved.win) window.scrollTo(0, saved.win);
+  }, [loadingProducts, products, scrollKey]);
+
   // Fetch Products whenever Category or SubCategory changes
   useEffect(() => {
     let isMounted = true;
     const fetchCategoryProducts = async () => {
       try {
-        setLoadingProducts(true);
+        const cached = readProductCache(activeCategory, activeSubCategory);
+        if (cached) {
+          setProducts(cached);
+          setLoadingProducts(false);
+        } else {
+          setLoadingProducts(true);
+        }
         const params = {};
         if (activeCategory && activeCategory !== 'All') {
           params.category = activeCategory;
@@ -192,6 +266,7 @@ const Categories = () => {
 
         if (res && res.success && Array.isArray(res.products)) {
           setProducts(res.products);
+          writeProductCache(activeCategory, activeSubCategory, res.products);
           if (activeCategory === 'All' && !activeSubCategory) {
             setTotalProductCount(res.total || res.products.length);
           }
@@ -324,7 +399,7 @@ const Categories = () => {
       <div className="flex-1 flex flex-row overflow-hidden md:overflow-visible md:gap-6 min-h-0">
         
         {/* Left Sidebar */}
-        <aside className="w-[80px] sm:w-[88px] md:w-64 bg-white border-r md:border md:rounded-2xl border-slate-100 overflow-y-auto shrink-0 [&::-webkit-scrollbar]:hidden md:p-2.5 md:shadow-xs">
+        <aside ref={asideRef} onScroll={saveScroll} className="w-[80px] sm:w-[88px] md:w-64 bg-white border-r md:border md:rounded-2xl border-slate-100 overflow-y-auto shrink-0 [&::-webkit-scrollbar]:hidden md:p-2.5 md:shadow-xs">
           
           <div className="hidden md:flex items-center justify-between pb-2.5 mb-2 border-b border-slate-100 px-2">
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">Categories</h3>
@@ -405,7 +480,7 @@ const Categories = () => {
         </aside>
 
         {/* Right Content Area */}
-        <main className="flex-1 p-2.5 md:p-0 overflow-y-auto md:overflow-visible [&::-webkit-scrollbar]:hidden bg-[#fdfaf6] flex flex-col min-w-0">
+        <main ref={mainRef} onScroll={saveScroll} className="flex-1 p-2.5 md:p-0 overflow-y-auto md:overflow-visible [&::-webkit-scrollbar]:hidden bg-[#fdfaf6] flex flex-col min-w-0">
           
           {/* Header Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 bg-white md:bg-transparent p-3 md:p-0 rounded-2xl border border-slate-100 md:border-none shadow-2xs md:shadow-none">
@@ -552,7 +627,7 @@ const Categories = () => {
                   <div 
                     key={item._id || item.id} 
                     className="bg-white rounded-xl sm:rounded-2xl overflow-hidden flex flex-col shadow-[0_2px_10px_rgba(0,0,0,0.03)] relative border border-slate-100/80 cursor-pointer transition-all hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] group"
-                    onClick={() => navigate(`/product/${item._id || item.id}`)}
+                    onClick={() => { saveScroll(); navigate(`/product/${item._id || item.id}`); }}
                   >
                     {/* Image Section */}
                     <div className="bg-[#f8fafc] h-[105px] sm:h-[125px] md:h-[150px] relative w-full overflow-hidden flex items-center justify-center p-1.5 sm:p-2">
