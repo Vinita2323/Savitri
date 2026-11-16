@@ -470,7 +470,7 @@ const ProductDetails = () => {
     : displayStock <= 0;
 
   return (
-    <div className="min-h-[100dvh] md:min-h-screen bg-white font-sans text-slate-800 relative w-full max-w-[480px] md:max-w-7xl mx-auto shadow-[0_0_25px_rgba(0,0,0,0.05)] md:shadow-none flex flex-col pb-24 md:pb-12 md:px-6 md:pt-4 overflow-x-hidden">
+    <div className="min-h-[100dvh] md:min-h-screen bg-white font-sans text-slate-800 relative w-full max-w-[480px] md:max-w-7xl mx-auto shadow-[0_0_25px_rgba(0,0,0,0.05)] md:shadow-none flex flex-col pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:pb-12 md:px-6 md:pt-4 overflow-x-hidden">
       
       {/* Desktop 2-Column Split Container */}
       <div className="md:grid md:grid-cols-12 md:gap-10 md:items-start w-full min-w-0 max-w-full">
@@ -1058,7 +1058,7 @@ const ProductDetails = () => {
       </div>
 
       {/* 4. Sticky Bottom Action Bar (Mobile Only) */}
-      <div className="md:hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white border-t border-slate-200/80 px-3 py-2.5 flex items-center justify-between gap-2.5 z-50 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+      <div className="md:hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white border-t border-slate-200/80 px-3 pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between gap-2.5 z-50 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         
         {/* Quantity Stepper */}
         <div className="flex items-center bg-slate-100 rounded-xl border border-slate-200/80 p-0.5 shrink-0 h-11">
@@ -1126,7 +1126,7 @@ const ProductDetails = () => {
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full text-[12px] font-medium shadow-lg z-[100] whitespace-nowrap">
+        <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full text-[12px] font-medium shadow-lg z-[100] whitespace-nowrap">
           {toastMessage}
         </div>
       )}
