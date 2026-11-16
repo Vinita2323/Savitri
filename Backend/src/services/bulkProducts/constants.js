@@ -1,5 +1,7 @@
+import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 /** Column order of the downloadable template (the first 15 are the supported spec; productId is optional, UPDATE only). */
 export const COLUMNS = [
@@ -49,4 +51,7 @@ export const UNIT_TYPES = ['kg', 'g', 'mg', 'ltr', 'ml', 'pcs', 'pack', 'dozen',
 /** Uploads are staged outside `uploads/` so the static file server can never expose them. */
 export const TEMP_ROOT = path.join(os.tmpdir(), 'savitri-bulk-upload');
 export const IMAGE_PUBLIC_PREFIX = '/uploads/products/bulk';
-export const IMAGE_DISK_ROOT = path.join(process.cwd(), 'uploads', 'products', 'bulk');
+// Must be the very folder server.js serves at /uploads (same rule as server.js), whatever directory the process was started from.
+const BACKEND_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+const UPLOADS_DIR = fs.existsSync(path.join(BACKEND_ROOT, 'uploads')) ? path.join(BACKEND_ROOT, 'uploads') : path.join(process.cwd(), 'uploads');
+export const IMAGE_DISK_ROOT = path.join(UPLOADS_DIR, 'products', 'bulk');
