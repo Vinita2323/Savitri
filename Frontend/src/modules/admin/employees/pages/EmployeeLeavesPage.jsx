@@ -125,14 +125,14 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
                 placeholder="Search by employee name, ID, or leave reference..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none font-medium"
+                className="w-full pl-9 pr-3 py-2 text-[14px] bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none font-semibold"
               />
             </div>
 
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:outline-none cursor-pointer"
+              className="text-[14px] font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:outline-none cursor-pointer"
             >
               <option value="ALL">All Statuses</option>
               <option value="Pending">Pending Review</option>
@@ -144,7 +144,7 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
           <button
             type="button"
             onClick={() => setIsSubmitModalOpen(true)}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-[14px] flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
           >
             <Plus className="w-4 h-4" />
             <span>Apply Leave</span>
@@ -154,9 +154,9 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
         {/* Leaves Table */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-[14px]">
               <thead>
-                <tr className="bg-slate-50/70 border-b border-slate-200/80 text-slate-500 uppercase tracking-wider text-[10px]">
+                <tr className="bg-slate-50/70 border-b border-slate-200/80 text-slate-500 uppercase tracking-wider text-[12px]">
                   <th className="py-3.5 px-4">Leave ID & Employee</th>
                   <th className="py-3.5 px-4">Leave Type</th>
                   <th className="py-3.5 px-4">Dates & Duration</th>
@@ -172,14 +172,14 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
                     <tr key={l._id} className="hover:bg-slate-50/60">
                       <td className="py-3 px-4">
                         <div className="font-bold text-slate-900">{l.employeeName}</div>
-                        <div className="text-[10px] font-mono text-emerald-700 font-semibold">
+                        <div className="text-[12px] font-mono text-emerald-700 font-bold">
                           {l.leaveId} • {l.employeeId}
                         </div>
                       </td>
-                      <td className="py-3 px-4 font-semibold text-slate-800">
+                      <td className="py-3 px-4 font-bold text-slate-800">
                         {l.leaveType}
                         {l.isHalfDay && (
-                          <span className="block text-[10px] text-purple-600 font-bold">
+                          <span className="block text-[12px] text-purple-600 font-bold">
                             Half Day
                           </span>
                         )}
@@ -189,7 +189,7 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
                           {new Date(l.startDate).toLocaleDateString('en-IN')} to{' '}
                           {new Date(l.endDate).toLocaleDateString('en-IN')}
                         </div>
-                        <span className="text-[10px] text-slate-400 font-bold">
+                        <span className="text-[12px] text-slate-400 font-bold">
                           {l.totalDays} day{l.totalDays > 1 ? 's' : ''}
                         </span>
                       </td>
@@ -198,7 +198,7 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
                       </td>
                       <td className="py-3 px-4">
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          className={`px-2 py-0.5 rounded-full text-[12px] font-bold ${
                             l.status === 'Approved'
                               ? 'bg-emerald-100 text-emerald-800'
                               : l.status === 'Rejected'
@@ -209,14 +209,14 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
                           {l.status}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-[11px] text-slate-500">
+                      <td className="py-3 px-4 text-[13px] text-slate-500">
                         {l.reviewedBy?.name ? (
                           <div>
-                            <span className="font-semibold text-slate-700">
+                            <span className="font-bold text-slate-700">
                               By {l.reviewedBy.name}
                             </span>
                             {l.reviewedBy.notes && (
-                              <span className="block italic text-[10px] text-slate-400">
+                              <span className="block italic text-[12px] text-slate-400">
                                 "{l.reviewedBy.notes}"
                               </span>
                             )}
@@ -234,7 +234,7 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
                                 setReviewingLeave(l);
                                 setReviewAction('Approved');
                               }}
-                              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold rounded-lg text-xs"
+                              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold rounded-lg text-[14px]"
                             >
                               Approve
                             </button>
@@ -244,13 +244,13 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
                                 setReviewingLeave(l);
                                 setReviewAction('Rejected');
                               }}
-                              className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg text-xs"
+                              className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg text-[14px]"
                             >
                               Reject
                             </button>
                           </div>
                         ) : (
-                          <span className="text-slate-400 text-xs font-semibold">Finalized</span>
+                          <span className="text-slate-400 text-[14px] font-bold">Finalized</span>
                         )}
                       </td>
                     </tr>
@@ -273,7 +273,7 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-100 space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="text-base font-extrabold text-slate-900">Apply Leave Request</h3>
+              <h3 className="text-[17px] font-extrabold text-slate-900">Apply Leave Request</h3>
               <button
                 type="button"
                 onClick={() => setIsSubmitModalOpen(false)}
@@ -283,7 +283,7 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitLeaveRequest} className="space-y-3 text-xs">
+            <form onSubmit={handleSubmitLeaveRequest} className="space-y-3 text-[14px]">
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Select Employee *</label>
                 <select
@@ -347,7 +347,7 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
                   onChange={(e) => setIsHalfDay(e.target.checked)}
                   className="rounded text-emerald-600 focus:ring-emerald-500"
                 />
-                <label htmlFor="halfDayChk" className="font-semibold text-slate-700 cursor-pointer">
+                <label htmlFor="halfDayChk" className="font-bold text-slate-700 cursor-pointer">
                   Half-Day Leave
                 </label>
               </div>
@@ -390,10 +390,10 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-100 space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex justify-between items-start border-b pb-3">
               <div>
-                <h3 className="text-base font-extrabold text-slate-900">
+                <h3 className="text-[17px] font-extrabold text-slate-900">
                   {reviewAction === 'Approved' ? 'Approve Leave' : 'Reject Leave'}
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-[14px] text-slate-500">
                   {reviewingLeave.employeeName} • {reviewingLeave.leaveType} ({reviewingLeave.totalDays} day)
                 </p>
               </div>
@@ -406,7 +406,7 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
               </button>
             </div>
 
-            <form onSubmit={handleConfirmReview} className="space-y-3 text-xs">
+            <form onSubmit={handleConfirmReview} className="space-y-3 text-[14px]">
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-slate-600 italic">
                 "{reviewingLeave.reason}"
               </div>

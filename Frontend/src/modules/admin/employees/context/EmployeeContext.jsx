@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { employeeService } from '../../../../services/employeeService';
+import API from '../../../../services/api';
 import { useSuperAdmin } from '../../../super-admin/context/SuperAdminContext';
 
 const EmployeeContext = createContext();
@@ -13,14 +14,25 @@ export const EmployeeProvider = ({ children }) => {
     // If rendered outside SuperAdminProvider (e.g. within Admin panel)
   }
 
-  const activeBrandId = superAdminCtx?.selectedBrandId || 'ALL';
   const selectedBrand = superAdminCtx?.selectedBrand || null;
-  const brandsList = superAdminCtx?.brands || [
-    { id: 'ALL', name: 'All Brands (Consolidated)' },
-    { id: 'brand_fg', name: 'Fashion Gallary' },
-    { id: 'brand_fh', name: 'Fashion Hub' },
-    { id: 'brand_fa', name: 'Fashion Adda' },
-  ];
+  // Outside the Super Admin panel the brand list comes from the API (the brands this admin may access), never a hard-coded list.
+  const [apiBrands, setApiBrands] = useState([{ id: 'ALL', name: 'All Brands (Consolidated)' }]);
+  useEffect(() => {
+    if (superAdminCtx?.brands) return undefined;
+    let alive = true;
+    API.get('/super-admin/brands')
+      .then((res) => {
+        const list = res.data?.brands || res.data?.data || [];
+        if (alive) setApiBrands([{ id: 'ALL', name: 'All Brands (Consolidated)' }, ...list.map((x) => ({ id: x.brandId, name: x.name }))]);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [superAdminCtx?.brands]);
+  const brandsList = superAdminCtx?.brands || apiBrands;
+  // A brand-restricted admin who can access exactly one brand is always scoped to it (never the consolidated view).
+  const activeBrandId = superAdminCtx?.selectedBrandId || (apiBrands.length === 2 ? apiBrands[1].id : 'ALL');
 
   const [employees, setEmployees] = useState([]);
   const [allEmployees, setAllEmployees] = useState([]);

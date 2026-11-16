@@ -91,12 +91,20 @@ const EmployeeTasksPage = lazy(() => import('../employees/pages/EmployeeTasksPag
 const EmployeeLeavesPage = lazy(() => import('../employees/pages/EmployeeLeavesPage'));
 const EmployeeShiftsHolidaysPage = lazy(() => import('../employees/pages/EmployeeShiftsHolidaysPage'));
 const EmployeeReportsPage = lazy(() => import('../employees/pages/EmployeeReportsPage'));
+const EmployeeOverviewPage = lazy(() => import('../employees/pages/EmployeeOverviewPage'));
+const EmployeeRegistrationsPage = lazy(() => import('../employees/pages/EmployeeRegistrationsPage'));
+const EmployeeAttendanceReportPage = lazy(() => import('../employees/pages/EmployeeAttendanceReportPage'));
+const EmployeeTaskReviewPage = lazy(() => import('../employees/pages/EmployeeTaskReviewPage'));
+const EmployeeRulesPage = lazy(() => import('../employees/pages/EmployeeRulesPage'));
+const EmployeeActivityPage = lazy(() => import('../employees/pages/EmployeeActivityPage'));
 
 export const AdminLayout = () => {
   const { activeTab, setActiveTab, tabData, sidebarOpen, setSidebarOpen, isCompact } = useAdmin();
 
   const renderActiveTabContent = () => {
-    switch (activeTab) {
+    // The URL form is hyphenated ("/admin/employee-directory") while the employee tab keys use underscores.
+    const tabKey = typeof activeTab === 'string' && activeTab.startsWith('employee') ? activeTab.replace(/-/g, '_') : activeTab;
+    switch (tabKey) {
       case 'referral_dashboard':
       case 'referral-dashboard':
         return <ReferralDashboard onNavigateTab={(tab) => setActiveTab(tab)} />;
@@ -360,6 +368,24 @@ export const AdminLayout = () => {
       case 'employee_reports':
       case 'employees/reports':
         return <EmployeeReportsPage onNavigate={(tab) => setActiveTab(tab)} currentTab="reports" />;
+      case 'employee_overview':
+      case 'employees/overview':
+        return <EmployeeOverviewPage onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'employee_registrations':
+      case 'employees/registrations':
+        return <EmployeeRegistrationsPage onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'employee_attendance_report':
+      case 'employees/attendance-report':
+        return <EmployeeAttendanceReportPage onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'employee_review':
+      case 'employees/review':
+        return <EmployeeTaskReviewPage onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'employee_rules':
+      case 'employees/rules':
+        return <EmployeeRulesPage onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'employee_activity':
+      case 'employees/activity':
+        return <EmployeeActivityPage onNavigate={(tab) => setActiveTab(tab)} />;
       default:
         return <AdminDashboard onNavigate={(tab) => setActiveTab(tab)} />;
     }

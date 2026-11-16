@@ -13,6 +13,7 @@ import {
   getTasks,
   createTask,
   updateTaskStatus,
+  updateTask,
   addTaskComment,
   getLeaveRequests,
   submitLeaveRequest,
@@ -23,6 +24,7 @@ import {
   createHoliday,
   getEmployeeDashboardSummary,
 } from '../controllers/employeeController.js';
+import { correctAttendance } from '../controllers/employeeAdminController.js';
 import { resolveBrandScope } from '../middleware/scopeMiddleware.js';
 
 const router = express.Router();
@@ -52,11 +54,13 @@ router.get('/attendance/records', getAttendanceRecords);
 router.post('/attendance/check-in', checkIn);
 router.post('/attendance/check-out', checkOut);
 router.patch('/attendance/:id/correction', requestOrApproveCorrection);
+router.post('/attendance/manual', correctAttendance);
 
 // 3. Task Management
 router.get('/tasks/all', getTasks);
 router.post('/tasks', createTask);
 router.patch('/tasks/:id/status', updateTaskStatus);
+router.put('/tasks/:id', updateTask);
 router.post('/tasks/:id/comments', addTaskComment);
 
 // 4. Leave Management

@@ -9,6 +9,8 @@ const DeliveryRoutes = lazy(() => import('./modules/delivery/routes/DeliveryRout
 const SellerRoutes = lazy(() => import('./modules/seller/routes/SellerRoutes'));
 const AdminRoutes = lazy(() => import('./modules/admin/routes/AdminRoutes'));
 const SuperAdminRoutes = lazy(() => import('./modules/super-admin/routes/SuperAdminRoutes'));
+/** Employee portal (employee login, attendance, tasks, leave) — fully separate from every other panel */
+const EmployeeRoutes = lazy(() => import('./modules/employee/routes/EmployeeRoutes'));
 /** Brand Super Admin (frontend-only multi-brand demo) — isolated from /admin and /super-admin */
 const BrandSuperAdminRoutes = lazy(() => import('./modules/brand-super-admin/routes/BrandSuperAdminRoutes'));
 /** MyWillBook Super Admin (frontend-only platform demo) — isolated from other admin modules */
@@ -80,6 +82,7 @@ function App() {
                           <Route path="/seller/*" element={<SellerRoutes />} />
                           <Route path="/admin/*" element={<AdminRoutes />} />
                           <Route path="/super-admin/*" element={<SuperAdminRoutes />} />
+                          <Route path="/employee/*" element={<EmployeeRoutes />} />
                           <Route path="/brand-super-admin/*" element={<BrandSuperAdminRoutes />} />
                           <Route path="/mywillbook-super-admin/*" element={<MyWillBookSuperAdminRoutes />} />
                           <Route path="/*" element={<UserRoutes />} />

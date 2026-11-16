@@ -302,12 +302,18 @@ export const AdminSidebar = () => {
           icon: UserCheck,
           submenu: [
             { id: 'employee_dashboard', label: 'Employee Dashboard' },
+            { id: 'employee_overview', label: 'Employee Overview' },
+            { id: 'employee_registrations', label: 'Registration Requests' },
             { id: 'employee_directory', label: 'Employee Directory' },
             { id: 'employee_attendance', label: 'Attendance Management' },
+            { id: 'employee_attendance_report', label: 'Attendance Reports' },
             { id: 'employee_tasks', label: 'Task Management' },
+            { id: 'employee_review', label: 'Task Review' },
             { id: 'employee_leaves', label: 'Leave Management' },
             { id: 'employee_shifts', label: 'Shifts & Holidays' },
             { id: 'employee_reports', label: 'Reports & Analytics' },
+            { id: 'employee_rules', label: 'Attendance Rules' },
+            { id: 'employee_activity', label: 'Activity Log' },
           ]
         }
       ]

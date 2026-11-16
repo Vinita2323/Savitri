@@ -5,184 +5,45 @@ import EmployeeTask from '../models/EmployeeTask.model.js';
 import LeaveRequest from '../models/LeaveRequest.model.js';
 import Shift from '../models/Shift.model.js';
 import Holiday from '../models/Holiday.model.js';
+import Brand from '../models/Brand.model.js';
+import bcrypt from 'bcryptjs';
+import {
+  actorFromReq,
+  escapeRegex,
+  generateEmployeeCode,
+  generateTaskCode,
+  generateLeaveCode,
+  getRules,
+  istDateString,
+  istMinutesOfDay,
+  logActivity,
+  notifyEmployee,
+  parseHHmm,
+} from '../services/employeeCore.js';
+import { correctAttendance, decideLeave } from './employeeAdminController.js';
 
 // Brand check for by-id access (IDOR protection). Consolidated scope (isAll) sees every brand;
 // otherwise the record must belong to the validated brand. Callers answer 404 on failure.
 const inBrand = (req, doc) => !req.scope || req.scope.isAll || (doc && doc.brandId === req.scope.brandId);
 
-// Helper: Format Date to YYYY-MM-DD
-const toDateString = (d = new Date()) => {
-  const date = new Date(d);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+// Helper: YYYY-MM-DD in the business timezone (Asia/Kolkata), never the server's local time
+const toDateString = (d = new Date()) => istDateString(d);
 
-// Helper: Generate Collision-Safe Unique Employee ID
-const generateEmployeeId = async (brandCode = 'EMP') => {
-  const year = new Date().getFullYear();
-  const count = await Employee.countDocuments();
-  const seq = String(count + 1).padStart(4, '0');
-  const prefix = brandCode ? brandCode.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) : 'EMP';
-  return `${prefix}-${year}-${seq}`;
-};
-
-// Helper: Generate Unique Task ID
-const generateTaskId = async () => {
-  const year = new Date().getFullYear();
-  const count = await EmployeeTask.countDocuments();
-  const seq = String(count + 1).padStart(4, '0');
-  return `TSK-${year}-${seq}`;
-};
-
-// Helper: Generate Unique Leave ID
-const generateLeaveId = async () => {
-  const year = new Date().getFullYear();
-  const count = await LeaveRequest.countDocuments();
-  const seq = String(count + 1).padStart(4, '0');
-  return `LV-${year}-${seq}`;
-};
+const generateEmployeeId = () => generateEmployeeCode();
+const generateTaskId = () => generateTaskCode();
+const generateLeaveId = () => generateLeaveCode();
 
 // ==========================================
 // 1. EMPLOYEE DIRECTORY & RECORDS
 // ==========================================
 
-const DEFAULT_SEED_EMPLOYEES = [
-  {
-    employeeId: 'EMP-FG-001',
-    fullName: 'Aakash Sharma',
-    email: 'aakash.sharma@fashiongallary.in',
-    phone: '9826011223',
-    designation: 'Store Manager',
-    department: 'Retail Operations',
-    brandId: 'brand_fg',
-    brandName: 'Fashion Gallary',
-    storeName: 'Indore MG Road Store',
-    employmentType: 'Full-time',
-    employmentStatus: 'Active',
-    shift: {
-      name: 'Morning Retail Shift (9:30 AM - 6:30 PM)',
-      startTime: '09:30',
-      endTime: '18:30',
-      graceMinutes: 15,
-    },
-  },
-  {
-    employeeId: 'EMP-FG-002',
-    fullName: 'Priya Rathore',
-    email: 'priya.rathore@fashiongallary.in',
-    phone: '9425022334',
-    designation: 'Inventory & Dispatch Lead',
-    department: 'Warehouse & Inventory',
-    brandId: 'brand_fg',
-    brandName: 'Fashion Gallary',
-    storeName: 'Indore MG Road Store',
-    employmentType: 'Full-time',
-    employmentStatus: 'Active',
-    shift: {
-      name: 'General Shift (10:00 AM - 7:00 PM)',
-      startTime: '10:00',
-      endTime: '19:00',
-      graceMinutes: 15,
-    },
-  },
-  {
-    employeeId: 'EMP-FH-001',
-    fullName: 'Rohit Verma',
-    email: 'rohit.verma@fashionhub.in',
-    phone: '9893033445',
-    designation: 'Fulfillment Associate',
-    department: 'Logistics & Dispatch',
-    brandId: 'brand_fh',
-    brandName: 'Fashion Hub',
-    storeName: 'Bhopal Dark Store #02',
-    employmentType: 'Full-time',
-    employmentStatus: 'Active',
-    shift: {
-      name: 'Morning Express Shift (8:00 AM - 5:00 PM)',
-      startTime: '08:00',
-      endTime: '17:00',
-      graceMinutes: 10,
-    },
-  },
-  {
-    employeeId: 'EMP-FA-001',
-    fullName: 'Sneha Patel',
-    email: 'sneha.patel@fashionadda.in',
-    phone: '9123455667',
-    designation: 'Customer Support Executive',
-    department: 'Customer Support',
-    brandId: 'brand_fa',
-    brandName: 'Fashion Adda',
-    storeName: 'Jabalpur Hub',
-    employmentType: 'Full-time',
-    employmentStatus: 'Active',
-    shift: {
-      name: 'General Shift (10:00 AM - 7:00 PM)',
-      startTime: '10:00',
-      endTime: '19:00',
-      graceMinutes: 15,
-    },
-  },
-  {
-    employeeId: 'EMP-FG-003',
-    fullName: 'Vikas Soni',
-    email: 'vikas.soni@fashiongallary.in',
-    phone: '9827044556',
-    designation: 'Billing Cashier & POS Operator',
-    department: 'Retail Operations',
-    brandId: 'brand_fg',
-    brandName: 'Fashion Gallary',
-    storeName: 'Indore MG Road Store',
-    employmentType: 'Part-time',
-    employmentStatus: 'Active',
-    shift: {
-      name: 'Evening Shift (1:00 PM - 10:00 PM)',
-      startTime: '13:00',
-      endTime: '22:00',
-      graceMinutes: 15,
-    },
-  },
-  {
-    employeeId: 'EMP-FH-002',
-    fullName: 'Amitabh Sen',
-    email: 'amitabh.sen@fashionhub.in',
-    phone: '9826077889',
-    designation: 'Logistics & Fleet Dispatcher',
-    department: 'Logistics & Dispatch',
-    brandId: 'brand_fh',
-    brandName: 'Fashion Hub',
-    storeName: 'Bhopal Dark Store #02',
-    employmentType: 'Full-time',
-    employmentStatus: 'Active',
-    shift: {
-      name: 'General Shift (10:00 AM - 7:00 PM)',
-      startTime: '10:00',
-      endTime: '19:00',
-      graceMinutes: 15,
-    },
-  },
-];
-
 export const getEmployees = async (req, res) => {
   try {
-    const { brandId, department, status, search, page = 1, limit = 50 } = req.query;
+    const { brandId, department, status, search, page = 1 } = req.query;
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50));
 
-    // Ensure realistic seed staff exists if DB has fewer than 2 employees
-    try {
-      const currentCount = await Employee.countDocuments();
-      if (currentCount < 2) {
-        for (const seed of DEFAULT_SEED_EMPLOYEES) {
-          const exists = await Employee.findOne({ email: seed.email });
-          if (!exists) {
-            await Employee.create(seed);
-          }
-        }
-      }
-    } catch (_) {}
-
-    const query = {};
+    // Pending / rejected self-registrations live in the Registration Requests list.
+    const query = { registrationStatus: { $nin: ['Pending', 'Rejected'] } };
 
     // Scoped brand filter
     const activeBrandId = (req.scope && !req.scope.isAll) ? req.scope.brandId : (brandId && brandId !== 'ALL' ? brandId : null);
@@ -199,7 +60,7 @@ export const getEmployees = async (req, res) => {
     }
 
     if (search && search.trim()) {
-      const regex = new RegExp(search.trim(), 'i');
+      const regex = new RegExp(escapeRegex(search.trim()), 'i');
       query.$or = [
         { fullName: regex },
         { employeeId: regex },
@@ -273,13 +134,16 @@ export const createEmployee = async (req, res) => {
       designation,
       department,
       brandId,
-      brandName,
       storeId,
       storeName,
       employmentType,
       shift,
       emergencyContact,
       notes,
+      password,
+      gender,
+      address,
+      city,
     } = req.body;
 
     if (!fullName || !email || !phone) {
@@ -287,6 +151,19 @@ export const createEmployee = async (req, res) => {
         success: false,
         message: 'Full name, email, and phone number are required.',
       });
+    }
+
+    // The brand must be a real, active brand; its name always comes from the brand record.
+    const brand = brandId ? await Brand.findOne({ brandId }).select('brandId name').lean() : null;
+    if (!brand) {
+      return res.status(400).json({ success: false, message: 'Select a valid brand for this employee.' });
+    }
+    if (!inBrand(req, { brandId: brand.brandId })) {
+      return res.status(404).json({ success: false, message: 'Brand not found.' });
+    }
+
+    if (password !== undefined && password !== '' && !/^(?=.*[A-Za-z])(?=.*\d).{8,72}$/.test(String(password))) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters and include a letter and a number.' });
     }
 
     // Check duplicate email
@@ -298,21 +175,28 @@ export const createEmployee = async (req, res) => {
       });
     }
 
-    const employeeId = await generateEmployeeId(brandId);
+    const employeeId = await generateEmployeeId();
 
     const newEmp = new Employee({
       employeeId,
       fullName: fullName.trim(),
       email: email.toLowerCase().trim(),
-      phone: phone.trim(),
+      phone: String(phone).trim(),
       designation: designation || 'Associate',
       department: department || 'Operations',
-      brandId: brandId || 'brand_fg',
-      brandName: brandName || 'Fashion Gallary',
+      brandId: brand.brandId,
+      brandName: brand.name,
       storeId: storeId || '',
-      storeName: storeName || 'Central Store',
+      storeName: storeName || '',
       employmentType: employmentType || 'Full-time',
       employmentStatus: 'Active',
+      registrationStatus: 'Approved',
+      registrationSource: 'admin',
+      activatedAt: new Date(),
+      gender: ['Male', 'Female', 'Other'].includes(gender) ? gender : '',
+      address: address || '',
+      city: city || '',
+      password: password ? await bcrypt.hash(String(password), 10) : '',
       shift: shift || {
         name: 'Standard General Shift (9 AM - 6 PM)',
         startTime: '09:00',
@@ -323,39 +207,57 @@ export const createEmployee = async (req, res) => {
     });
 
     await newEmp.save();
+    await logActivity({ action: 'employee_created', actor: actorFromReq(req), employee: newEmp, entity: 'Employee', entityId: newEmp._id });
 
+    const out = newEmp.toObject();
+    delete out.password;
     return res.status(201).json({
       success: true,
       message: `Employee "${newEmp.fullName}" created successfully with ID ${newEmp.employeeId}.`,
-      employee: newEmp,
+      employee: out,
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
 
+// Fields an admin may change through the edit form. Credentials, status, approval and brand are NOT here:
+// they have dedicated, audited endpoints.
+const EDITABLE_EMPLOYEE_FIELDS = [
+  'fullName', 'phone', 'designation', 'department', 'storeId', 'storeName', 'employmentType', 'shift',
+  'emergencyContact', 'notes', 'avatar', 'gender', 'dateOfBirth', 'address', 'city', 'joiningDate', 'reportingManager',
+];
+
 export const updateEmployee = async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
 
-    delete updates.employeeId; // Immutable ID
-
-    const current = await Employee.findById(id).select('brandId').lean();
+    const current = await Employee.findById(id);
     if (!current || !inBrand(req, current)) {
       return res.status(404).json({ success: false, message: 'Employee not found.' });
     }
-    delete updates._id;
 
-    const updated = await Employee.findByIdAndUpdate(id, updates, { new: true });
-    if (!updated) {
-      return res.status(404).json({ success: false, message: 'Employee not found.' });
+    const updates = {};
+    for (const key of EDITABLE_EMPLOYEE_FIELDS) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+    if (updates.phone !== undefined) updates.phone = String(updates.phone).replace(/\D/g, '').slice(-10);
+    if (updates.phone !== undefined && updates.phone.length !== 10) {
+      return res.status(400).json({ success: false, message: 'Enter a valid 10-digit mobile number.' });
     }
 
+    const before = {};
+    for (const k of Object.keys(updates)) before[k] = current[k];
+    current.set(updates);
+    await current.save();
+    await logActivity({ action: 'employee_updated', actor: actorFromReq(req), employee: current, entity: 'Employee', entityId: current._id, details: { fields: Object.keys(updates) } });
+
+    const out = current.toObject();
+    delete out.password;
     return res.status(200).json({
       success: true,
       message: 'Employee record updated successfully.',
-      employee: updated,
+      employee: out,
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -371,14 +273,26 @@ export const toggleEmployeeStatus = async (req, res) => {
     if (!emp || !inBrand(req, emp)) {
       return res.status(404).json({ success: false, message: 'Employee not found.' });
     }
+    if ((emp.registrationStatus || 'Approved') !== 'Approved') {
+      return res.status(409).json({ success: false, message: 'Approve the registration before changing this employee\'s status.' });
+    }
+    if (status !== undefined && !['Active', 'Inactive', 'On Leave', 'Terminated'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status.' });
+    }
 
+    const previous = emp.employmentStatus;
     emp.employmentStatus = status || (emp.employmentStatus === 'Active' ? 'Inactive' : 'Active');
+    // Deactivating signs the employee out of every device immediately.
+    if (['Inactive', 'Terminated'].includes(emp.employmentStatus)) emp.tokenVersion = (emp.tokenVersion || 0) + 1;
     await emp.save();
+    await logActivity({ action: 'employee_status_changed', actor: actorFromReq(req), employee: emp, entity: 'Employee', entityId: emp._id, details: { from: previous, to: emp.employmentStatus } });
 
+    const out = emp.toObject();
+    delete out.password;
     return res.status(200).json({
       success: true,
       message: `Employee status changed to ${emp.employmentStatus}.`,
-      employee: emp,
+      employee: out,
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -500,15 +414,10 @@ export const checkIn = async (req, res) => {
       });
     }
 
-    // Determine shift start time and late calculation
-    const shiftStartTime = emp.shift?.startTime || '09:00';
-    const [shiftHour, shiftMinute] = shiftStartTime.split(':').map(Number);
-
-    const shiftStartDate = new Date(now);
-    shiftStartDate.setHours(shiftHour, shiftMinute, 0, 0);
-
-    const graceMins = emp.shift?.graceMinutes || 15;
-    const diffMinutes = Math.round((now.getTime() - shiftStartDate.getTime()) / 60000);
+    // Late calculation uses the configured office rules, in Asia/Kolkata time
+    const rules = await getRules(emp.brandId);
+    const diffMinutes = istMinutesOfDay(now) - parseHHmm(rules.officeStartTime, 570);
+    const graceMins = Number(rules.graceMinutes) || 0;
 
     let lateMinutes = 0;
     let initialStatus = 'Present';
@@ -627,58 +536,8 @@ export const checkOut = async (req, res) => {
   }
 };
 
-export const requestOrApproveCorrection = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { checkIn, checkOut, status, reason } = req.body;
-
-    const attendance = await Attendance.findById(id);
-    if (!attendance || !inBrand(req, attendance)) {
-      return res.status(404).json({ success: false, message: 'Attendance record not found.' });
-    }
-
-    // Save historical snapshot in correction audit trail
-    attendance.correction = {
-      isCorrected: true,
-      originalCheckIn: attendance.checkIn,
-      originalCheckOut: attendance.checkOut,
-      originalStatus: attendance.status,
-      reason: reason || 'Administrative correction',
-      requestedBy: {
-        id: req.user?._id || null,
-        name: req.user?.name || 'Administrator',
-        role: req.user?.role || 'super_admin',
-      },
-      approvedBy: {
-        id: req.user?._id || null,
-        name: req.user?.name || 'Administrator',
-        role: req.user?.role || 'super_admin',
-      },
-      correctedAt: new Date(),
-    };
-
-    if (checkIn) attendance.checkIn = new Date(checkIn);
-    if (checkOut) attendance.checkOut = new Date(checkOut);
-    if (status) attendance.status = status;
-
-    if (attendance.checkIn && attendance.checkOut) {
-      attendance.totalDurationMinutes = Math.round(
-        (new Date(attendance.checkOut) - new Date(attendance.checkIn)) / 60000
-      );
-      attendance.isMissingCheckout = false;
-    }
-
-    await attendance.save();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Attendance record corrected and audited successfully.',
-      record: attendance,
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};
+// Manual corrections are audited (reason + before/after history) in the shared handler.
+export const requestOrApproveCorrection = correctAttendance;
 
 // ==========================================
 // 3. TASK MANAGEMENT & WORKFLOW
@@ -686,7 +545,8 @@ export const requestOrApproveCorrection = async (req, res) => {
 
 export const getTasks = async (req, res) => {
   try {
-    const { brandId, status, priority, employeeId, search, page = 1, limit = 50 } = req.query;
+    const { brandId, status, priority, employeeId, search, page = 1 } = req.query;
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50));
 
     const query = {};
 
@@ -694,7 +554,10 @@ export const getTasks = async (req, res) => {
       query.brandId = brandId;
     }
 
-    if (status && status !== 'ALL') {
+    if (status === 'Overdue') {
+      query.status = { $nin: ['Completed', 'Rejected'] };
+      query.dueDate = { $lt: new Date() };
+    } else if (status && status !== 'ALL') {
       query.status = status;
     }
 
@@ -702,28 +565,29 @@ export const getTasks = async (req, res) => {
       query.priority = priority;
     }
 
-    if (employeeId) {
+    if (employeeId && mongoose.Types.ObjectId.isValid(employeeId)) {
       query['assignedEmployees.employee'] = employeeId;
     }
 
     if (search && search.trim()) {
-      const regex = new RegExp(search.trim(), 'i');
+      const regex = new RegExp(escapeRegex(search.trim()), 'i');
       query.$or = [{ title: regex }, { taskId: regex }, { category: regex }];
     }
 
     const total = await EmployeeTask.countDocuments(query);
     const tasks = await EmployeeTask.find(query)
       .sort({ dueDate: 1, priority: -1 })
-      .skip((Number(page) - 1) * Number(limit))
-      .limit(Number(limit))
+      .skip((Number(page) - 1) * limit)
+      .limit(limit)
       .lean();
 
+    const now = new Date();
     return res.status(200).json({
       success: true,
       total,
       page: Number(page),
-      pages: Math.ceil(total / Number(limit)),
-      tasks,
+      pages: Math.ceil(total / limit),
+      tasks: tasks.map((t) => ({ ...t, isOverdue: !['Completed', 'Rejected'].includes(t.status) && new Date(t.dueDate) < now })),
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -736,57 +600,68 @@ export const createTask = async (req, res) => {
       title,
       description,
       brandId,
-      brandName,
       storeId,
       department,
       category,
       assignedEmployeeIds = [],
+      assignedDepartment = '',
       priority,
       startDate,
       dueDate,
       subtasks = [],
+      attachments = [],
     } = req.body;
 
     if (!title || !dueDate) {
       return res.status(400).json({ success: false, message: 'Task title and due date are required.' });
     }
+    const due = new Date(dueDate);
+    if (Number.isNaN(due.getTime())) return res.status(400).json({ success: false, message: 'Enter a valid due date.' });
+    const start = startDate ? new Date(startDate) : new Date();
+    if (Number.isNaN(start.getTime()) || start > due) return res.status(400).json({ success: false, message: 'Start date must be before the deadline.' });
+    if (priority && !['Low', 'Medium', 'High', 'Urgent'].includes(priority)) return res.status(400).json({ success: false, message: 'Invalid priority.' });
 
-    // Look up assigned employees
+    const brand = brandId ? await Brand.findOne({ brandId }).select('brandId name').lean() : null;
+    if (!brand || !inBrand(req, { brandId: brand.brandId })) {
+      return res.status(400).json({ success: false, message: 'Select a valid brand for this task.' });
+    }
+
+    // Assignees must be approved, active employees of THIS brand (ids from the client are never trusted on their own).
+    const ids = (Array.isArray(assignedEmployeeIds) ? assignedEmployeeIds : []).filter((i) => mongoose.Types.ObjectId.isValid(i));
+    const eligible = { brandId: brand.brandId, registrationStatus: { $ne: 'Pending' }, employmentStatus: { $in: ['Active', 'On Leave'] } };
+    const orClauses = [];
+    if (ids.length) orClauses.push({ _id: { $in: ids } });
+    if (assignedDepartment) orClauses.push({ department: String(assignedDepartment) });
     let assigned = [];
-    if (assignedEmployeeIds.length > 0) {
-      const emps = await Employee.find({ _id: { $in: assignedEmployeeIds } }).select(
-        '_id employeeId fullName designation avatar'
-      );
-      assigned = emps.map((e) => ({
-        employee: e._id,
-        employeeId: e.employeeId,
-        name: e.fullName,
-        designation: e.designation,
-        avatar: e.avatar,
-      }));
+    if (orClauses.length) {
+      const emps = await Employee.find({ ...eligible, $or: orClauses }).select('_id employeeId fullName designation avatar brandId');
+      assigned = emps.map((e) => ({ employee: e._id, employeeId: e.employeeId, name: e.fullName, designation: e.designation, avatar: e.avatar }));
+      if (ids.length && !assigned.length) return res.status(400).json({ success: false, message: 'None of the selected employees belong to this brand.' });
     }
 
     const taskId = await generateTaskId();
+    const actor = actorFromReq(req);
 
     const task = new EmployeeTask({
       taskId,
       title: title.trim(),
       description: description || '',
-      brandId: brandId || 'brand_fg',
-      brandName: brandName || 'Fashion Gallary',
+      brandId: brand.brandId,
+      brandName: brand.name,
       storeId: storeId || '',
-      department: department || 'Operations',
+      department: department || assignedDepartment || 'Operations',
+      assignedDepartment: assignedDepartment || '',
       category: category || 'Store Operations',
       assignedEmployees: assigned,
-      createdBy: {
-        id: req.user?._id || null,
-        name: req.user?.name || 'Super Admin',
-        role: req.user?.role || 'super_admin',
-      },
+      createdBy: { id: actor.id, name: actor.name || 'Admin', role: actor.type },
       priority: priority || 'Medium',
-      startDate: startDate ? new Date(startDate) : new Date(),
-      dueDate: new Date(dueDate),
+      startDate: start,
+      dueDate: due,
       status: assigned.length > 0 ? 'Assigned' : 'To Do',
+      attachments: (Array.isArray(attachments) ? attachments : [])
+        .slice(0, 10)
+        .map((a) => ({ name: String(a?.name || 'Attachment').slice(0, 150), url: String(a?.url || '') }))
+        .filter((a) => /^(https?:\/\/|\/uploads\/)/i.test(a.url)),
       subtasks: subtasks.map((st, i) => ({
         id: `sub_${Date.now()}_${i}`,
         title: typeof st === 'string' ? st : st.title,
@@ -795,6 +670,18 @@ export const createTask = async (req, res) => {
     });
 
     await task.save();
+    await Promise.all(
+      assigned.map((a) =>
+        notifyEmployee({ _id: a.employee, brandId: brand.brandId }, {
+          type: 'task_assigned',
+          title: `New task: ${task.title}`,
+          message: `Priority ${task.priority}. Due ${due.toISOString().slice(0, 10)}.`,
+          link: `/employee/tasks/${task._id}`,
+          meta: { taskId: String(task._id) },
+        })
+      )
+    );
+    await logActivity({ action: 'task_created', actor, brandId: brand.brandId, entity: 'EmployeeTask', entityId: task._id, details: { taskId, assigned: assigned.length } });
 
     return res.status(201).json({
       success: true,
@@ -806,6 +693,8 @@ export const createTask = async (req, res) => {
   }
 };
 
+const ADMIN_TASK_STATUSES = ['To Do', 'Assigned', 'In Progress', 'Blocked', 'Submitted for Review', 'Completed', 'Reopened', 'Pending', 'Rejected'];
+
 export const updateTaskStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -815,10 +704,14 @@ export const updateTaskStatus = async (req, res) => {
     if (!task || !inBrand(req, task)) {
       return res.status(404).json({ success: false, message: 'Task not found.' });
     }
+    if (!ADMIN_TASK_STATUSES.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid task status.' });
+    }
 
+    const previous = task.status;
     task.status = status;
     if (progressPercent !== undefined) {
-      task.progressPercent = Number(progressPercent);
+      task.progressPercent = Math.min(100, Math.max(0, Number(progressPercent) || 0));
     }
 
     if (status === 'Completed') {
@@ -828,12 +721,48 @@ export const updateTaskStatus = async (req, res) => {
     }
 
     await task.save();
+    await logActivity({ action: 'task_status_changed', actor: actorFromReq(req), brandId: task.brandId, entity: 'EmployeeTask', entityId: task._id, details: { from: previous, to: status } });
 
     return res.status(200).json({
       success: true,
       message: `Task status updated to "${status}".`,
       task,
     });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Edit task details (admins only; assignment changes notify the new assignees).
+export const updateTask = async (req, res) => {
+  try {
+    const task = await EmployeeTask.findById(req.params.id);
+    if (!task || !inBrand(req, task)) return res.status(404).json({ success: false, message: 'Task not found.' });
+    const b = req.body || {};
+    if (b.title !== undefined) task.title = String(b.title).trim().slice(0, 200) || task.title;
+    if (b.description !== undefined) task.description = String(b.description).slice(0, 5000);
+    if (b.category !== undefined) task.category = b.category;
+    if (['Low', 'Medium', 'High', 'Urgent'].includes(b.priority)) task.priority = b.priority;
+    if (b.dueDate) {
+      const d = new Date(b.dueDate);
+      if (!Number.isNaN(d.getTime())) {
+        task.dueDate = d;
+        task.overdueNotified = false;
+        task.deadlineReminderSent = false;
+      }
+    }
+    if (Array.isArray(b.assignedEmployeeIds)) {
+      const ids = b.assignedEmployeeIds.filter((i) => mongoose.Types.ObjectId.isValid(i));
+      const emps = await Employee.find({ _id: { $in: ids }, brandId: task.brandId, registrationStatus: { $ne: 'Pending' }, employmentStatus: { $in: ['Active', 'On Leave'] } }).select('_id employeeId fullName designation avatar brandId');
+      const had = new Set(task.assignedEmployees.map((a) => String(a.employee)));
+      task.assignedEmployees = emps.map((e) => ({ employee: e._id, employeeId: e.employeeId, name: e.fullName, designation: e.designation, avatar: e.avatar }));
+      await task.save();
+      await Promise.all(emps.filter((e) => !had.has(String(e._id))).map((e) => notifyEmployee(e, { type: 'task_assigned', title: `New task: ${task.title}`, link: `/employee/tasks/${task._id}` })));
+    } else {
+      await task.save();
+    }
+    await logActivity({ action: 'task_updated', actor: actorFromReq(req), brandId: task.brandId, entity: 'EmployeeTask', entityId: task._id });
+    return res.status(200).json({ success: true, task });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -857,7 +786,7 @@ export const addTaskComment = async (req, res) => {
       id: `comm_${Date.now()}`,
       authorName: req.user?.name || 'Administrator',
       authorRole: req.user?.role || 'admin',
-      text: text.trim(),
+      text: text.trim().slice(0, 2000),
       createdAt: new Date(),
     });
 
@@ -926,7 +855,7 @@ export const submitLeaveRequest = async (req, res) => {
       });
     }
 
-    const emp = await Employee.findById(employeeId);
+    const emp = mongoose.Types.ObjectId.isValid(employeeId) ? await Employee.findById(employeeId) : null;
     if (!emp || !inBrand(req, emp)) {
       return res.status(404).json({ success: false, message: 'Employee not found.' });
     }
@@ -934,8 +863,18 @@ export const submitLeaveRequest = async (req, res) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    if (end < start) {
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
       return res.status(400).json({ success: false, message: 'End date cannot be earlier than start date.' });
+    }
+
+    const overlap = await LeaveRequest.findOne({
+      employee: emp._id,
+      status: { $in: ['Pending', 'Approved'] },
+      startDate: { $lte: end },
+      endDate: { $gte: start },
+    }).lean();
+    if (overlap) {
+      return res.status(409).json({ success: false, message: `A ${overlap.status.toLowerCase()} leave (${overlap.leaveId}) already covers these dates.` });
     }
 
     const totalDays = isHalfDay
@@ -957,7 +896,7 @@ export const submitLeaveRequest = async (req, res) => {
       isHalfDay: !!isHalfDay,
       halfDayType: halfDayType || 'None',
       totalDays,
-      reason: reason.trim(),
+      reason: String(reason).trim().slice(0, 1000),
       status: 'Pending',
     });
 
@@ -973,48 +912,9 @@ export const submitLeaveRequest = async (req, res) => {
   }
 };
 
-export const reviewLeaveRequest = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status, notes } = req.body; // 'Approved' | 'Rejected'
-
-    if (!['Approved', 'Rejected'].includes(status)) {
-      return res.status(400).json({ success: false, message: 'Status must be Approved or Rejected.' });
-    }
-
-    const leave = await LeaveRequest.findById(id);
-    if (!leave || !inBrand(req, leave)) {
-      return res.status(404).json({ success: false, message: 'Leave request not found.' });
-    }
-
-    leave.status = status;
-    leave.reviewedBy = {
-      id: req.user?._id || null,
-      name: req.user?.name || 'Administrator',
-      role: req.user?.role || 'super_admin',
-      notes: notes || '',
-      reviewedAt: new Date(),
-    };
-
-    await leave.save();
-
-    // If approved, mark employee's status as 'On Leave' if current date falls within range
-    if (status === 'Approved') {
-      const today = new Date();
-      if (today >= leave.startDate && today <= leave.endDate) {
-        await Employee.findByIdAndUpdate(leave.employee, { employmentStatus: 'On Leave' });
-      }
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: `Leave request ${leave.leaveId} has been ${status}.`,
-      leave,
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};
+// Approval/rejection now lives in the shared handler: it writes the matching attendance rows,
+// blocks conflicts with days already worked, notifies the employee and logs the action.
+export const reviewLeaveRequest = decideLeave;
 
 // ==========================================
 // 5. SHIFTS & HOLIDAYS MANAGEMENT

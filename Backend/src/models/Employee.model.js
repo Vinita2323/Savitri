@@ -103,6 +103,36 @@ const employeeSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+
+    // ── Employee portal (self-registration, login, approval) ──
+    password: { type: String, select: false, default: '' },
+    gender: { type: String, enum: ['Male', 'Female', 'Other', ''], default: '' },
+    dateOfBirth: { type: Date, default: null },
+    address: { type: String, default: '', trim: true },
+    city: { type: String, default: '', trim: true },
+    // Records created before the portal existed carry no value and are treated as Approved.
+    registrationStatus: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Approved', index: true },
+    rejectionReason: { type: String, default: '' },
+    reviewedBy: {
+      id: { type: mongoose.Schema.Types.ObjectId, default: null },
+      name: { type: String, default: '' },
+      role: { type: String, default: '' },
+      at: { type: Date, default: null },
+    },
+    assignedAdmin: {
+      id: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+      name: { type: String, default: '' },
+    },
+    // Identity document uploaded at registration (Aadhaar, PAN, ...)
+    idProof: {
+      type: { type: String, default: '' },
+      documentUrl: { type: String, default: '' },
+    },
+    registrationSource: { type: String, enum: ['self', 'admin'], default: 'admin' },
+    // Bumped on password reset / deactivation so older tokens stop working immediately.
+    tokenVersion: { type: Number, default: 0 },
+    lastLoginAt: { type: Date, default: null },
+    activatedAt: { type: Date, default: null },
   },
   {
     timestamps: true,

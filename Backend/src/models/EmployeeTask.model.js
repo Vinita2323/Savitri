@@ -89,6 +89,8 @@ const employeeTaskSchema = new mongoose.Schema(
         'Submitted for Review',
         'Completed',
         'Reopened',
+        'Pending',
+        'Rejected',
       ],
       default: 'To Do',
       index: true,
@@ -141,6 +143,24 @@ const employeeTaskSchema = new mongoose.Schema(
       name: { type: String, default: '' },
       reviewedAt: { type: Date, default: null },
     },
+    // ── Employee portal workflow ──
+    assignedDepartment: { type: String, default: '' },
+    startedAt: { type: Date, default: null },
+    submittedAt: { type: Date, default: null },
+    extensionRequests: [
+      {
+        requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
+        requestedByName: { type: String, default: '' },
+        requestedDueDate: { type: Date },
+        reason: { type: String, default: '' },
+        status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+        decidedBy: { name: { type: String, default: '' }, role: { type: String, default: '' } },
+        decidedAt: { type: Date, default: null },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    deadlineReminderSent: { type: Boolean, default: false },
+    overdueNotified: { type: Boolean, default: false },
     isOverdue: {
       type: Boolean,
       default: false,

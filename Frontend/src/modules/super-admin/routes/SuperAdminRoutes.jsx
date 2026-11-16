@@ -57,6 +57,12 @@ const EmployeeTasksPage = lazy(() => import('../../admin/employees/pages/Employe
 const EmployeeLeavesPage = lazy(() => import('../../admin/employees/pages/EmployeeLeavesPage'));
 const EmployeeShiftsHolidaysPage = lazy(() => import('../../admin/employees/pages/EmployeeShiftsHolidaysPage'));
 const EmployeeReportsPage = lazy(() => import('../../admin/employees/pages/EmployeeReportsPage'));
+const EmployeeOverviewPage = lazy(() => import('../../admin/employees/pages/EmployeeOverviewPage'));
+const EmployeeRegistrationsPage = lazy(() => import('../../admin/employees/pages/EmployeeRegistrationsPage'));
+const EmployeeAttendanceReportPage = lazy(() => import('../../admin/employees/pages/EmployeeAttendanceReportPage'));
+const EmployeeTaskReviewPage = lazy(() => import('../../admin/employees/pages/EmployeeTaskReviewPage'));
+const EmployeeRulesPage = lazy(() => import('../../admin/employees/pages/EmployeeRulesPage'));
+const EmployeeActivityPage = lazy(() => import('../../admin/employees/pages/EmployeeActivityPage'));
 
 const SuperAdminEmployeeWrapper = ({ Component, currentTab }) => {
   const navigate = useNavigate();
@@ -213,6 +219,12 @@ const SuperAdminRoutesContent = () => {
           <Route path="/employees/leaves" element={<SuperAdminEmployeeWrapper Component={EmployeeLeavesPage} currentTab="leaves" />} />
           <Route path="/employees/shifts" element={<SuperAdminEmployeeWrapper Component={EmployeeShiftsHolidaysPage} currentTab="shifts" />} />
           <Route path="/employees/reports" element={<SuperAdminEmployeeWrapper Component={EmployeeReportsPage} currentTab="reports" />} />
+          <Route path="/employees/overview" element={<SuperAdminEmployeeWrapper Component={EmployeeOverviewPage} currentTab="overview" />} />
+          <Route path="/employees/registrations" element={<SuperAdminEmployeeWrapper Component={EmployeeRegistrationsPage} currentTab="registrations" />} />
+          <Route path="/employees/attendance-report" element={<SuperAdminEmployeeWrapper Component={EmployeeAttendanceReportPage} currentTab="attendance-report" />} />
+          <Route path="/employees/review" element={<SuperAdminEmployeeWrapper Component={EmployeeTaskReviewPage} currentTab="review" />} />
+          <Route path="/employees/rules" element={<SuperAdminEmployeeWrapper Component={EmployeeRulesPage} currentTab="rules" />} />
+          <Route path="/employees/activity" element={<SuperAdminEmployeeWrapper Component={EmployeeActivityPage} currentTab="activity" />} />
 
           <Route path="/captain-settlements" element={<Navigate to="/super-admin/dashboard" replace />} />
           <Route path="/payouts" element={<Navigate to="/super-admin/payouts/sellers" replace />} />

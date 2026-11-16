@@ -12,6 +12,12 @@ import {
   Building2,
   LogIn,
   LogOut,
+  LayoutGrid,
+  UserPlus,
+  CalendarRange,
+  ClipboardCheck,
+  Settings2,
+  Activity,
 } from 'lucide-react';
 
 export const EmployeeHeader = ({ activeTabName = 'dashboard', onNavigate }) => {
@@ -22,13 +28,19 @@ export const EmployeeHeader = ({ activeTabName = 'dashboard', onNavigate }) => {
   const basePath = isSuperAdmin ? '/super-admin/employees' : '/admin/employees';
 
   const navLinks = [
+    { id: 'overview', to: `${basePath}/overview`, label: 'Overview', icon: LayoutGrid },
     { id: 'dashboard', to: `${basePath}`, label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'registrations', to: `${basePath}/registrations`, label: 'Registrations', icon: UserPlus },
     { id: 'directory', to: `${basePath}/directory`, label: 'Directory', icon: Users },
     { id: 'attendance', to: `${basePath}/attendance`, label: 'Attendance', icon: Clock },
+    { id: 'attendance-report', to: `${basePath}/attendance-report`, label: 'Attendance Reports', icon: CalendarRange },
     { id: 'tasks', to: `${basePath}/tasks`, label: 'Tasks', icon: CheckSquare },
+    { id: 'review', to: `${basePath}/review`, label: 'Task Review', icon: ClipboardCheck },
     { id: 'leaves', to: `${basePath}/leaves`, label: 'Leaves', icon: CalendarCheck },
     { id: 'shifts', to: `${basePath}/shifts`, label: 'Shifts & Holidays', icon: CalendarDays },
     { id: 'reports', to: `${basePath}/reports`, label: 'Reports', icon: FileBarChart },
+    { id: 'rules', to: `${basePath}/rules`, label: 'Attendance Rules', icon: Settings2 },
+    { id: 'activity', to: `${basePath}/activity`, label: 'Activity Log', icon: Activity },
   ];
 
   return (
@@ -79,7 +91,7 @@ export const EmployeeHeader = ({ activeTabName = 'dashboard', onNavigate }) => {
             <Building2 className="w-4 h-4 text-slate-400" />
             <span className="text-slate-500">Brand Scope:</span>
             <span className="font-bold text-slate-800">
-              {selectedBrand?.name || (activeBrandId === 'ALL' ? 'All Brands' : activeBrandId)}
+              {selectedBrand?.name || (activeBrandId === 'ALL' ? 'All Brands' : brandsList?.find((b) => b.id === activeBrandId)?.name || activeBrandId)}
             </span>
           </div>
         </div>
@@ -96,7 +108,7 @@ export const EmployeeHeader = ({ activeTabName = 'dashboard', onNavigate }) => {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => onNavigate(tab.id)}
+                onClick={() => onNavigate(isSuperAdmin ? tab.id : `employee_${tab.id.replace(/-/g, '_')}`)}
                 className={`flex items-center gap-2 px-4.5 py-3.5 text-sm font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
                   isActive
                     ? 'border-emerald-600 text-emerald-700 font-bold'
@@ -112,7 +124,7 @@ export const EmployeeHeader = ({ activeTabName = 'dashboard', onNavigate }) => {
           const isActive =
             tab.id === 'dashboard'
               ? location.pathname === tab.to || location.pathname === `${tab.to}/`
-              : location.pathname.startsWith(tab.to);
+              : location.pathname === tab.to || location.pathname.startsWith(`${tab.to}/`);
 
           return (
             <NavLink

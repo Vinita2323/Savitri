@@ -134,6 +134,16 @@ export const SuperAdminSidebar = () => {
           icon: Users,
         },
         {
+          to: '/super-admin/employees/overview',
+          label: 'Employee Overview',
+          icon: Users,
+        },
+        {
+          to: '/super-admin/employees/registrations',
+          label: 'Registration Requests',
+          icon: UserCheck,
+        },
+        {
           to: '/super-admin/employees/directory',
           label: 'Employee Directory',
           icon: UserCheck,
@@ -144,8 +154,18 @@ export const SuperAdminSidebar = () => {
           icon: CalendarCheck,
         },
         {
+          to: '/super-admin/employees/attendance-report',
+          label: 'Attendance Reports',
+          icon: CalendarCheck,
+        },
+        {
           to: '/super-admin/employees/tasks',
           label: 'Task Management',
+          icon: ClipboardList,
+        },
+        {
+          to: '/super-admin/employees/review',
+          label: 'Task Review',
           icon: ClipboardList,
         },
         {
@@ -162,6 +182,16 @@ export const SuperAdminSidebar = () => {
           to: '/super-admin/employees/reports',
           label: 'Workforce Reports',
           icon: BarChart3,
+        },
+        {
+          to: '/super-admin/employees/rules',
+          label: 'Attendance Rules',
+          icon: Clock,
+        },
+        {
+          to: '/super-admin/employees/activity',
+          label: 'Activity Log',
+          icon: ClipboardList,
         },
       ],
     },

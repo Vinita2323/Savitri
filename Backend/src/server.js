@@ -54,6 +54,9 @@ import quotationRoutes from './routes/quotationRoutes.js';
 import proformaInvoiceRoutes from './routes/proformaInvoiceRoutes.js';
 import posRoutes from './routes/posRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
+import employeePortalRoutes from './routes/employeePortalRoutes.js';
+import employeeManagementRoutes from './routes/employeeManagementRoutes.js';
+import { startEmployeeScheduler } from './services/employeeScheduler.js';
 import compression from 'compression';
 import performanceLogger from './middleware/performanceMiddleware.js';
 
@@ -199,6 +202,8 @@ const registerRoutes = (prefix = '') => {
   app.use(`${prefix}/pos`, posRoutes);
   app.use(`${prefix}/treasury`, treasuryRoutes);
   app.use(`${prefix}/employees`, employeeRoutes);
+  app.use(`${prefix}/employee-portal`, employeePortalRoutes);
+  app.use(`${prefix}/employee-management`, employeeManagementRoutes);
   app.use(`${prefix}`, commissionRoutes);
 };
 
@@ -241,6 +246,7 @@ httpServer.listen(PORT, () => {
       console.error('[Orders] Failed to release expired payment holds:', err.message);
     });
   };
+  startEmployeeScheduler();
   setTimeout(sweepUnpaidOrders, 15000);
   setInterval(sweepUnpaidOrders, 5 * 60 * 1000);
 });

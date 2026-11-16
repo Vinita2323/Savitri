@@ -1,818 +1,385 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { Paperclip, Plus, Search, Send, X } from 'lucide-react';
 import { useEmployee } from '../context/EmployeeContext';
+import employeeService from '../../../../services/employeeService';
 import { EmployeeHeader } from '../components/EmployeeHeader';
-import {
-  CheckSquare,
-  Plus,
-  Search,
-  Filter,
-  Calendar,
-  AlertTriangle,
-  Clock,
-  User,
-  MessageSquare,
-  Paperclip,
-  CheckCircle2,
-  X,
-  Layers,
-  List,
-  Kanban,
-  Send,
-  Sparkles,
-  ChevronDown,
-} from 'lucide-react';
-
-const CATEGORIES = [
-  'Store Operations',
-  'Inventory Audit',
-  'Order Dispatch',
-  'Customer Support',
-  'Merchandising',
-  'Maintenance',
-  'Administrative',
-  'Other',
-];
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
 
+// Plain-language names for the stored task statuses
+const STATUS_LABEL = {
+  'To Do': 'Not started',
+  Assigned: 'Not started',
+  Pending: 'Not started',
+  Reopened: 'Changes requested',
+  'In Progress': 'In progress',
+  Blocked: 'Blocked',
+  'Submitted for Review': 'Waiting for your review',
+  Completed: 'Completed',
+  Rejected: 'Rejected',
+};
+
+const STATUS_TONE = {
+  'Not started': 'bg-slate-100 text-slate-700',
+  'Changes requested': 'bg-amber-100 text-amber-800',
+  'In progress': 'bg-blue-100 text-blue-800',
+  Blocked: 'bg-rose-100 text-rose-800',
+  'Waiting for your review': 'bg-violet-100 text-violet-800',
+  Completed: 'bg-emerald-100 text-emerald-800',
+  Rejected: 'bg-rose-100 text-rose-800',
+  Overdue: 'bg-rose-100 text-rose-800',
+};
+
+const PRIORITY_TONE = {
+  Urgent: 'bg-rose-100 text-rose-800',
+  High: 'bg-amber-100 text-amber-800',
+  Medium: 'bg-blue-100 text-blue-800',
+  Low: 'bg-slate-100 text-slate-700',
+};
+
+const FILTERS = [
+  { id: 'ALL', label: 'All' },
+  { id: 'PROGRESS', label: 'In progress', statuses: ['In Progress', 'Blocked'] },
+  { id: 'DONE', label: 'Completed', statuses: ['Completed'] },
+  { id: 'OVERDUE', label: 'Overdue' },
+];
+
+const isClosed = (t) => ['Completed', 'Rejected'].includes(t.status);
+const isOverdue = (t) => !isClosed(t) && t.dueDate && new Date(t.dueDate) < new Date();
+const statusOf = (t) => (isOverdue(t) ? 'Overdue' : STATUS_LABEL[t.status] || t.status);
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+
+const Pill = ({ label, tone }) => (
+  <span className={`inline-flex items-center px-3 py-1 rounded-full text-[13px] font-semibold whitespace-nowrap ${tone}`}>{label}</span>
+);
+
+const labelCls = 'block text-[13px] font-semibold text-slate-700 mb-1.5';
+const inputCls =
+  'w-full px-4 py-3 text-[15px] bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500';
+
 export const EmployeeTasksPage = ({ onNavigate }) => {
-  const {
-    tasks,
-    employees,
-    allEmployees,
-    activeBrandId,
-    handleCreateTask,
-    handleUpdateTaskStatus,
-    handleAddComment,
-  } = useEmployee();
+  const { tasks, employees, allEmployees, activeBrandId, handleCreateTask, handleUpdateTaskStatus, handleAddComment } = useEmployee();
 
-  const [viewMode, setViewMode] = useState('KANBAN'); // 'KANBAN' | 'LIST'
-  const [priorityFilter, setPriorityFilter] = useState('ALL');
+  const [filter, setFilter] = useState('ALL');
   const [search, setSearch] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
+  const [comment, setComment] = useState('');
 
-  // Modals state
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState(null);
-  const [newCommentText, setNewCommentText] = useState('');
+  // New task form
+  const blank = { title: '', description: '', employeeId: '', department: '', priority: 'Medium', dueDate: '', attachments: [] };
+  const [form, setForm] = useState(blank);
+  const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  // New Task Form
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('Store Operations');
-  const [priority, setPriority] = useState('Medium');
-  const [dueDate, setDueDate] = useState('');
-  const [selectedStaffId, setSelectedStaffId] = useState('');
-  const [assignedStaffList, setAssignedStaffList] = useState([]);
-  const [subtasksList, setSubtasksList] = useState(['']);
-
-  // Comprehensive active staff list (current brand staff + cross-brand staff + standard team members)
-  const availableStaff = React.useMemo(() => {
-    const list = [];
+  // Only real employees from the database
+  const staff = useMemo(() => {
     const seen = new Set();
-
-    // 1. Employees from current brand & all brands
-    const combined = [...(employees || []), ...(allEmployees || [])];
-    combined.forEach((emp) => {
-      const id = emp._id || emp.employeeId || emp.email;
-      if (emp && id && !seen.has(id)) {
-        seen.add(id);
-        list.push({
-          _id: id,
-          employeeId: emp.employeeId || 'EMP',
-          fullName: emp.fullName || emp.name,
-          designation: emp.designation || 'Staff',
-          department: emp.department || 'Operations',
-          brandName:
-            emp.brandName ||
-            (emp.brandId === 'brand_fg'
-              ? 'Fashion Gallary'
-              : emp.brandId === 'brand_fh'
-              ? 'Fashion Hub'
-              : emp.brandId === 'brand_fa'
-              ? 'Fashion Adda'
-              : 'Corporate'),
-        });
+    const list = [];
+    [...(employees || []), ...(allEmployees || [])].forEach((e) => {
+      if (e?._id && !seen.has(e._id) && ['Active', 'On Leave'].includes(e.employmentStatus)) {
+        seen.add(e._id);
+        list.push(e);
       }
     });
-
-    // 2. Fallback organization staff so user can ALWAYS assign to any department / role
-    const FALLBACK_STAFF = [
-      { _id: 'seed_aakash', employeeId: 'EMP-FG-001', fullName: 'Aakash Sharma', designation: 'Store Manager', department: 'Retail Operations', brandName: 'Fashion Gallary' },
-      { _id: 'seed_priya', employeeId: 'EMP-FG-002', fullName: 'Priya Rathore', designation: 'Inventory & Dispatch Lead', department: 'Warehouse & Inventory', brandName: 'Fashion Gallary' },
-      { _id: 'seed_rohit', employeeId: 'EMP-FH-001', fullName: 'Rohit Verma', designation: 'Fulfillment Associate', department: 'Logistics & Dispatch', brandName: 'Fashion Hub' },
-      { _id: 'seed_sneha', employeeId: 'EMP-FA-001', fullName: 'Sneha Patel', designation: 'Customer Support Executive', department: 'Customer Support', brandName: 'Fashion Adda' },
-      { _id: 'seed_vikas', employeeId: 'EMP-FG-003', fullName: 'Vikas Soni', designation: 'Billing Cashier & POS Operator', department: 'Retail Operations', brandName: 'Fashion Gallary' },
-      { _id: 'seed_amitabh', employeeId: 'EMP-FH-002', fullName: 'Amitabh Sen', designation: 'Fleet Dispatch Officer', department: 'Logistics & Dispatch', brandName: 'Fashion Hub' },
-      { _id: 'seed_pooja', employeeId: 'EMP-FG-004', fullName: 'Pooja Deshmukh', designation: 'Floor Supervisor', department: 'Retail Operations', brandName: 'Fashion Gallary' },
-      { _id: 'seed_karan', employeeId: 'EMP-FA-002', fullName: 'Karan Malhotra', designation: 'Warehouse Operations Lead', department: 'Warehouse & Inventory', brandName: 'Fashion Adda' },
-    ];
-
-    FALLBACK_STAFF.forEach((fallback) => {
-      const exists = list.some(
-        (e) => e.fullName?.toLowerCase().trim() === fallback.fullName.toLowerCase().trim()
-      );
-      if (!exists) {
-        list.push(fallback);
-      }
-    });
-
-    return list;
+    return list.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
   }, [employees, allEmployees]);
+  const departments = useMemo(() => [...new Set(staff.map((e) => e.department).filter(Boolean))].sort(), [staff]);
 
-  const filteredTasks = (tasks || []).filter((t) => {
-    if (activeBrandId && activeBrandId !== 'ALL' && t.brandId !== activeBrandId) return false;
-    if (priorityFilter !== 'ALL' && t.priority !== priorityFilter) return false;
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      return (
-        t.title?.toLowerCase().includes(q) ||
-        t.taskId?.toLowerCase().includes(q) ||
-        t.category?.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+  const inScope = useMemo(
+    () => (tasks || []).filter((t) => !activeBrandId || activeBrandId === 'ALL' || t.brandId === activeBrandId),
+    [tasks, activeBrandId]
+  );
 
-  const handleSubtaskChange = (index, value) => {
-    const next = [...subtasksList];
-    next[index] = value;
-    setSubtasksList(next);
-  };
-
-  const addSubtaskInput = () => {
-    setSubtasksList([...subtasksList, '']);
-  };
-
-  const handleCreateSubmit = async (e) => {
-    e.preventDefault();
-    if (!title || !dueDate) {
-      alert('Please provide task title and due date.');
-      return;
-    }
-
-    let assigned = [];
-    if (assignedStaffList.length > 0) {
-      assigned = assignedStaffList.map((e) => ({
-        employeeId: e.employeeId || 'EMP',
-        name: e.fullName,
-        designation: e.designation || 'Staff',
-      }));
-    } else if (selectedStaffId && selectedStaffId !== 'ANY_AVAILABLE') {
-      const emp = availableStaff.find((e) => e._id === selectedStaffId);
-      if (emp) {
-        assigned = [
-          {
-            employeeId: emp.employeeId || 'EMP',
-            name: emp.fullName,
-            designation: emp.designation || 'Staff',
-          },
-        ];
-      }
-    }
-
-    if (assigned.length === 0) {
-      assigned = [
-        {
-          employeeId: 'OPEN',
-          name: 'Any Available Staff',
-          designation: 'Open Pool',
-        },
-      ];
-    }
-
-    const cleanSubtasks = subtasksList
-      .filter((s) => s.trim().length > 0)
-      .map((s, i) => ({ id: `st_${Date.now()}_${i}`, title: s.trim(), isCompleted: false }));
-
-    const res = await handleCreateTask({
-      title: title.trim(),
-      description,
-      brandId: activeBrandId === 'ALL' ? 'brand_fg' : activeBrandId,
-      category,
-      priority,
-      dueDate,
-      assignedEmployees: assigned,
-      subtasks: cleanSubtasks,
+  const counts = useMemo(() => {
+    const out = {};
+    FILTERS.forEach((f) => {
+      out[f.id] = f.id === 'ALL' ? inScope.length : f.id === 'OVERDUE' ? inScope.filter(isOverdue).length : inScope.filter((t) => f.statuses.includes(t.status)).length;
     });
+    return out;
+  }, [inScope]);
 
-    if (res.success) {
-      setIsCreateModalOpen(false);
-      setTitle('');
-      setDescription('');
-      setDueDate('');
-      setSelectedStaffId('');
-      setAssignedStaffList([]);
-      setSubtasksList(['']);
+  const reviewCount = useMemo(() => inScope.filter((t) => t.status === 'Submitted for Review').length, [inScope]);
+
+  const visible = useMemo(() => {
+    const f = FILTERS.find((x) => x.id === filter);
+    const q = search.trim().toLowerCase();
+    return inScope
+      .filter((t) => (filter === 'ALL' ? true : filter === 'OVERDUE' ? isOverdue(t) : f.statuses.includes(t.status)))
+      .filter((t) => !q || t.title?.toLowerCase().includes(q) || t.taskId?.toLowerCase().includes(q) || t.assignedEmployees?.some((a) => a.name?.toLowerCase().includes(q)))
+      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+  }, [inScope, filter, search]);
+
+  const selected = (tasks || []).find((t) => t._id === selectedId) || null;
+
+  const submitTask = async (e) => {
+    e.preventDefault();
+    setFormError('');
+    if (!form.title.trim()) return setFormError('Please enter a task name.');
+    if (!form.dueDate) return setFormError('Please choose a due date.');
+    if (!form.employeeId && !form.department) return setFormError('Choose who this task is for: one employee or a whole department.');
+
+    const person = staff.find((s) => s._id === form.employeeId);
+    const brandId =
+      activeBrandId && activeBrandId !== 'ALL' ? activeBrandId : person?.brandId || staff.find((s) => s.department === form.department)?.brandId || '';
+    if (!brandId) return setFormError('Could not work out the brand for this task. Pick an employee.');
+
+    setSaving(true);
+    const res = await handleCreateTask({
+      title: form.title.trim(),
+      description: form.description,
+      brandId,
+      priority: form.priority,
+      dueDate: form.dueDate,
+      assignedEmployeeIds: form.employeeId ? [form.employeeId] : [],
+      assignedDepartment: form.department || undefined,
+      attachments: form.attachments,
+    });
+    setSaving(false);
+    if (res?.success) {
+      setCreateOpen(false);
+      setForm(blank);
     }
   };
 
-  const handleAddCommentSubmit = async (e) => {
-    e.preventDefault();
-    if (!newCommentText.trim() || !selectedTask) return;
-    await handleAddComment(selectedTask._id || selectedTask.taskId, newCommentText.trim());
-    setNewCommentText('');
+  const onFile = async (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    setUploading(true);
+    setFormError('');
+    try {
+      const up = await employeeService.uploadTaskFile(f);
+      setForm((cur) => ({ ...cur, attachments: [...cur.attachments, up] }));
+    } catch (err) {
+      setFormError(err.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
-  // Kanban Columns
-  const kanbanColumns = [
-    { title: 'To Do & Assigned', statuses: ['To Do', 'Assigned'], color: 'border-slate-300' },
-    { title: 'In Progress', statuses: ['In Progress', 'Blocked'], color: 'border-blue-400' },
-    {
-      title: 'Submitted for Review',
-      statuses: ['Submitted for Review'],
-      color: 'border-amber-400',
-    },
-    { title: 'Completed', statuses: ['Completed'], color: 'border-emerald-400' },
-  ];
+  const postComment = async (e) => {
+    e.preventDefault();
+    if (!comment.trim() || !selected) return;
+    await handleAddComment(selected._id, comment.trim());
+    setComment('');
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50/60 pb-12">
+    <div className="min-h-screen bg-slate-50 pb-12">
       <EmployeeHeader activeTabName="tasks" onNavigate={onNavigate} />
 
-      <div className="max-w-7xl mx-auto px-6 py-6 space-y-5">
-        {/* Top Control Bar */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3 flex-1">
-            {/* Search */}
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search tasks by title, ID, category..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none font-medium"
-              />
-            </div>
-
-            {/* Priority Filter */}
-            <select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-              className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:outline-none cursor-pointer"
-            >
-              <option value="ALL">All Priorities</option>
-              {PRIORITIES.map((p) => (
-                <option key={p} value={p}>
-                  {p} Priority
-                </option>
-              ))}
-            </select>
+      <div className="px-6 pt-6 space-y-5 max-w-6xl">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-extrabold text-slate-900 m-0">Tasks</h2>
+            <p className="text-[15px] text-slate-500 mt-1 mb-0">Give work to your team and follow its progress.</p>
           </div>
+          <button type="button" onClick={() => { setForm(blank); setFormError(''); setCreateOpen(true); }} className="inline-flex items-center gap-2 px-5 py-3 text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl cursor-pointer border-0">
+            <Plus className="w-5 h-5" /> New task
+          </button>
+        </div>
 
-          <div className="flex items-center gap-2">
-            {/* View Mode Switcher */}
-            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600">
-              <button
-                type="button"
-                onClick={() => setViewMode('KANBAN')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-                  viewMode === 'KANBAN'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'hover:text-slate-900'
-                }`}
-              >
-                <Kanban className="w-3.5 h-3.5" />
-                <span>Kanban</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('LIST')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-                  viewMode === 'LIST'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'hover:text-slate-900'
-                }`}
-              >
-                <List className="w-3.5 h-3.5" />
-                <span>List</span>
-              </button>
-            </div>
+        {reviewCount > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-violet-50 border border-violet-200 rounded-2xl px-5 py-4">
+            <p className="m-0 text-[15px] font-semibold text-violet-900">{reviewCount} task{reviewCount === 1 ? ' is' : 's are'} waiting for your review.</p>
+            <button type="button" onClick={() => onNavigate?.('review')} className="text-[15px] font-bold text-violet-900 underline cursor-pointer bg-transparent border-0">Review now</button>
+          </div>
+        )}
 
-            {/* Add Task Button */}
-            <button
-              type="button"
-              onClick={() => setIsCreateModalOpen(true)}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create Task</span>
-            </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap gap-2">
+            {FILTERS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFilter(f.id)}
+                className={`px-4 py-2.5 rounded-full text-[15px] font-semibold border cursor-pointer ${filter === f.id ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}
+              >
+                {f.label} <span className={filter === f.id ? 'text-emerald-100' : 'text-slate-400'}>{counts[f.id]}</span>
+              </button>
+            ))}
+          </div>
+          <div className="relative flex-1 min-w-60 max-w-md ml-auto">
+            <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input className={`${inputCls} pl-12`} placeholder="Search by task or employee name" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </div>
 
-        {/* ── KANBAN BOARD VIEW ── */}
-        {viewMode === 'KANBAN' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {kanbanColumns.map((col) => {
-              const colTasks = filteredTasks.filter((t) => col.statuses.includes(t.status));
-              return (
-                <div
-                  key={col.title}
-                  className="bg-slate-100/60 rounded-2xl p-3.5 border border-slate-200/80 flex flex-col space-y-3 min-h-[500px]"
-                >
-                  <div className="flex items-center justify-between px-1">
-                    <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className={`w-2 h-2 rounded-full border-2 ${col.color} bg-white`} />
-                      {col.title}
-                    </h3>
-                    <span className="text-[11px] font-bold px-2 py-0.2 rounded-full bg-white text-slate-600 border border-slate-200">
-                      {colTasks.length}
-                    </span>
-                  </div>
-
-                  <div className="space-y-3 flex-1 overflow-y-auto">
-                    {colTasks.length > 0 ? (
-                      colTasks.map((t) => {
-                        const isOverdue =
-                          new Date(t.dueDate) < new Date() && t.status !== 'Completed';
-
-                        return (
-                          <div
-                            key={t._id}
-                            onClick={() => setSelectedTask(t)}
-                            className="bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-xs hover:border-emerald-300 cursor-pointer transition-all space-y-2.5"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-mono font-bold text-slate-400">
-                                {t.taskId}
-                              </span>
-                              <span
-                                className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded ${
-                                  t.priority === 'Urgent'
-                                    ? 'bg-rose-100 text-rose-800'
-                                    : t.priority === 'High'
-                                    ? 'bg-amber-100 text-amber-800'
-                                    : t.priority === 'Medium'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-slate-100 text-slate-700'
-                                }`}
-                              >
-                                {t.priority}
-                              </span>
-                            </div>
-
-                            <h4 className="text-xs font-bold text-slate-900 leading-snug line-clamp-2">
-                              {t.title}
-                            </h4>
-
-                            <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
-                              <span className="text-[10px] font-semibold text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded">
-                                {t.category}
-                              </span>
-                              <div
-                                className={`flex items-center gap-1 text-[10px] font-semibold ${
-                                  isOverdue ? 'text-rose-600 font-bold' : 'text-slate-500'
-                                }`}
-                              >
-                                {isOverdue && <AlertTriangle className="w-3 h-3" />}
-                                <span>
-                                  {new Date(t.dueDate).toLocaleDateString('en-IN', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                  })}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Assigned Staff */}
-                            {t.assignedEmployees?.length > 0 && (
-                              <div className="flex items-center gap-1 text-[11px] text-slate-600">
-                                <User className="w-3 h-3 text-slate-400" />
-                                <span className="truncate">
-                                  {t.assignedEmployees.map((e) => e.name).join(', ')}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="h-32 flex items-center justify-center text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
-                        No tasks in this lane
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+        {visible.length === 0 ? (
+          <div className="bg-white border border-slate-200 rounded-2xl py-16 text-center">
+            <p className="text-[16px] font-semibold text-slate-700 m-0">{inScope.length === 0 ? 'No tasks yet' : 'No tasks match this filter'}</p>
+            <p className="text-[15px] text-slate-500 mt-1.5 mb-0">{inScope.length === 0 ? 'Click “New task” to give work to an employee.' : 'Try another tab or clear the search.'}</p>
           </div>
         ) : (
-          /* ── LIST VIEW ── */
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="bg-slate-50/70 border-b border-slate-200/80 text-slate-500 uppercase tracking-wider text-[10px]">
-                  <th className="py-3.5 px-4">Task ID & Title</th>
-                  <th className="py-3.5 px-4">Category</th>
-                  <th className="py-3.5 px-4">Priority</th>
-                  <th className="py-3.5 px-4">Assigned To</th>
-                  <th className="py-3.5 px-4">Due Date</th>
-                  <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredTasks.length > 0 ? (
-                  filteredTasks.map((t) => {
-                    const isOverdue =
-                      new Date(t.dueDate) < new Date() && t.status !== 'Completed';
-
-                    return (
-                      <tr key={t._id} className="hover:bg-slate-50/60">
-                        <td className="py-3 px-4">
-                          <div className="font-bold text-slate-900">{t.title}</div>
-                          <div className="text-[10px] font-mono text-emerald-700 font-semibold">
-                            {t.taskId}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-slate-600">{t.category}</td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                              t.priority === 'Urgent'
-                                ? 'bg-rose-100 text-rose-800'
-                                : t.priority === 'High'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-slate-100 text-slate-700'
-                            }`}
-                          >
-                            {t.priority}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 font-medium text-slate-700">
-                          {t.assignedEmployees?.map((e) => e.name).join(', ') || 'Unassigned'}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`font-semibold ${
-                              isOverdue ? 'text-rose-600 font-bold' : 'text-slate-600'
-                            }`}
-                          >
-                            {new Date(t.dueDate).toLocaleDateString('en-IN')}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="font-bold text-slate-800">{t.status}</span>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedTask(t)}
-                            className="px-3 py-1 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 font-bold rounded-lg text-xs"
-                          >
-                            Details
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan="7" className="py-12 text-center text-slate-400">
-                      No tasks found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <div className="space-y-3">
+            {visible.map((t) => {
+              const label = statusOf(t);
+              return (
+                <button key={t._id} type="button" onClick={() => setSelectedId(t._id)} className="w-full text-left bg-white border border-slate-200 rounded-2xl p-5 hover:border-emerald-400 hover:shadow-sm transition cursor-pointer">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[16px] font-bold text-slate-900 m-0 break-words">{t.title}</p>
+                      <p className="text-[15px] text-slate-500 mt-1 mb-0">
+                        For <strong className="text-slate-700 font-semibold">{t.assignedEmployees?.map((a) => a.name).join(', ') || 'nobody yet'}</strong> · Due{' '}
+                        <strong className={`font-semibold ${isOverdue(t) ? 'text-rose-600' : 'text-slate-700'}`}>{fmtDate(t.dueDate)}</strong>
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Pill label={`${t.priority} priority`} tone={PRIORITY_TONE[t.priority] || PRIORITY_TONE.Medium} />
+                      <Pill label={label} tone={STATUS_TONE[label] || STATUS_TONE['Not started']} />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-center gap-3">
+                    <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: `${t.progressPercent || 0}%` }} /></div>
+                    <span className="text-[15px] font-semibold text-slate-600 w-12 text-right">{t.progressPercent || 0}%</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* ── CREATE TASK MODAL ── */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95">
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+      {/* ── New task ── */}
+      {createOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4" onClick={() => setCreateOpen(false)}>
+          <form onSubmit={submitTask} className="bg-white rounded-2xl w-full max-w-xl max-h-[92vh] overflow-y-auto p-7 space-y-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-base font-extrabold text-slate-900">Create Task</h3>
-                <p className="text-xs text-slate-500">
-                  Assign work with priority, deadlines and subtasks
-                </p>
+                <h3 className="text-lg font-extrabold text-slate-900 m-0">New task</h3>
+                <p className="text-[15px] text-slate-500 mt-1 mb-0">The employee is notified straight away.</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200/60"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <button type="button" onClick={() => setCreateOpen(false)} className="p-2 rounded-lg hover:bg-slate-100 cursor-pointer bg-transparent border-0" aria-label="Close"><X className="w-5 h-5 text-slate-500" /></button>
             </div>
 
-            <form onSubmit={handleCreateSubmit} className="p-6 overflow-y-auto space-y-4 text-sm">
+            <div>
+              <label className={labelCls}>What needs to be done? *</label>
+              <input className={inputCls} value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Count the stock on shelf B" autoFocus />
+            </div>
+            <div>
+              <label className={labelCls}>More details</label>
+              <textarea className={inputCls} rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Instructions the employee should follow (optional)" />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wide">
-                  Task Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Conduct barcode audit for FMCG aisle"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm font-medium"
-                />
+                <label className={labelCls}>Give it to *</label>
+                <select className={inputCls} value={form.employeeId} onChange={(e) => setForm((f) => ({ ...f, employeeId: e.target.value, department: e.target.value ? '' : f.department }))}>
+                  <option value="">Choose an employee</option>
+                  {staff.map((s) => <option key={s._id} value={s._id}>{s.fullName} — {s.designation}</option>)}
+                </select>
               </div>
-
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wide">
-                  Description
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Task instructions and expectations..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm"
-                />
+                <label className={labelCls}>…or a whole department</label>
+                <select className={inputCls} value={form.department} disabled={Boolean(form.employeeId)} onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}>
+                  <option value="">No department</option>
+                  {departments.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
               </div>
-
-              <div className="grid grid-cols-2 gap-3.5">
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wide">
-                    Category
-                  </label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 cursor-pointer"
-                  >
-                    {CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wide">
-                    Priority
-                  </label>
-                  <select
-                    value={priority}
-                    onChange={(e) => setPriority(e.target.value)}
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 cursor-pointer"
-                  >
-                    {PRIORITIES.map((p) => (
-                      <option key={p} value={p}>
-                        {p} Priority
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className={labelCls}>Due date *</label>
+                <input type="date" className={inputCls} value={form.dueDate} onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))} />
               </div>
-
-              <div className="grid grid-cols-2 gap-3.5">
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wide">
-                    Due Date *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl font-medium text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wide">
-                    Assign Staff (Dropdown)
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={selectedStaffId}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setSelectedStaffId(val);
-                        if (val && val !== 'ANY_AVAILABLE') {
-                          const emp = availableStaff.find((s) => s._id === val);
-                          if (emp && !assignedStaffList.some((s) => s._id === emp._id)) {
-                            setAssignedStaffList((prev) => [...prev, emp]);
-                          }
-                        } else if (val === 'ANY_AVAILABLE') {
-                          setAssignedStaffList([]);
-                        }
-                      }}
-                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 cursor-pointer shadow-2xs appearance-none pr-10"
-                    >
-                      <option value="">-- Choose Staff Member to Assign --</option>
-                      <option value="ANY_AVAILABLE">👥 Any Available Staff (Open Team Pool)</option>
-
-                      <optgroup label="Available Staff & Team Members">
-                        {availableStaff.map((emp) => (
-                          <option key={emp._id} value={emp._id}>
-                            {emp.fullName} ({emp.designation} • {emp.brandName || emp.department})
-                          </option>
-                        ))}
-                      </optgroup>
-                    </select>
-                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                      <ChevronDown className="w-4 h-4" />
-                    </div>
-                  </div>
-                </div>
+              <div>
+                <label className={labelCls}>How urgent?</label>
+                <select className={inputCls} value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))}>
+                  {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
               </div>
+            </div>
 
-              {/* Selected Staff Tags (supports single or multiple assignees) */}
-              {assignedStaffList.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                  <span className="text-xs font-bold text-slate-500">Assigned To:</span>
-                  {assignedStaffList.map((st) => (
-                    <span
-                      key={st._id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 shadow-2xs"
-                    >
-                      <User className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>{st.fullName} ({st.designation})</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const next = assignedStaffList.filter((s) => s._id !== st._id);
-                          setAssignedStaffList(next);
-                          if (selectedStaffId === st._id) {
-                            setSelectedStaffId(next[0]?._id || '');
-                          }
-                        }}
-                        className="text-emerald-500 hover:text-emerald-800 cursor-pointer ml-1"
-                        title="Remove Assignee"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Subtasks */}
-              <div className="space-y-1.5 pt-2 border-t">
-                <div className="flex justify-between items-center">
-                  <label className="font-bold text-slate-700">Checklist / Subtasks</label>
-                  <button
-                    type="button"
-                    onClick={addSubtaskInput}
-                    className="text-[11px] font-bold text-emerald-700 hover:underline"
-                  >
-                    + Add Step
-                  </button>
-                </div>
-                {subtasksList.map((st, i) => (
-                  <input
-                    key={i}
-                    type="text"
-                    placeholder={`Step ${i + 1}`}
-                    value={st}
-                    onChange={(e) => handleSubtaskChange(i, e.target.value)}
-                    className="w-full px-3.5 py-2 border rounded-xl text-sm"
-                  />
+            <div>
+              <label className={labelCls}>Attach a file (optional)</label>
+              <input type="file" accept="image/*,.pdf" disabled={uploading} onChange={onFile} className="text-[15px]" />
+              {uploading && <span className="text-[13px] text-slate-500 ml-2">Uploading…</span>}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {form.attachments.map((a, i) => (
+                  <span key={i} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 text-[13px] font-semibold text-slate-700">
+                    <Paperclip className="w-4 h-4" />{a.name}
+                    <button type="button" className="text-slate-400 hover:text-rose-600 cursor-pointer bg-transparent border-0 text-[16px] leading-none" onClick={() => setForm((f) => ({ ...f, attachments: f.attachments.filter((_, j) => j !== i) }))}>×</button>
+                  </span>
                 ))}
               </div>
+            </div>
 
-              <div className="flex justify-end gap-2.5 pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4.5 py-2.5 font-bold text-slate-600 hover:bg-slate-100 rounded-xl text-sm cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm shadow-xs cursor-pointer"
-                >
-                  Assign Task
-                </button>
-              </div>
-            </form>
-          </div>
+            {formError && <div className="px-4 py-3 rounded-xl bg-rose-50 border border-rose-200 text-[15px] font-medium text-rose-800">{formError}</div>}
+
+            <div className="flex justify-end gap-3 pt-1">
+              <button type="button" onClick={() => setCreateOpen(false)} className="px-5 py-3 text-[15px] font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 cursor-pointer">Cancel</button>
+              <button type="submit" disabled={saving || uploading} className="px-6 py-3 text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl disabled:opacity-60 cursor-pointer border-0">{saving ? 'Saving…' : 'Create task'}</button>
+            </div>
+          </form>
         </div>
       )}
 
-      {/* ── TASK DETAIL MODAL ── */}
-      {selectedTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[88vh] flex flex-col overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95">
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-start justify-between">
-              <div>
-                <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  {selectedTask.taskId}
-                </span>
-                <h3 className="text-base font-extrabold text-slate-900 mt-1 leading-snug">
-                  {selectedTask.title}
-                </h3>
+      {/* ── Task details ── */}
+      {selected && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4" onClick={() => setSelectedId(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto p-7 space-y-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-slate-400 m-0">{selected.taskId}</p>
+                <h3 className="text-xl font-extrabold text-slate-900 mt-1 mb-0 break-words">{selected.title}</h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedTask(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200/60"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <button type="button" onClick={() => setSelectedId(null)} className="p-2 rounded-lg hover:bg-slate-100 cursor-pointer bg-transparent border-0" aria-label="Close"><X className="w-5 h-5 text-slate-500" /></button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-4 text-xs">
-              {/* Status Workflow Action Buttons */}
+            <div className="flex flex-wrap gap-2">
+              <Pill label={statusOf(selected)} tone={STATUS_TONE[statusOf(selected)] || STATUS_TONE['Not started']} />
+              <Pill label={`${selected.priority} priority`} tone={PRIORITY_TONE[selected.priority] || PRIORITY_TONE.Medium} />
+            </div>
+
+            {selected.description && <p className="text-[15px] text-slate-700 m-0 whitespace-pre-wrap break-words">{selected.description}</p>}
+
+            <div className="grid sm:grid-cols-3 gap-5 text-[15px]">
+              <div><p className="text-[13px] font-semibold text-slate-500 m-0">For</p><p className="font-semibold text-slate-900 mt-1 mb-0">{selected.assignedEmployees?.map((a) => a.name).join(', ') || 'Nobody yet'}</p></div>
+              <div><p className="text-[13px] font-semibold text-slate-500 m-0">Due date</p><p className={`font-semibold mt-1 mb-0 ${isOverdue(selected) ? 'text-rose-600' : 'text-slate-900'}`}>{fmtDate(selected.dueDate)}</p></div>
+              <div><p className="text-[13px] font-semibold text-slate-500 m-0">Progress</p><p className="font-semibold text-slate-900 mt-1 mb-0">{selected.progressPercent || 0}%</p></div>
+            </div>
+
+            {selected.status === 'Submitted for Review' && (
+              <div className="bg-violet-50 border border-violet-200 rounded-xl px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="m-0 text-[15px] font-semibold text-violet-900">The employee finished this task and is waiting for you.</p>
+                <button type="button" onClick={() => { setSelectedId(null); onNavigate?.('review'); }} className="px-4 py-2.5 text-[15px] font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-xl cursor-pointer border-0">Review it</button>
+              </div>
+            )}
+
+            {selected.attachments?.length > 0 && (
               <div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
-                  Change Status Workflow
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {['To Do', 'In Progress', 'Submitted for Review', 'Completed'].map((st) => (
-                    <button
-                      key={st}
-                      type="button"
-                      onClick={async () => {
-                        await handleUpdateTaskStatus(
-                          selectedTask._id || selectedTask.taskId,
-                          st
-                        );
-                        setSelectedTask({ ...selectedTask, status: st });
-                      }}
-                      className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${
-                        selectedTask.status === st
-                          ? 'bg-emerald-600 text-white shadow-2xs'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                      }`}
-                    >
-                      {st}
-                    </button>
+                <p className="text-[13px] font-semibold text-slate-500 m-0 mb-2">Files</p>
+                <div className="flex flex-wrap gap-2">
+                  {selected.attachments.map((a, i) => (
+                    <a key={i} href={a.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 text-[15px] font-semibold text-emerald-700"><Paperclip className="w-4 h-4" />{a.name}</a>
                   ))}
                 </div>
               </div>
+            )}
 
-              {selectedTask.description && (
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 text-slate-700 leading-relaxed">
-                  {selectedTask.description}
-                </div>
-              )}
+            {!['Submitted for Review'].includes(selected.status) && (
+              <div>
+                <label className={labelCls}>Change status</label>
+                <select className={inputCls} value={selected.status} onChange={(e) => handleUpdateTaskStatus(selected._id, e.target.value, e.target.value === 'Completed' ? 100 : undefined)}>
+                  {['Assigned', 'In Progress', 'Blocked', 'Completed', 'Rejected'].map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                  {!['Assigned', 'In Progress', 'Blocked', 'Completed', 'Rejected'].includes(selected.status) && <option value={selected.status}>{STATUS_LABEL[selected.status] || selected.status}</option>}
+                </select>
+              </div>
+            )}
 
-              {/* Subtasks checklist */}
-              {selectedTask.subtasks?.length > 0 && (
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                    Subtasks Checklist
-                  </span>
-                  <div className="space-y-1 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
-                    {selectedTask.subtasks.map((st, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-xs">
-                        <CheckCircle2
-                          className={`w-4 h-4 ${
-                            st.isCompleted ? 'text-emerald-600' : 'text-slate-300'
-                          }`}
-                        />
-                        <span className={st.isCompleted ? 'line-through text-slate-400' : 'text-slate-800'}>
-                          {st.title}
-                        </span>
-                      </div>
-                    ))}
+            <div>
+              <p className="text-[16px] font-bold text-slate-900 m-0 mb-3">Comments</p>
+              <div className="space-y-3">
+                {(selected.comments || []).length === 0 && <p className="text-[15px] text-slate-500 m-0">No comments yet.</p>}
+                {(selected.comments || []).map((c) => (
+                  <div key={c.id} className={`rounded-xl px-4 py-3 ${c.authorRole === 'employee' ? 'bg-emerald-50' : 'bg-slate-50'}`}>
+                    <p className="text-[13px] font-semibold text-slate-500 m-0">{c.authorName} · {new Date(c.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                    <p className="text-[15px] text-slate-800 mt-1 mb-0 whitespace-pre-wrap break-words">{c.text}</p>
                   </div>
-                </div>
-              )}
-
-              {/* Comments Feed */}
-              <div className="space-y-2 pt-2 border-t">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  Comments & Activity
-                </span>
-                <div className="space-y-2 max-h-36 overflow-y-auto">
-                  {selectedTask.comments?.length > 0 ? (
-                    selectedTask.comments.map((c, i) => (
-                      <div key={i} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/60 text-xs">
-                        <div className="flex justify-between font-bold text-slate-900 text-[11px]">
-                          <span>{c.authorName}</span>
-                          <span className="text-slate-400 font-normal">
-                            {new Date(c.createdAt).toLocaleTimeString('en-IN', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        </div>
-                        <p className="text-slate-600 mt-0.5">{c.text}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-slate-400 text-center py-2 text-[11px]">
-                      No comments yet.
-                    </div>
-                  )}
-                </div>
-
-                {/* Add Comment input */}
-                <form onSubmit={handleAddCommentSubmit} className="flex gap-1.5 pt-1">
-                  <input
-                    type="text"
-                    placeholder="Write a message or update..."
-                    value={newCommentText}
-                    onChange={(e) => setNewCommentText(e.target.value)}
-                    className="flex-1 px-3 py-1.5 border rounded-xl text-xs focus:outline-none"
-                  />
-                  <button
-                    type="submit"
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold flex items-center gap-1 text-xs"
-                  >
-                    <Send className="w-3 h-3" />
-                  </button>
+                ))}
+                <form onSubmit={postComment} className="flex gap-2">
+                  <input className={inputCls} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Write a comment" maxLength={2000} />
+                  <button type="submit" disabled={!comment.trim()} className="inline-flex items-center gap-2 px-5 py-3 text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl disabled:opacity-60 cursor-pointer border-0"><Send className="w-4 h-4" /> Send</button>
                 </form>
               </div>
             </div>

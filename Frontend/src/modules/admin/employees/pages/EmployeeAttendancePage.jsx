@@ -84,23 +84,6 @@ export const EmployeeAttendancePage = ({ onNavigate }) => {
       }
     });
 
-    const FALLBACK_STAFF = [
-      { _id: 'emp_demo_1', fullName: 'Vinita Sharma', employeeId: 'EMP-001', brandId: 'brand_fg', department: 'Retail Operations', employmentStatus: 'Active' },
-      { _id: 'emp_demo_2', fullName: 'Rahul Verma', employeeId: 'EMP-002', brandId: 'brand_fg', department: 'Store Operations', employmentStatus: 'Active' },
-      { _id: 'emp_demo_3', fullName: 'Priya Patel', employeeId: 'EMP-003', brandId: 'brand_fh', department: 'Inventory & Dispatch', employmentStatus: 'Active' },
-      { _id: 'emp_demo_4', fullName: 'Amit Kumar', employeeId: 'EMP-004', brandId: 'brand_fa', department: 'Customer Support', employmentStatus: 'Active' },
-      { _id: 'emp_demo_5', fullName: 'Sneha Gupta', employeeId: 'EMP-005', brandId: 'brand_fg', department: 'Merchandising', employmentStatus: 'Active' },
-    ];
-
-    FALLBACK_STAFF.forEach((fallback) => {
-      const exists = list.some(
-        (e) => e.fullName?.toLowerCase().trim() === fallback.fullName.toLowerCase().trim()
-      );
-      if (!exists) {
-        list.push(fallback);
-      }
-    });
-
     return list;
   }, [employees, allEmployees]);
 

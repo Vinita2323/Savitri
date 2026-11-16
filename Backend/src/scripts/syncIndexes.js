@@ -10,6 +10,15 @@ import Admin from '../models/Admin.model.js';
 import Product from '../models/Product.model.js';
 import Order from '../models/Order.model.js';
 import Category from '../models/Category.model.js';
+import Employee from '../models/Employee.model.js';
+import Attendance from '../models/Attendance.model.js';
+import EmployeeTask from '../models/EmployeeTask.model.js';
+import LeaveRequest from '../models/LeaveRequest.model.js';
+import EmployeeDepartment from '../models/EmployeeDepartment.model.js';
+import EmployeeNotification from '../models/EmployeeNotification.model.js';
+import EmployeeActivityLog from '../models/EmployeeActivityLog.model.js';
+import EmployeeSettings from '../models/EmployeeSettings.model.js';
+import EmployeeTaskSubmission from '../models/EmployeeTaskSubmission.model.js';
 import Banner from '../models/Banner.model.js';
 import TransportBooking from '../models/TransportBooking.model.js';
 import VehicleType from '../models/VehicleType.model.js';
@@ -63,6 +72,15 @@ const models = [
   { name: 'QuotationRequest', model: QuotationRequest },
   { name: 'ProformaInvoice', model: ProformaInvoice },
   { name: 'DeliveryChallan', model: DeliveryChallan },
+  { name: 'Employee', model: Employee },
+  { name: 'Attendance', model: Attendance },
+  { name: 'EmployeeTask', model: EmployeeTask },
+  { name: 'LeaveRequest', model: LeaveRequest },
+  { name: 'EmployeeDepartment', model: EmployeeDepartment },
+  { name: 'EmployeeNotification', model: EmployeeNotification },
+  { name: 'EmployeeActivityLog', model: EmployeeActivityLog },
+  { name: 'EmployeeSettings', model: EmployeeSettings },
+  { name: 'EmployeeTaskSubmission', model: EmployeeTaskSubmission },
   { name: 'TreasuryAccount', model: TreasuryAccount },
   { name: 'JournalEntry', model: JournalEntry },
   { name: 'GatewayPayment', model: GatewayPayment },

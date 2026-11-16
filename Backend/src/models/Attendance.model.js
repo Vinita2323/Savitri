@@ -130,6 +130,32 @@ const attendanceSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+
+    // ── Employee portal: server-recorded login sessions ──
+    // checkIn = FIRST login of the day and is never overwritten; checkOut = latest session end.
+    sessions: [
+      {
+        sessionId: { type: String },
+        loginAt: { type: Date },
+        logoutAt: { type: Date, default: null },
+        source: { type: String, default: 'Web' },
+        ip: { type: String, default: '' },
+      },
+    ],
+    lastActivityAt: { type: Date, default: null },
+    loginCount: { type: Number, default: 0 },
+    // true when status was set by leave approval / manual correction and must not be recomputed
+    statusLocked: { type: Boolean, default: false },
+    // full audit trail of manual corrections (who, when, what, why)
+    correctionHistory: [
+      {
+        at: { type: Date, default: Date.now },
+        by: { id: { type: mongoose.Schema.Types.ObjectId, default: null }, name: String, role: String },
+        reason: { type: String, default: '' },
+        before: { type: mongoose.Schema.Types.Mixed, default: null },
+        after: { type: mongoose.Schema.Types.Mixed, default: null },
+      },
+    ],
   },
   {
     timestamps: true,

@@ -57,7 +57,10 @@ API.interceptors.request.use(
       requestUrl.includes('/auth/captain/login') ||
       requestUrl.includes('/auth/captain/send-otp') ||
       requestUrl.includes('/auth/user/send-otp') ||
-      requestUrl.includes('/auth/user/verify-otp');
+      requestUrl.includes('/auth/user/verify-otp') ||
+      requestUrl.includes('/employee-portal/login') ||
+      requestUrl.includes('/employee-portal/register') ||
+      requestUrl.includes('/employee-portal/public');
 
     if (isPublicAuthEndpoint) {
       if (config.headers) {
@@ -69,7 +72,9 @@ API.interceptors.request.use(
     // Endpoint-specific token resolution
     // Browser path takes priority over request URL so /admin panel always uses admin token
     // (even when it calls /super-admin/* endpoints that are now dual-role accessible)
-    if (requestUrl.includes('/user/notifications') || requestUrl.includes('/user/notifications/')) {
+    if (requestUrl.includes('/employee-portal') || currentPath.startsWith('/employee/')) {
+      token = localStorage.getItem('savitri_employee_token');
+    } else if (requestUrl.includes('/user/notifications') || requestUrl.includes('/user/notifications/')) {
       token = localStorage.getItem('savitri_user_token');
     } else if (currentPath.startsWith('/super-admin')) {
       token = localStorage.getItem('savitri_super_admin_token') || localStorage.getItem('savitri_admin_token');
@@ -150,7 +155,14 @@ API.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       const currentPath = (typeof window !== 'undefined' && window.location && window.location.pathname) ? window.location.pathname : '';
 
-      if (currentPath.startsWith('/super-admin')) {
+      if (currentPath.startsWith('/employee/')) {
+        if (!currentPath.startsWith('/employee/login') && !currentPath.startsWith('/employee/register')) {
+          localStorage.removeItem('savitri_employee_token');
+          localStorage.removeItem('savitri_employee_data');
+          sessionStorage.setItem('savitri_employee_auth_expired_redirect', currentPath);
+          window.location.href = '/employee/login';
+        }
+      } else if (currentPath.startsWith('/super-admin')) {
         if (!currentPath.startsWith('/super-admin/login')) {
           localStorage.removeItem('savitri_super_admin_token');
           localStorage.removeItem('savitri_super_admin_data');
