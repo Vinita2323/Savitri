@@ -19,6 +19,8 @@ import EmployeeNotification from '../models/EmployeeNotification.model.js';
 import EmployeeActivityLog from '../models/EmployeeActivityLog.model.js';
 import EmployeeSettings from '../models/EmployeeSettings.model.js';
 import EmployeeTaskSubmission from '../models/EmployeeTaskSubmission.model.js';
+import BulkImport from '../models/BulkImport.model.js';
+import BulkImportRow from '../models/BulkImportRow.model.js';
 import Banner from '../models/Banner.model.js';
 import TransportBooking from '../models/TransportBooking.model.js';
 import VehicleType from '../models/VehicleType.model.js';
@@ -81,6 +83,8 @@ const models = [
   { name: 'EmployeeActivityLog', model: EmployeeActivityLog },
   { name: 'EmployeeSettings', model: EmployeeSettings },
   { name: 'EmployeeTaskSubmission', model: EmployeeTaskSubmission },
+  { name: 'BulkImport', model: BulkImport },
+  { name: 'BulkImportRow', model: BulkImportRow },
   { name: 'TreasuryAccount', model: TreasuryAccount },
   { name: 'JournalEntry', model: JournalEntry },
   { name: 'GatewayPayment', model: GatewayPayment },

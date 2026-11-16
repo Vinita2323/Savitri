@@ -17,7 +17,8 @@ import {
   ChevronDown, 
   ChevronUp,
   HelpCircle,
-  Gift
+  Gift,
+  UploadCloud
 } from 'lucide-react';
 
 const SellerSidebar = ({ isOpen, setIsOpen }) => {
@@ -125,11 +126,24 @@ const SellerSidebar = ({ isOpen, setIsOpen }) => {
                 <span>Add new Product</span>
               </Link>
 
+              {/* Bulk Upload */}
+              <Link
+                to="/seller/products/bulk-upload"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-medium transition-all ${
+                  isActive('/seller/products/bulk-upload')
+                    ? 'bg-[#2A4515] text-white font-bold border-l-2 border-[#F7941D]'
+                    : 'text-slate-300 hover:bg-[#2A4515]/50 hover:text-white'
+                }`}
+              >
+                <UploadCloud size={18} className="shrink-0 text-white/90" />
+                <span>Bulk Upload</span>
+              </Link>
+
               {/* Product List */}
               <Link
                 to="/seller/products"
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-medium transition-all ${
-                  isActive('/seller/products') || isActive('/seller/product/list')
+                  (isActive('/seller/products') && !isActive('/seller/products/bulk-upload')) || isActive('/seller/product/list')
                     ? 'bg-[#2A4515] text-white font-bold border-l-2 border-[#F7941D]'
                     : 'text-slate-300 hover:bg-[#2A4515]/50 hover:text-white'
                 }`}

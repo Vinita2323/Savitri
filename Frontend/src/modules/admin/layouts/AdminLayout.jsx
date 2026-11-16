@@ -92,6 +92,8 @@ const EmployeeLeavesPage = lazy(() => import('../employees/pages/EmployeeLeavesP
 const EmployeeShiftsHolidaysPage = lazy(() => import('../employees/pages/EmployeeShiftsHolidaysPage'));
 const EmployeeReportsPage = lazy(() => import('../employees/pages/EmployeeReportsPage'));
 const EmployeeOverviewPage = lazy(() => import('../employees/pages/EmployeeOverviewPage'));
+const BulkUploadsPage = lazy(() => import('../catalog/BulkUploadsPage'));
+const CatalogControlPage = lazy(() => import('../catalog/CatalogControlPage'));
 const EmployeeRegistrationsPage = lazy(() => import('../employees/pages/EmployeeRegistrationsPage'));
 const EmployeeAttendanceReportPage = lazy(() => import('../employees/pages/EmployeeAttendanceReportPage'));
 const EmployeeTaskReviewPage = lazy(() => import('../employees/pages/EmployeeTaskReviewPage'));
@@ -180,6 +182,12 @@ export const AdminLayout = () => {
         return <BrandManagement />;
       case 'products':
         return <ProductManagement />;
+      case 'bulk_uploads':
+      case 'bulk-uploads':
+        return <BulkUploadsPage />;
+      case 'catalog_control':
+      case 'catalog-control':
+        return <CatalogControlPage />;
       case 'add_product':
         return <AddProductPage />;
       case 'sku_audit':

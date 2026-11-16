@@ -11,6 +11,7 @@ const SellerRegister = lazy(() => import('../pages/auth/SellerRegister'));
 const SellerUnderReview = lazy(() => import('../pages/auth/SellerUnderReview'));
 const Products = lazy(() => import('../pages/Products'));
 const AddProduct = lazy(() => import('../pages/AddProduct'));
+const BulkUpload = lazy(() => import('../pages/BulkUpload'));
 const Orders = lazy(() => import('../pages/Orders'));
 const Inventory = lazy(() => import('../pages/Inventory'));
 const Dispatch = lazy(() => import('../pages/Dispatch'));
@@ -53,6 +54,8 @@ const SellerRoutes = () => {
             {/* Product Group */}
             <Route path="product/add" element={<AddProduct />} />
             <Route path="products/add" element={<AddProduct />} />
+            <Route path="products/bulk-upload" element={<BulkUpload />} />
+            <Route path="product/bulk-upload" element={<BulkUpload />} />
             <Route path="product/edit/:id" element={<AddProduct />} />
             <Route path="products/edit/:id" element={<AddProduct />} />
             <Route path="taxes" element={<Navigate to="/seller/dashboard" replace />} />

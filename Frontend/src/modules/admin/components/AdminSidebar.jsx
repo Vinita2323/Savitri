@@ -157,6 +157,8 @@ export const AdminSidebar = () => {
           submenu: [
             { id: 'products', label: 'All Products & Stock' },
             { id: 'add_product', label: '+ Add Product' },
+            { id: 'bulk_uploads', label: 'Bulk Uploads' },
+            { id: 'catalog_control', label: 'Catalog Control' },
             { id: 'taxes', label: 'Taxes' },
             { id: 'sku_audit', label: 'SKU Audit' }
           ]

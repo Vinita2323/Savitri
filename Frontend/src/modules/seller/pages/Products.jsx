@@ -406,13 +406,22 @@ const Products = () => {
           <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Products</h1>
           <p className="text-sm font-normal text-slate-500 mt-1">Manage your store product catalog and inventory details.</p>
         </div>
-        <button 
-          onClick={() => navigate('/seller/product/add')}
-          className="bg-[#ff7526] hover:bg-[#e65507] text-white font-medium py-2.5 px-4 rounded-lg shadow-sm transition-colors cursor-pointer border-none flex items-center gap-2 text-sm"
-        >
-          <Plus size={18} strokeWidth={2} />
-          Add New Product
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => navigate('/seller/products/bulk-upload')}
+            className="bg-white hover:bg-slate-50 text-slate-700 font-medium py-2.5 px-4 rounded-lg shadow-sm border border-slate-300 transition-colors cursor-pointer flex items-center gap-2 text-sm"
+          >
+            <Upload size={18} strokeWidth={2} />
+            Bulk Upload
+          </button>
+          <button
+            onClick={() => navigate('/seller/product/add')}
+            className="bg-[#ff7526] hover:bg-[#e65507] text-white font-medium py-2.5 px-4 rounded-lg shadow-sm transition-colors cursor-pointer border-none flex items-center gap-2 text-sm"
+          >
+            <Plus size={18} strokeWidth={2} />
+            Add New Product
+          </button>
+        </div>
       </div>
 
       {/* Main Unified Card Container */}

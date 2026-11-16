@@ -57,6 +57,8 @@ import employeeRoutes from './routes/employeeRoutes.js';
 import employeePortalRoutes from './routes/employeePortalRoutes.js';
 import employeeManagementRoutes from './routes/employeeManagementRoutes.js';
 import { startEmployeeScheduler } from './services/employeeScheduler.js';
+import bulkProductRoutes from './routes/bulkProductRoutes.js';
+import { startBulkImportMaintenance } from './services/bulkProducts/runner.js';
 import compression from 'compression';
 import performanceLogger from './middleware/performanceMiddleware.js';
 
@@ -204,6 +206,7 @@ const registerRoutes = (prefix = '') => {
   app.use(`${prefix}/employees`, employeeRoutes);
   app.use(`${prefix}/employee-portal`, employeePortalRoutes);
   app.use(`${prefix}/employee-management`, employeeManagementRoutes);
+  app.use(`${prefix}/bulk-products`, bulkProductRoutes);
   app.use(`${prefix}`, commissionRoutes);
 };
 
@@ -247,6 +250,7 @@ httpServer.listen(PORT, () => {
     });
   };
   startEmployeeScheduler();
+  startBulkImportMaintenance();
   setTimeout(sweepUnpaidOrders, 15000);
   setInterval(sweepUnpaidOrders, 5 * 60 * 1000);
 });

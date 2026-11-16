@@ -543,13 +543,24 @@ const AddProduct = () => {
               : 'Create and list new items with pricing, stock limits, media, and homepage section mapping'}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate('/seller/products')}
-          className="flex items-center gap-2 text-slate-700 font-bold text-xs hover:text-[#F7941D] cursor-pointer border border-slate-200 bg-slate-50 px-3.5 py-2 rounded-xl transition-all shrink-0 w-fit"
-        >
-          <ArrowLeft size={16} /> Back to Product List
-        </button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {!isEditMode && (
+            <button
+              type="button"
+              onClick={() => navigate('/seller/products/bulk-upload')}
+              className="flex items-center gap-2 text-white font-bold text-xs bg-[#F7941D] hover:bg-[#e0850f] cursor-pointer border-none px-3.5 py-2 rounded-xl transition-all shrink-0 w-fit"
+            >
+              <Upload size={16} /> Upload products in bulk
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => navigate('/seller/products')}
+            className="flex items-center gap-2 text-slate-700 font-bold text-xs hover:text-[#F7941D] cursor-pointer border border-slate-200 bg-slate-50 px-3.5 py-2 rounded-xl transition-all shrink-0 w-fit"
+          >
+            <ArrowLeft size={16} /> Back to Product List
+          </button>
+        </div>
       </div>
 
       {loadingProduct && (

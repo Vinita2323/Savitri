@@ -58,6 +58,8 @@ const EmployeeLeavesPage = lazy(() => import('../../admin/employees/pages/Employ
 const EmployeeShiftsHolidaysPage = lazy(() => import('../../admin/employees/pages/EmployeeShiftsHolidaysPage'));
 const EmployeeReportsPage = lazy(() => import('../../admin/employees/pages/EmployeeReportsPage'));
 const EmployeeOverviewPage = lazy(() => import('../../admin/employees/pages/EmployeeOverviewPage'));
+const BulkUploadsPage = lazy(() => import('../../admin/catalog/BulkUploadsPage'));
+const CatalogControlPage = lazy(() => import('../../admin/catalog/CatalogControlPage'));
 const EmployeeRegistrationsPage = lazy(() => import('../../admin/employees/pages/EmployeeRegistrationsPage'));
 const EmployeeAttendanceReportPage = lazy(() => import('../../admin/employees/pages/EmployeeAttendanceReportPage'));
 const EmployeeTaskReviewPage = lazy(() => import('../../admin/employees/pages/EmployeeTaskReviewPage'));
@@ -182,6 +184,8 @@ const SuperAdminRoutesContent = () => {
           <Route path="/brands/create" element={<CreateBrandPage />} />
           <Route path="/brands/edit/:id" element={<CreateBrandPage />} />
           <Route path="/inventory" element={<SuperAdminInventory />} />
+          <Route path="/bulk-uploads" element={<BulkUploadsPage />} />
+          <Route path="/catalog-control" element={<CatalogControlPage />} />
           <Route path="/delivery-partners" element={<SuperAdminDeliveryPartners />} />
           
           {/* Quotation Management Module Routes */}

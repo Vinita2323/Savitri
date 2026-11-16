@@ -99,6 +99,16 @@ export const SuperAdminSidebar = () => {
           icon: Boxes,
         },
         {
+          to: '/super-admin/catalog-control',
+          label: 'Catalog Control',
+          icon: Boxes,
+        },
+        {
+          to: '/super-admin/bulk-uploads',
+          label: 'Bulk Uploads',
+          icon: Boxes,
+        },
+        {
           to: '/super-admin/pos-billing',
           label: 'POS Billing',
           icon: ScanBarcode,

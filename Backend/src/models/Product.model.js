@@ -137,6 +137,22 @@ const productSchema = new mongoose.Schema(
       type: String,
       default: '7 Days Returnable'
     },
+    // ── Publishing / moderation (additive: existing products keep the defaults and stay visible) ──
+    isPublished: { type: Boolean, default: true },
+    publishedAt: { type: Date, default: null },
+    // active | out_of_stock | inactive. Informational label; customer visibility is decided by isPublished,
+    // adminBlocked, status and the real stock count.
+    listingStatus: { type: String, enum: ['active', 'out_of_stock', 'inactive'], default: 'active' },
+    adminBlocked: { type: Boolean, default: false },
+    blockedReason: { type: String, default: '' },
+    blockedAt: { type: Date, default: null },
+    blockedBy: { type: String, default: '' },
+    // Extra catalogue fields carried by bulk upload
+    barcode: { type: String, default: '', trim: true },
+    purchasePrice: { type: Number, min: 0, default: 0 },
+    weight: { type: String, default: '' },
+    source: { type: String, enum: ['manual', 'bulk'], default: 'manual' },
+    importId: { type: mongoose.Schema.Types.ObjectId, ref: 'BulkImport', default: null },
     ratingAverage: {
       type: Number,
       default: 0,
@@ -159,6 +175,11 @@ productSchema.index({ subCategory: 1, status: 1 });
 productSchema.index({ sellerId: 1, status: 1 });
 productSchema.index({ homeSections: 1, status: 1 });
 productSchema.index({ sku: 1 });
+// Per-seller SKU lookups (bulk upload CREATE/UPDATE). Deliberately NOT unique: uniqueness per seller is enforced
+// by the import code, so existing catalogues that already contain repeated SKUs cannot break index creation.
+productSchema.index({ sellerId: 1, sku: 1 });
+productSchema.index({ sellerId: 1, importId: 1 });
+productSchema.index({ isPublished: 1, adminBlocked: 1, status: 1 });
 productSchema.index({ createdAt: -1 });
 
 const Product = mongoose.model('Product', productSchema);

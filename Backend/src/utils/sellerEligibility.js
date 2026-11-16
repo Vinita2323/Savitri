@@ -277,6 +277,17 @@ export const evaluateProductSellerEligibility = async (product, options = {}) =>
     return { eligible: false, reason: 'product_missing', message: 'Product not found.' };
   }
 
+  // Product-level rules: an admin-blocked, unpublished or non-Published product is never available to customers
+  if (product.adminBlocked === true) {
+    return { eligible: false, reason: 'product_blocked', message: 'This product is not available.' };
+  }
+  if (product.isPublished === false) {
+    return { eligible: false, reason: 'product_unpublished', message: 'This product is not available.' };
+  }
+  if (product.status && product.status !== 'Published') {
+    return { eligible: false, reason: 'product_not_published', message: 'This product is not available.' };
+  }
+
   // Products without a seller (legacy/admin catalog) — allow only if explicitly admin-managed
   if (!product.sellerId && !product.seller) {
     return { eligible: true, reason: null, message: null, seller: null };

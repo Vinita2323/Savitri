@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Product from '../models/Product.model.js';
 import Seller from '../models/Seller.model.js';
+import Admin from '../models/Admin.model.js';
 import { uploadToCloudinary } from '../config/cloudinary.js';
 import dotenv from 'dotenv';
 
@@ -12,6 +13,12 @@ import { getEligibleSellersForLocation, isValidCoordinate } from '../utils/selle
 import { evaluateSellerStorefrontEligibility, evaluateProductSellerEligibility } from '../utils/sellerEligibility.js';
 import { getEffectiveStock, syncRootStockFromVariants } from '../utils/productStock.js';
 import { canAccessProduct, canAccessSellerId } from '../utils/accessControl.js';
+import { normalizeRole } from '../middleware/authMiddleware.js';
+
+// Fields only the platform (admin moderation or the bulk importer) may write
+const PLATFORM_ONLY_FIELDS = ['adminBlocked', 'blockedReason', 'blockedAt', 'blockedBy', 'importId', 'source', 'publishedAt', 'purchasePrice_internal'];
+// Never shown to customers
+const PRIVATE_PRODUCT_FIELDS = ['purchasePrice', 'blockedReason', 'blockedAt', 'blockedBy', 'importId', 'source', 'barcode'];
 
 // High-speed In-memory Cache for Products listing
 const productsCache = new Map();
@@ -226,6 +233,9 @@ export const createProduct = async (req, res) => {
       homeSections: Array.isArray(homeSections) && homeSections.length > 0 ? homeSections : ['flash_sale', 'bestseller'],
       galleryImages: processedGalleryImages,
       status: status || 'Published',
+      isPublished: (status || 'Published') === 'Published',
+      publishedAt: (status || 'Published') === 'Published' ? new Date() : null,
+      listingStatus: (status || 'Published') !== 'Published' ? 'inactive' : (parsedStock > 0 ? 'active' : 'out_of_stock'),
       isFeatured: Boolean(isFeatured),
       isReturnable: finalIsReturnable,
       returnWindow: finalReturnWindow,
@@ -263,9 +273,18 @@ export const getProducts = async (req, res) => {
 
     const userLat = lat !== undefined ? lat : latitude;
     const userLng = lng !== undefined ? lng : longitude;
-    const isAdminOrInternal = admin === 'true' || all === 'true' || req.headers['x-admin-request'] === 'true' || req.user?.role === 'admin';
+    // The internal flags (admin=true, headers) only count for a verified admin / seller token. Without one the caller is a
+    // customer and gets the full storefront rules, so hidden or blocked products can never be listed by adding ?admin=true.
+    const viewerRole = normalizeRole(req.user?.role);
+    const isStaff = viewerRole === 'admin' || viewerRole === 'super_admin';
+    const wantsInternal = admin === 'true' || all === 'true' || req.headers['x-admin-request'] === 'true';
+    const isAdminOrInternal = isStaff && (wantsInternal || viewerRole === 'admin' || viewerRole === 'super_admin');
+    // A seller always sees their own full catalogue (drafts, out of stock, unpublished), nobody else's
+    const ownSellerView = viewerRole === 'seller' && Boolean(sellerId) && String(sellerId) === String(req.user.id);
+    const privileged = isAdminOrInternal || ownSellerView;
+    const viewer = isAdminOrInternal ? 'adm' : ownSellerView ? `own:${req.user.id}` : 'cust';
 
-    const cacheKey = `${req.originalUrl}_${userLat || 'none'}_${userLng || 'none'}_${isAdminOrInternal ? 'adm' : 'cust'}`;
+    const cacheKey = `${req.originalUrl}_${userLat || 'none'}_${userLng || 'none'}_${viewer}`;
     const cached = productsCache.get(cacheKey);
     if (cached && (now - cached.timestamp < 10000)) {
       return res.status(200).json(cached.data);
@@ -274,7 +293,7 @@ export const getProducts = async (req, res) => {
     let query = {};
 
     if (sellerId || seller) {
-      if (!isAdminOrInternal && !req.headers['x-seller-request']) {
+      if (!privileged) {
         const sQuery = sellerId && mongoose.Types.ObjectId.isValid(sellerId)
           ? { _id: sellerId }
           : { businessName: seller || sellerId };
@@ -309,7 +328,36 @@ export const getProducts = async (req, res) => {
         query.seller = seller;
       }
     } else if (isAdminOrInternal) {
-      // Admin product management: allowed to query all products
+      // Admin product management: allowed to query all products (optionally narrowed by seller / city / brand / state)
+      // Brand scope: a brand-restricted Admin only ever sees their brands' sellers; a Super Admin follows the brand selector.
+      let allowedSellerIds = null; // null = every seller
+      const intersect = (ids) => { const set = new Set(ids.map(String)); allowedSellerIds = allowedSellerIds === null ? [...set] : allowedSellerIds.filter((x) => set.has(x)); };
+      let brandIds = null;
+      if (viewerRole === 'admin') {
+        const me = await Admin.findById(req.user.id).select('authorizedBrands').lean();
+        const list = me?.authorizedBrands;
+        if (Array.isArray(list) && list.length > 0 && !list.includes('*')) brandIds = list;
+      }
+      const brandHeader = String(req.headers['x-brand-id'] || '').trim();
+      if (brandHeader && brandHeader.toUpperCase() !== 'ALL') brandIds = brandIds ? brandIds.filter((b) => b === brandHeader) : [brandHeader];
+      if (brandIds) intersect((await Seller.find({ brandId: { $in: brandIds } }).select('_id').lean()).map((x) => x._id));
+      if (isId(req.query.adminSellerId)) intersect([req.query.adminSellerId]);
+      if (req.query.city && String(req.query.city).trim()) {
+        const esc = String(req.query.city).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        intersect((await Seller.find({ 'warehouseLocation.city': new RegExp(`^${esc}$`, 'i') }).select('_id').lean()).map((x) => x._id));
+      }
+      if (allowedSellerIds !== null) query.sellerId = { $in: allowedSellerIds.map((id) => new mongoose.Types.ObjectId(id)) };
+      if (req.query.brand && String(req.query.brand).trim()) {
+        const esc = String(req.query.brand).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        query.brand = new RegExp(`^${esc}$`, 'i');
+      }
+      if (req.query.blocked === 'true') query.adminBlocked = true;
+      if (req.query.blocked === 'false') query.adminBlocked = { $ne: true };
+      if (req.query.published === 'true') query.isPublished = { $ne: false };
+      if (req.query.published === 'false') query.isPublished = false;
+      if (req.query.source === 'bulk') query.source = 'bulk';
+      if (req.query.stockState === 'out') query.stock = { $lte: 0 };
+      if (req.query.stockState === 'in') query.stock = { $gt: 0 };
     } else if (isValidCoordinate(userLat, userLng)) {
       // Customer Storefront: Find sellers covering this user's location based on each seller's serviceRadius
       const { eligibleSellerIds, eligibleSellerNames } = await getEligibleSellersForLocation(userLat, userLng);
@@ -386,9 +434,12 @@ export const getProducts = async (req, res) => {
       query.name = { $regex: search, $options: 'i' };
     }
 
-    // Customer / public listings: only Published products
-    if (!isAdminOrInternal && !req.headers['x-seller-request']) {
+    // Customer / public listings: only products that are Published, not blocked by an admin and in stock
+    if (!privileged) {
       query.status = 'Published';
+      query.isPublished = { $ne: false };
+      query.adminBlocked = { $ne: true };
+      query.stock = { $gt: 0 };
     }
 
     const page = Math.max(1, Number(req.query.page) || 1);
@@ -397,7 +448,7 @@ export const getProducts = async (req, res) => {
       : 50;
 
     let dbQuery = Product.find(query)
-      .select('name category subCategory brand unitValue unitType unit seller sellerId mrp salePrice stock mainImage homeSections status isFeatured isReturnable sku createdAt hasVariants variantOptions variants')
+      .select(`name category subCategory brand unitValue unitType unit seller sellerId mrp salePrice stock mainImage homeSections status isFeatured isReturnable sku createdAt hasVariants variantOptions variants isPublished adminBlocked listingStatus${privileged ? ' purchasePrice barcode weight blockedReason source importId' : ''}`)
       .sort({ createdAt: -1 })
       .lean();
 
@@ -414,7 +465,7 @@ export const getProducts = async (req, res) => {
 
     // Defense-in-depth: drop any product whose seller is not storefront-eligible
     // (covers name collisions / stale seller fields on customer listings)
-    if (!isAdminOrInternal && !req.headers['x-seller-request'] && visibleProducts.length > 0) {
+    if (!privileged && visibleProducts.length > 0) {
       const checks = await Promise.all(
         visibleProducts.map((p) => evaluateProductSellerEligibility(p))
       );
@@ -477,13 +528,9 @@ export const getProductById = async (req, res) => {
       });
     }
 
-    const isAdminOrInternal =
-      req.query.admin === 'true' ||
-      req.headers['x-admin-request'] === 'true' ||
-      req.headers['x-seller-request'] === 'true' ||
-      req.user?.role === 'admin' ||
-      req.user?.role === 'seller';
-
+    // staff / sellers (verified token) see everything they manage; everyone else gets the customer rules
+    const role = normalizeRole(req.user?.role);
+    const isAdminOrInternal = role === 'admin' || role === 'super_admin' || (role === 'seller' && String(product.sellerId || '') === String(req.user.id));
     if (!isAdminOrInternal) {
       if (product.status && product.status !== 'Published') {
         return res.status(404).json({
@@ -501,13 +548,9 @@ export const getProductById = async (req, res) => {
       }
     }
 
-    res.status(200).json({
-      success: true,
-      product: {
-        ...product,
-        stock: getEffectiveStock(product),
-      },
-    });
+    const out = { ...product, stock: getEffectiveStock(product) };
+    if (!isAdminOrInternal) PRIVATE_PRODUCT_FIELDS.forEach((f) => delete out[f]);
+    res.status(200).json({ success: true, product: out });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -531,6 +574,10 @@ export const updateProduct = async (req, res) => {
     }
 
     const updateData = { ...req.body };
+    // Moderation / import bookkeeping is never taken from a request body (a seller must not be able to unblock a product)
+    PLATFORM_ONLY_FIELDS.forEach((f) => delete updateData[f]);
+    delete updateData.isPublished;
+    delete updateData.listingStatus;
     // Ownership fields cannot be reassigned by sellers.
     if (req.user?.role === 'seller') {
       delete updateData.sellerId;
@@ -588,6 +635,17 @@ export const updateProduct = async (req, res) => {
       }
     }
 
+    // keep the publishing labels in step with the existing editor fields (status + stock)
+    if (updateData.status !== undefined) {
+      const live = updateData.status === 'Published';
+      updateData.isPublished = live;
+      if (live && !product.publishedAt) updateData.publishedAt = new Date();
+    }
+    if (updateData.status !== undefined || updateData.stock !== undefined) {
+      const st = updateData.status !== undefined ? updateData.status : product.status;
+      const stock = updateData.stock !== undefined ? Number(updateData.stock) : product.stock;
+      updateData.listingStatus = st !== 'Published' ? 'inactive' : stock > 0 ? 'active' : 'out_of_stock';
+    }
     const updatedProduct = await Product.findByIdAndUpdate(
       product._id,
       { $set: updateData },
@@ -635,5 +693,78 @@ export const deleteProduct = async (req, res) => {
       success: false,
       message: error.message || 'Error deleting product'
     });
+  }
+};
+
+
+const isId = (v) => mongoose.Types.ObjectId.isValid(String(v || ''));
+
+// @desc    Admin moderation: deactivate / activate / block / unblock a product
+// @route   PATCH /api/products/:id/moderation
+// @access  Admin, Super Admin (brand scoped)
+export const moderateProduct = async (req, res) => {
+  try {
+    const product = await findProductByIdOrSku(req.params.id);
+    if (!product || !(await canAccessProduct(req, product))) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    const action = String(req.body?.action || '');
+    const reason = String(req.body?.reason || '').trim().slice(0, 300);
+    const actor = req.user?.email || req.user?.name || 'admin';
+    let update;
+    if (action === 'block') {
+      if (!reason) return res.status(400).json({ success: false, message: 'A reason is required to block a product.' });
+      update = { adminBlocked: true, blockedReason: reason, blockedAt: new Date(), blockedBy: actor };
+    } else if (action === 'unblock') {
+      update = { adminBlocked: false, blockedReason: '', blockedAt: null, blockedBy: '' };
+    } else if (action === 'deactivate') {
+      update = { status: 'Draft', isPublished: false, listingStatus: 'inactive' };
+    } else if (action === 'activate') {
+      update = { status: 'Published', isPublished: true, listingStatus: product.stock > 0 ? 'active' : 'out_of_stock', publishedAt: product.publishedAt || new Date() };
+    } else {
+      return res.status(400).json({ success: false, message: 'Action must be deactivate, activate, block or unblock.' });
+    }
+    const updated = await Product.findByIdAndUpdate(product._id, { $set: update }, { returnDocument: 'after' });
+    invalidateProductsCache();
+    const done = { block: 'blocked', unblock: 'unblocked', deactivate: 'deactivated', activate: 'activated' }[action];
+    return res.json({ success: true, message: `Product ${done}.`, product: updated });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'Could not update the product' });
+  }
+};
+
+// @desc    Seller: change price / stock / status of many of their own products at once
+// @route   POST /api/products/bulk-update
+// @access  Seller
+export const bulkUpdateMyProducts = async (req, res) => {
+  try {
+    const ids = (Array.isArray(req.body?.ids) ? req.body.ids : []).filter(isId).slice(0, 500);
+    const u = req.body?.updates || {};
+    if (ids.length === 0) return res.status(400).json({ success: false, message: 'Select at least one product.' });
+    const set = {};
+    const filter = { _id: { $in: ids }, sellerId: req.user.id, hasVariants: { $ne: true } };
+    const num = (v) => (v === '' || v === null || v === undefined ? NaN : Number(v));
+    const stock = num(u.stock); const sale = num(u.salePrice); const mrp = num(u.mrp);
+    if (u.stock !== undefined) { if (!Number.isInteger(stock) || stock < 0 || stock > 10000000) return res.status(400).json({ success: false, message: 'Stock must be a whole number (0 or more).' }); set.stock = stock; }
+    if (u.salePrice !== undefined) { if (!(sale >= 0)) return res.status(400).json({ success: false, message: 'Selling price must be 0 or more.' }); set.salePrice = sale; }
+    if (u.mrp !== undefined) { if (!(mrp >= 0)) return res.status(400).json({ success: false, message: 'MRP must be 0 or more.' }); set.mrp = mrp; }
+    if (set.salePrice !== undefined && set.mrp !== undefined && set.salePrice > set.mrp) return res.status(400).json({ success: false, message: 'Selling price cannot be higher than MRP.' });
+    if (set.salePrice !== undefined && set.mrp === undefined) filter.mrp = { $gte: set.salePrice };
+    if (set.mrp !== undefined && set.salePrice === undefined) filter.salePrice = { $lte: set.mrp };
+    const status = u.status === undefined ? null : String(u.status);
+    if (status && !['active', 'inactive'].includes(status)) return res.status(400).json({ success: false, message: 'Status must be active or inactive.' });
+    if (Object.keys(set).length === 0 && !status) return res.status(400).json({ success: false, message: 'Nothing to update.' });
+
+    // one pipeline update keeps status labels consistent with the stock each product ends up with
+    const stockExpr = set.stock !== undefined ? set.stock : '$stock';
+    const pipelineSet = { ...set };
+    if (status === 'inactive') Object.assign(pipelineSet, { status: 'Draft', isPublished: false, listingStatus: 'inactive' });
+    else if (status === 'active') Object.assign(pipelineSet, { status: 'Published', isPublished: true, publishedAt: { $ifNull: ['$publishedAt', new Date()] }, listingStatus: { $cond: [{ $gt: [stockExpr, 0] }, 'active', 'out_of_stock'] } });
+    else if (set.stock !== undefined) pipelineSet.listingStatus = { $cond: [{ $eq: ['$listingStatus', 'inactive'] }, 'inactive', { $cond: [{ $gt: [set.stock, 0] }, 'active', 'out_of_stock'] }] };
+    const result = await Product.updateMany(filter, [{ $set: pipelineSet }], { updatePipeline: true });
+    invalidateProductsCache();
+    return res.json({ success: true, requested: ids.length, updated: result.modifiedCount || 0, skipped: ids.length - (result.matchedCount || 0), message: `${result.modifiedCount || 0} product(s) updated.` });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'Bulk update failed' });
   }
 };
