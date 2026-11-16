@@ -20,7 +20,9 @@ const connectDB = async () => {
       // Each new connection to a remote Atlas cluster costs a TLS + auth handshake (seconds on a slow link). Keeping a
       // warm, long-lived pool means a burst of page requests reuses ready connections instead of opening 16 at once.
       minPoolSize: Number(process.env.DB_MIN_POOL_SIZE) || 20,
-      maxIdleTimeMS: 600000,
+      // 0 = never expire idle connections. A finite value makes the driver close every idle connection and
+      // immediately re-open it (minPoolSize), which looks like endless "closed / new connection" churn on a quiet dev server.
+      maxIdleTimeMS: Number(process.env.DB_MAX_IDLE_MS) || 0,
       serverSelectionTimeoutMS: 30000, // tolerate slow or unstable networks
       socketTimeoutMS: 45000,
       connectTimeoutMS: 30000,
@@ -41,8 +43,11 @@ const connectDB = async () => {
         if (e.duration >= slowMs) console.warn(`[DB-SLOW] ${e.commandName} took ${e.duration}ms`);
       });
       client.on('commandFailed', (e) => console.warn(`[DB-FAIL] ${e.commandName} failed after ${e.duration}ms: ${e.failure?.message || e.failure}`));
-      client.on('connectionCreated', () => console.warn('[DB-POOL] new connection opened'));
-      client.on('connectionClosed', (e) => console.warn(`[DB-POOL] connection closed (reason: ${e.reason})`));
+      // Pool open/close events are very chatty; they print only when DB_POOL_LOG=true.
+      if (process.env.DB_POOL_LOG === 'true') {
+        client.on('connectionCreated', () => console.warn('[DB-POOL] new connection opened'));
+        client.on('connectionClosed', (e) => console.warn(`[DB-POOL] connection closed (reason: ${e.reason})`));
+      }
     }
 
     isConnected = true;
