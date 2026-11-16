@@ -28,17 +28,17 @@ export default function PortalTasks() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-extrabold text-slate-900 m-0">My Tasks</h1>
+        <h1 className="text-[22px] sm:text-2xl font-extrabold text-slate-900 m-0 leading-tight">My Tasks</h1>
         <p className="text-sm text-slate-500 mt-1 mb-0">Tasks assigned to you. Open a task to start it, report progress and submit it for review.</p>
       </div>
       <div className="flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-52 max-w-sm">
+        <div className="relative w-full sm:flex-1 sm:min-w-52 sm:max-w-sm">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input className={`${inputCls} pl-10`} placeholder="Search tasks" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="flex gap-2 overflow-x-auto sm:flex-wrap -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 w-[calc(100%+2rem)] sm:w-auto [&::-webkit-scrollbar]:hidden">
           {FILTERS.map((f) => (
-            <button key={f} type="button" onClick={() => setStatus(f)} className={`px-3.5 py-2 rounded-full text-xs font-semibold border cursor-pointer ${status === f ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
+            <button key={f} type="button" onClick={() => setStatus(f)} className={`shrink-0 whitespace-nowrap px-4 py-2.5 rounded-full text-[13px] font-semibold border cursor-pointer ${status === f ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
               {f === 'ALL' ? 'All' : f}
             </button>
           ))}

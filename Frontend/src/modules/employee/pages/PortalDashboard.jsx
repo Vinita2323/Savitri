@@ -1,9 +1,19 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, LogIn, LogOut } from 'lucide-react';
+import { Bell, CalendarCheck, CalendarDays, CheckSquare, LogIn, LogOut } from 'lucide-react';
 import employeePortalService from '../../../services/employeePortalService';
 import { useEmployeeAuth } from '../context/EmployeeAuthContext';
-import { Badge, Card, Empty, Notice, Spinner, Stat, btnGhost, btnPrimary, fmtDate, fmtDateTime, fmtDuration, fmtTime } from '../components/ui';
+import { Badge, Card, Empty, Notice, Spinner, fmtClock, fmtDate, fmtDateTime, fmtDuration, fmtShort, fmtTime } from '../components/ui';
+
+const Tile = ({ label, value, tone, to }) => {
+  const colors = { slate: 'text-slate-900', amber: 'text-amber-600', violet: 'text-violet-600', blue: 'text-blue-600', green: 'text-emerald-600', red: 'text-rose-600' };
+  return (
+    <Link to={to} className="bg-white border border-slate-200 rounded-xl px-2 py-2.5 no-underline text-center active:bg-slate-50">
+      <p className={`text-lg font-extrabold m-0 leading-none ${colors[tone]}`}>{value}</p>
+      <p className="text-[10px] font-semibold text-slate-500 mt-1.5 mb-0 uppercase tracking-wide leading-tight">{label}</p>
+    </Link>
+  );
+};
 
 export default function PortalDashboard() {
   const { employee } = useEmployeeAuth();
@@ -35,82 +45,112 @@ export default function PortalDashboard() {
     }
   };
 
+  const role = [employee?.designation, employee?.department].filter((v) => v && v !== 'NA').join(' · ');
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold text-slate-900 m-0">Welcome, {employee?.fullName?.split(' ')[0]} 👋</h1>
-        <p className="text-sm text-slate-500 mt-1 mb-0">
-          {employee?.employeeId} · {employee?.designation}, {employee?.department} · {employee?.brandName}
-        </p>
+        <h1 className="text-lg sm:text-2xl font-extrabold text-slate-900 m-0 leading-tight">Hi, {employee?.fullName?.split(' ')[0]} 👋</h1>
+        <p className="text-xs sm:text-sm text-slate-500 mt-0.5 mb-0">{[employee?.employeeId, role].filter(Boolean).join(' · ')}</p>
       </div>
 
       {error && <Notice type="error">{error}</Notice>}
 
-      <Card
-        title="Today's attendance"
-        action={
-          today.isCheckedIn ? (
-            <button type="button" className={btnGhost} disabled={busy} onClick={() => act(() => employeePortalService.checkOut())}>
-              <LogOut className="w-4 h-4" /> Check out
-            </button>
-          ) : (
-            <button type="button" className={btnPrimary} disabled={busy} onClick={() => act(() => employeePortalService.checkIn())}>
-              <LogIn className="w-4 h-4" /> Check in
-            </button>
-          )
-        }
-      >
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div><p className="text-xs text-slate-500 font-semibold m-0">STATUS</p><div className="mt-1.5"><Badge status={today.status} /></div></div>
-          <div><p className="text-xs text-slate-500 font-semibold m-0">FIRST LOGIN</p><p className="text-lg font-bold text-slate-900 mt-1 mb-0">{fmtTime(today.firstLogin)}</p></div>
-          <div>
-            <p className="text-xs text-slate-500 font-semibold m-0">CHECK-IN / OUT</p>
-            <p className="text-lg font-bold text-slate-900 mt-1 mb-0">{today.isCheckedIn ? 'Checked in' : today.lastLogout ? `Out at ${fmtTime(today.lastLogout)}` : 'Not checked in'}</p>
-          </div>
-          <div><p className="text-xs text-slate-500 font-semibold m-0">WORKING HOURS</p><p className="text-lg font-bold text-slate-900 mt-1 mb-0">{fmtDuration(today.workedMinutes)}</p></div>
+      {/* Today's attendance: the main action, big and thumb-friendly */}
+      <section className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-5 shadow-xs">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-bold text-slate-900 m-0">Today</p>
+          <Badge status={today.status} />
         </div>
-        <p className="text-xs text-slate-400 mt-4 mb-0">
-          Office starts {rules.officeStartTime} (grace {rules.graceMinutes} min) · {today.loginCount} login{today.loginCount === 1 ? '' : 's'} today
-          {today.lateMinutes > 0 && <span className="text-amber-600 font-semibold"> · {today.lateMinutes} min late</span>}
-        </p>
-      </Card>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Stat label="Assigned" value={tasks.total} />
-        <Stat label="Pending" value={tasks.pending} tone="amber" />
-        <Stat label="In progress" value={tasks.inProgress} tone="violet" />
-        <Stat label="Under review" value={tasks.underReview} tone="blue" />
-        <Stat label="Completed" value={tasks.completed} tone="green" />
-        <Stat label="Overdue" value={tasks.overdue} tone="red" />
+        <div className="grid grid-cols-2 gap-2 mt-2.5">
+          <div className="bg-slate-50 rounded-xl px-3 py-2">
+            <p className="text-[10px] font-semibold text-slate-500 m-0 uppercase tracking-wide">First login</p>
+            <p className="text-base font-extrabold text-slate-900 mt-0.5 mb-0">{fmtTime(today.firstLogin)}</p>
+          </div>
+          <div className="bg-slate-50 rounded-xl px-3 py-2">
+            <p className="text-[10px] font-semibold text-slate-500 m-0 uppercase tracking-wide">Working time</p>
+            <p className="text-base font-extrabold text-slate-900 mt-0.5 mb-0">{fmtDuration(today.workedMinutes)}</p>
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-500 mt-2 mb-0 leading-snug">
+          {today.isCheckedIn ? <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-700"><span className="w-2 h-2 rounded-full bg-emerald-500" /> You are checked in</span> : today.lastLogout ? `Checked out at ${fmtTime(today.lastLogout)}` : 'You have not checked in yet'}
+        </p>
+        {today.lateMinutes > 0 && (
+          <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5 mt-2 mb-0 leading-snug">
+            You arrived <strong>{fmtShort(today.lateMinutes)}</strong> after office time ({fmtClock(rules.officeStartTime, Number(rules.graceMinutes) || 0)}).
+          </p>
+        )}
+
+        {today.isCheckedIn ? (
+          <button type="button" disabled={busy} onClick={() => act(() => employeePortalService.checkOut())} className="mt-2.5 w-full h-10 inline-flex items-center justify-center gap-2 text-sm font-bold text-slate-800 bg-white border-2 border-slate-300 rounded-xl active:bg-slate-50 disabled:opacity-60 cursor-pointer">
+            <LogOut className="w-4 h-4" /> Check out
+          </button>
+        ) : (
+          <button type="button" disabled={busy} onClick={() => act(() => employeePortalService.checkIn())} className="mt-2.5 w-full h-10 inline-flex items-center justify-center gap-2 text-sm font-bold text-white bg-emerald-600 active:bg-emerald-700 rounded-xl disabled:opacity-60 cursor-pointer border-0">
+            <LogIn className="w-4 h-4" /> Check in
+          </button>
+        )}
+
+        <p className="text-[11px] text-slate-400 mt-2 mb-0 text-center">Office opens {fmtClock(rules.officeStartTime)} · on time until {fmtClock(rules.officeStartTime, Number(rules.graceMinutes) || 0)}</p>
+      </section>
+
+      {/* Quick actions */}
+      <div className="grid grid-cols-2 gap-2">
+        <Link to="/employee/leaves" className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-3 h-11 no-underline text-slate-800 active:bg-slate-50">
+          <span className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><CalendarCheck className="w-4 h-4" /></span>
+          <span className="text-[13px] font-bold leading-tight whitespace-nowrap">Apply leave</span>
+        </Link>
+        <Link to="/employee/holidays" className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-3 h-11 no-underline text-slate-800 active:bg-slate-50">
+          <span className="w-7 h-7 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center shrink-0"><CalendarDays className="w-4 h-4" /></span>
+          <span className="text-[13px] font-bold leading-tight">Holidays</span>
+        </Link>
       </div>
 
-      <Card title="Upcoming holidays" action={<Link to="/employee/holidays" className="text-sm font-semibold text-emerald-700">View all</Link>}>
+      {/* Tasks */}
+      <section>
+        <div className="flex items-center justify-between mb-1.5">
+          <h2 className="text-sm font-bold text-slate-900 m-0 inline-flex items-center gap-1.5"><CheckSquare className="w-4 h-4 text-slate-500" /> My tasks</h2>
+          <Link to="/employee/tasks" className="inline-block py-3 -my-3 pl-4 text-[13px] font-semibold text-emerald-700 no-underline">View all</Link>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <Tile label="Assigned" value={tasks.total} tone="slate" to="/employee/tasks" />
+          <Tile label="Pending" value={tasks.pending} tone="amber" to="/employee/tasks" />
+          <Tile label="In progress" value={tasks.inProgress} tone="violet" to="/employee/tasks" />
+          <Tile label="In review" value={tasks.underReview} tone="blue" to="/employee/tasks" />
+          <Tile label="Done" value={tasks.completed} tone="green" to="/employee/tasks" />
+          <Tile label="Overdue" value={tasks.overdue} tone="red" to="/employee/tasks" />
+        </div>
+      </section>
+
+      <Card title="Upcoming holidays" action={<Link to="/employee/holidays" className="inline-block py-3 -my-3 pl-4 text-[13px] font-semibold text-emerald-700 no-underline">View all</Link>}>
         {!data.upcomingHolidays?.length ? (
-          <Empty>No upcoming holidays have been announced yet.</Empty>
+          <Empty>No upcoming holidays announced yet.</Empty>
         ) : (
-          <ul className="divide-y divide-slate-100 list-none p-0 m-0">
+          <ul className="divide-y divide-slate-100 list-none p-0 m-0 -my-1">
             {data.upcomingHolidays.map((h) => (
-              <li key={h._id} className="py-3 flex items-center justify-between gap-3">
-                <span className="text-sm font-semibold text-slate-900">{h.name}{h.isOptional && <span className="ml-2 text-xs font-medium text-slate-400">(optional)</span>}</span>
-                <span className="text-sm text-slate-600 whitespace-nowrap">{fmtDate(h.dateString + 'T12:00:00+05:30')}</span>
+              <li key={h._id} className="py-2 flex items-center justify-between gap-3">
+                <span className="text-[13px] font-semibold text-slate-900 min-w-0 break-words">{h.name}{h.isOptional && <span className="ml-1.5 text-xs font-medium text-slate-400">(optional)</span>}</span>
+                <span className="text-xs text-slate-600 whitespace-nowrap">{fmtDate(`${h.dateString}T12:00:00+05:30`)}</span>
               </li>
             ))}
           </ul>
         )}
       </Card>
 
-      <Card title={`Recent notifications${data.unreadNotifications ? ` (${data.unreadNotifications} new)` : ''}`} action={<Link to="/employee/notifications" className="text-sm font-semibold text-emerald-700">View all</Link>}>
+      <Card title={`Notifications${data.unreadNotifications ? ` (${data.unreadNotifications} new)` : ''}`} action={<Link to="/employee/notifications" className="inline-block py-3 -my-3 pl-4 text-[13px] font-semibold text-emerald-700 no-underline">View all</Link>}>
         {data.notifications.length === 0 ? (
           <Empty>No notifications yet.</Empty>
         ) : (
-          <ul className="divide-y divide-slate-100 list-none p-0 m-0">
+          <ul className="divide-y divide-slate-100 list-none p-0 m-0 -my-1">
             {data.notifications.map((n) => (
-              <li key={n._id} className="py-3 flex gap-3">
-                <span className={`mt-0.5 w-8 h-8 shrink-0 rounded-full flex items-center justify-center ${n.isRead ? 'bg-slate-100 text-slate-400' : 'bg-emerald-100 text-emerald-700'}`}><Bell className="w-4 h-4" /></span>
+              <li key={n._id} className="py-2 flex gap-2.5">
+                <span className={`mt-0.5 w-7 h-7 shrink-0 rounded-full flex items-center justify-center ${n.isRead ? 'bg-slate-100 text-slate-400' : 'bg-emerald-100 text-emerald-700'}`}><Bell className="w-3.5 h-3.5" /></span>
                 <div className="min-w-0">
-                  <p className={`text-sm m-0 ${n.isRead ? 'text-slate-600' : 'font-semibold text-slate-900'}`}>{n.title}</p>
-                  {n.message && <p className="text-xs text-slate-500 m-0 mt-0.5 break-words">{n.message}</p>}
-                  <p className="text-xs text-slate-400 m-0 mt-0.5">{fmtDateTime(n.createdAt)}</p>
+                  <p className={`text-[13px] m-0 leading-snug ${n.isRead ? 'text-slate-600' : 'font-semibold text-slate-900'}`}>{n.title}</p>
+                  {n.message && <p className="text-xs text-slate-500 m-0 mt-0.5 break-words leading-snug">{n.message}</p>}
+                  <p className="text-[11px] text-slate-400 m-0 mt-0.5">{fmtDateTime(n.createdAt)}</p>
                 </div>
               </li>
             ))}

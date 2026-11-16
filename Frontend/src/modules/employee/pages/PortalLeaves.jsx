@@ -43,7 +43,7 @@ export default function PortalLeaves() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-extrabold text-slate-900 m-0">Leave</h1>
+        <h1 className="text-[22px] sm:text-2xl font-extrabold text-slate-900 m-0 leading-tight">Leave</h1>
         <p className="text-sm text-slate-500 mt-1 mb-0">Approved leave is marked in your attendance automatically.</p>
       </div>
       {error && <Notice type="error">{error}</Notice>}

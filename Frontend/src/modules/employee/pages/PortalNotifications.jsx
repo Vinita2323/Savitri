@@ -29,7 +29,7 @@ export default function PortalNotifications() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 m-0">Notifications</h1>
+          <h1 className="text-[22px] sm:text-2xl font-extrabold text-slate-900 m-0 leading-tight">Notifications</h1>
           <p className="text-sm text-slate-500 mt-1 mb-0">Account, task, leave and attendance updates.</p>
         </div>
         {data?.unread > 0 && <button type="button" className={btnGhost} onClick={readAll}><CheckCheck className="w-4 h-4" /> Mark all read</button>}

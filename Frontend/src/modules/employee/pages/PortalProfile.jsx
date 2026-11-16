@@ -43,7 +43,7 @@ export default function PortalProfile() {
 
   return (
     <div className="space-y-5 max-w-3xl">
-      <h1 className="text-2xl font-extrabold text-slate-900 m-0">My Profile</h1>
+      <h1 className="text-[22px] sm:text-2xl font-extrabold text-slate-900 m-0 leading-tight">My Profile</h1>
       <Card title="Employment details (managed by your administrator)">
         <div className="grid sm:grid-cols-3 gap-5">
           <Row label="Name" value={employee?.fullName} /><Row label="Employee ID" value={employee?.employeeId} /><Row label="Email" value={employee?.email} />
@@ -76,6 +76,7 @@ export default function PortalProfile() {
           </div>
         </form>
       </Card>
+      <button type="button" onClick={async () => { await logout(); navigate('/employee/login', { replace: true }); }} className="w-full h-12 inline-flex items-center justify-center gap-2 text-base font-bold text-rose-600 bg-white border-2 border-rose-200 rounded-2xl active:bg-rose-50 cursor-pointer lg:hidden">Log out</button>
     </div>
   );
 }

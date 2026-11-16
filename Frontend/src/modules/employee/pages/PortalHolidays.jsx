@@ -24,7 +24,7 @@ export default function PortalHolidays() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 m-0">Holidays</h1>
+          <h1 className="text-[22px] sm:text-2xl font-extrabold text-slate-900 m-0 leading-tight">Holidays</h1>
           <p className="text-sm text-slate-500 mt-1 mb-0">Holidays announced by your administrator. These days are not counted as absent.</p>
         </div>
         <select className={`${inputCls} !w-auto`} value={year} onChange={(e) => setYear(e.target.value)}>

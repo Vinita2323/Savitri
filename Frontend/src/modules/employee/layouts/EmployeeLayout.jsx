@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Bell, CalendarCheck, CalendarDays, CheckSquare, Clock, LayoutDashboard, LogOut, Menu, User, X } from 'lucide-react';
+import { Bell, CalendarCheck, CalendarDays, CheckSquare, Clock, LayoutDashboard, LogOut, User } from 'lucide-react';
 import { useEmployeeAuth } from '../context/EmployeeAuthContext';
 import employeePortalService from '../../../services/employeePortalService';
 
-const NAV = [
+// Desktop sidebar shows everything; the phone's bottom bar keeps the five everyday tabs
+// (notifications live behind the bell, the profile behind the avatar).
+const SIDEBAR_NAV = [
   { to: '/employee/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/employee/attendance', label: 'Attendance', icon: Clock },
   { to: '/employee/tasks', label: 'My Tasks', icon: CheckSquare },
@@ -13,11 +15,17 @@ const NAV = [
   { to: '/employee/notifications', label: 'Notifications', icon: Bell },
   { to: '/employee/profile', label: 'My Profile', icon: User },
 ];
+const TABS = [
+  { to: '/employee/dashboard', label: 'Home', icon: LayoutDashboard },
+  { to: '/employee/attendance', label: 'Attendance', icon: Clock },
+  { to: '/employee/tasks', label: 'Tasks', icon: CheckSquare },
+  { to: '/employee/leaves', label: 'Leave', icon: CalendarCheck },
+  { to: '/employee/holidays', label: 'Holidays', icon: CalendarDays },
+];
 
 export default function EmployeeLayout() {
   const { employee, logout } = useEmployeeAuth();
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -43,79 +51,95 @@ export default function EmployeeLayout() {
     navigate('/employee/login', { replace: true });
   };
 
-  const sidebar = (
-    <nav className="flex flex-col h-full">
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-100">
-        <img src="/LogoSavitri.png" alt="" className="w-9 h-9 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
-        <div>
-          <p className="text-sm font-extrabold text-slate-900 m-0 leading-tight">Employee Portal</p>
-          <p className="text-xs text-slate-500 m-0">{employee?.brandName}</p>
-        </div>
-      </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-1">
-        {NAV.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            onClick={() => setOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold no-underline transition-colors ${
-                isActive ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              }`
-            }
-          >
-            <Icon className="w-4.5 h-4.5" />
-            <span className="flex-1">{label}</span>
-            {to.endsWith('notifications') && unread > 0 && (
-              <span className="min-w-5 h-5 px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center">{unread > 99 ? '99+' : unread}</span>
-            )}
-          </NavLink>
-        ))}
-      </div>
-      <div className="p-3 border-t border-slate-100">
-        <button type="button" onClick={handleLogout} className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 cursor-pointer bg-transparent border-0">
-          <LogOut className="w-4.5 h-4.5" /> Logout
-        </button>
-      </div>
-    </nav>
+  const avatar = employee?.avatar ? (
+    <img src={employee.avatar} alt="" className="w-9 h-9 rounded-full object-cover" />
+  ) : (
+    <span className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold flex items-center justify-center">{(employee?.fullName || '?').charAt(0).toUpperCase()}</span>
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 lg:flex">
-      <aside className="hidden lg:block w-64 shrink-0 bg-white border-r border-slate-200 sticky top-0 h-screen">{sidebar}</aside>
-
-      {open && (
-        <div className="lg:hidden fixed inset-0 z-40 flex">
-          <div className="absolute inset-0 bg-slate-900/40" onClick={() => setOpen(false)} />
-          <aside className="relative w-72 max-w-[85%] bg-white h-full shadow-xl">{sidebar}</aside>
+    <div className="min-h-[100dvh] bg-slate-50 lg:flex">
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex lg:flex-col w-64 shrink-0 bg-white border-r border-slate-200 sticky top-0 h-screen">
+        <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-100">
+          <img src="/LogoSavitri.png" alt="" className="w-9 h-9 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
+          <div>
+            <p className="text-sm font-extrabold text-slate-900 m-0 leading-tight">Employee Portal</p>
+            <p className="text-xs text-slate-500 m-0">{employee?.brandName}</p>
+          </div>
         </div>
-      )}
-
-      <div className="flex-1 min-w-0">
-        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200 px-4 sm:px-6 h-14 flex items-center gap-3">
-          <button type="button" className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-slate-100 cursor-pointer bg-transparent border-0" onClick={() => setOpen((o) => !o)} aria-label="Menu">
-            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+          {SIDEBAR_NAV.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold no-underline transition-colors ${isActive ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`
+              }
+            >
+              <Icon className="w-5 h-5" />
+              <span className="flex-1">{label}</span>
+              {to.endsWith('notifications') && unread > 0 && (
+                <span className="min-w-5 h-5 px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center">{unread > 99 ? '99+' : unread}</span>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="p-3 border-t border-slate-100">
+          <button type="button" onClick={handleLogout} className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 cursor-pointer bg-transparent border-0">
+            <LogOut className="w-5 h-5" /> Logout
           </button>
+        </div>
+      </aside>
+
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Top bar: compact on phones */}
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-4 sm:px-6 h-14 flex items-center gap-3 pt-[env(safe-area-inset-top,0px)] box-content">
+          <div className="lg:hidden flex items-center gap-2.5 min-w-0">
+            <img src="/LogoSavitri.png" alt="" className="w-8 h-8 object-contain shrink-0" onError={(e) => (e.currentTarget.style.display = 'none')} />
+            <div className="min-w-0 leading-tight">
+              <p className="text-[15px] font-extrabold text-slate-900 m-0 truncate">Employee Portal</p>
+              <p className="text-xs text-slate-500 m-0 truncate">{employee?.brandName}</p>
+            </div>
+          </div>
           <div className="flex-1" />
-          <NavLink to="/employee/notifications" className="relative p-2 rounded-lg hover:bg-slate-100 text-slate-600" aria-label="Notifications">
-            <Bell className="w-5 h-5" />
-            {unread > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full" />}
+          <NavLink to="/employee/notifications" className="relative w-11 h-11 -mr-1 rounded-full hover:bg-slate-100 text-slate-600 flex items-center justify-center" aria-label="Notifications">
+            <Bell className="w-6 h-6" />
+            {unread > 0 && <span className="absolute top-2 right-2 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">{unread > 9 ? '9+' : unread}</span>}
           </NavLink>
-          <div className="flex items-center gap-2.5">
-            {employee?.avatar ? (
-              <img src={employee.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
-            ) : (
-              <span className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold flex items-center justify-center">{(employee?.fullName || '?').charAt(0).toUpperCase()}</span>
-            )}
+          <NavLink to="/employee/profile" className="flex items-center justify-center gap-2.5 no-underline min-w-11 min-h-11" aria-label="My profile">
+            {avatar}
             <div className="hidden sm:block leading-tight">
               <p className="text-sm font-semibold text-slate-800 m-0">{employee?.fullName}</p>
               <p className="text-xs text-slate-500 m-0">{employee?.employeeId}</p>
             </div>
-          </div>
+          </NavLink>
         </header>
-        <main className="p-4 sm:p-6 max-w-6xl mx-auto">
+
+        <main className="flex-1 w-full max-w-6xl mx-auto px-4 pt-4 sm:p-6 pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] lg:pb-6">
           <Outlet />
         </main>
+
+        {/* Phone bottom tab bar */}
+        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom,0px)]" aria-label="Main">
+          <ul className="grid grid-cols-5 list-none m-0 p-0">
+            {TABS.map(({ to, label, icon: Icon }) => (
+              <li key={to}>
+                <NavLink
+                  to={to}
+                  className={({ isActive }) => `flex flex-col items-center justify-center gap-0.5 h-14 no-underline text-[10px] font-semibold transition-colors ${isActive ? 'text-emerald-700' : 'text-slate-500'}`}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span className={`w-11 h-6 rounded-full flex items-center justify-center transition-colors ${isActive ? 'bg-emerald-100' : ''}`}><Icon className="w-5 h-5" /></span>
+                      <span>{label}</span>
+                    </>
+                  )}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
     </div>
   );

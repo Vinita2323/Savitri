@@ -15,6 +15,24 @@ export const fmtDuration = (minutes) => {
   return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
 };
 
+/** '09:30' -> '9:30 AM' */
+export const fmtClock = (hhmm, addMinutes = 0) => {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || '');
+  if (!m) return '';
+  const total = (((Number(m[1]) * 60 + Number(m[2]) + addMinutes) % 1440) + 1440) % 1440;
+  const h = Math.floor(total / 60);
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(total % 60).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+};
+
+/** 188 -> '3 hr 8 min', 45 -> '45 min', 120 -> '2 hr' */
+export const fmtShort = (minutes) => {
+  const m = Math.max(0, Math.round(Number(minutes) || 0));
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  if (h === 0) return `${r} min`;
+  return r === 0 ? `${h} hr` : `${h} hr ${r} min`;
+};
+
 /** Date input value (YYYY-MM-DD) for "today" in India. */
 export const todayIST = () => new Date().toLocaleDateString('en-CA', { timeZone: TZ });
 
@@ -45,21 +63,21 @@ export const Badge = ({ children, tone, status }) => {
 export const Card = ({ title, action, children, className = '' }) => (
   <div className={`bg-white border border-slate-200 rounded-2xl shadow-xs ${className}`}>
     {(title || action) && (
-      <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-100">
-        <h3 className="text-sm font-bold text-slate-800 m-0">{title}</h3>
+      <div className="flex items-center justify-between gap-3 px-3 sm:px-5 py-2 sm:py-3.5 border-b border-slate-100">
+        <h3 className="text-[13px] sm:text-sm font-bold text-slate-800 m-0">{title}</h3>
         {action}
       </div>
     )}
-    <div className="p-5">{children}</div>
+    <div className="px-3 py-2 sm:p-5">{children}</div>
   </div>
 );
 
 export const Stat = ({ label, value, hint, tone = 'slate' }) => {
   const colors = { slate: 'text-slate-900', green: 'text-emerald-600', amber: 'text-amber-600', red: 'text-rose-600', blue: 'text-blue-600', violet: 'text-violet-600' };
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-      <p className="text-xs font-semibold text-slate-500 m-0 uppercase tracking-wide">{label}</p>
-      <p className={`text-2xl font-extrabold mt-1.5 mb-0 ${colors[tone]}`}>{value}</p>
+    <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-xs">
+      <p className="text-[11px] sm:text-xs font-semibold text-slate-500 m-0 uppercase tracking-wide leading-tight">{label}</p>
+      <p className={`text-xl sm:text-2xl font-extrabold mt-1 sm:mt-1.5 mb-0 ${colors[tone]}`}>{value}</p>
       {hint && <p className="text-xs text-slate-400 mt-1 mb-0">{hint}</p>}
     </div>
   );
@@ -96,4 +114,4 @@ export const Spinner = ({ label = 'Loading…' }) => (
   </div>
 );
 
-export const Empty = ({ children }) => <div className="text-center py-12 text-sm text-slate-500">{children}</div>;
+export const Empty = ({ children }) => <div className="text-center py-5 sm:py-12 text-[13px] sm:text-sm text-slate-500">{children}</div>;
