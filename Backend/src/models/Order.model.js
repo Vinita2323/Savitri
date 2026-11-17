@@ -89,6 +89,8 @@ const orderSchema = new mongoose.Schema(
         'Delivered',
         'Cancelled',
         'Returned',
+        'Return to Origin',
+        'Returned to Seller',
         'Return Requested',
         'Return Approved',
         'Return Rejected',

@@ -6,6 +6,8 @@ import { mockCourierProvider } from './mockCourierProvider.js';
 import { shiprocketProvider } from './shiprocketProvider.js';
 import { validatePackage, chargeableWeightKg, packageFromItems } from './shippingCalculator.js';
 import { pickupAddressProblem, applyParentRollup } from '../fulfillmentService.js';
+import { processRtoRefunds } from './courierRefundService.js';
+import Seller from '../../models/Seller.model.js';
 
 /**
  * The only module order / seller / admin code uses to reach a courier. It picks the provider from
@@ -299,10 +301,40 @@ const DESCRIPTION = {
  * and uses a compare-and-set on the current status so two concurrent events cannot both apply.
  * Does NOT touch payment, settlement or refunds, and sends no customer notification (a later phase decides those).
  */
+/**
+ * Credit the seller for a courier-delivered fulfilment. Reuses the existing settlement routine
+ * (orderController.processSellerSettlement): it atomically moves the notification PENDING -> SETTLED and is the
+ * only place that computes commission and credits the seller wallet, so calling it again is a harmless no-op.
+ * Called only for a confirmed DELIVERED shipment status.
+ */
+const settleDeliveredFulfillment = async (f) => {
+  if (!f?.notification || f.fulfillmentType !== 'STANDARD') return null;
+  try {
+    const { processSellerSettlement } = await import('../../controllers/orderController.js');
+    return await processSellerSettlement(f.notification);
+  } catch (e) {
+    console.error('[Courier] settlement after delivery failed for fulfilment', String(f._id), e.message);
+    return null;
+  }
+};
+
+/** Refund the customer for returned courier parcels. Idempotent; a failure is logged and retried by the next RTO event. */
+const refundReturnedOrder = async (f) => {
+  try { return await processRtoRefunds(f.order); } catch (e) {
+    console.error('[Courier] RTO refund failed for order', String(f.order), e.message);
+    return null;
+  }
+};
+
 export const applyShipmentEvent = async (f, status, { simulated = false, description, location = '', reason = '' } = {}) => {
   requireStandard(f);
   const current = f.shipment?.status || 'NOT_CREATED';
-  if (current === status) return { duplicate: true, fulfillment: f };
+  if (current === status) {
+    // a repeated DELIVERED event re-runs the (idempotent) settlement, so a failed first attempt can recover
+    if (status === 'DELIVERED') await settleDeliveredFulfillment(f);
+    if (status === 'RTO_DELIVERED') await refundReturnedOrder(f);
+    return { duplicate: true, fulfillment: f };
+  }
   if (!(NEXT_SHIPMENT_STATUS[current] || []).includes(status)) {
     throw new CourierError(`Cannot move a shipment from ${current} to ${status}.`, 'INVALID_TRANSITION', 409, { allowed: NEXT_SHIPMENT_STATUS[current] || [] });
   }
@@ -324,6 +356,10 @@ export const applyShipmentEvent = async (f, status, { simulated = false, descrip
     await SellerNotification.updateOne({ _id: updated.notification, status: { $nin: ['REJECTED', 'Rejected'] } }, { $set: { status: NOTIFICATION_FOR[status] } }).catch(() => {});
   }
   await applyParentRollup(updated.order, { force: true });
+  // seller is paid only once the courier has confirmed delivery - never on pickup, transit, out-for-delivery, failed attempt or RTO
+  if (status === 'DELIVERED') await settleDeliveredFulfillment(updated);
+  // a parcel that came back is refunded to the customer (never settled to the seller); safe to repeat
+  if (status === 'RTO_DELIVERED') await refundReturnedOrder(updated);
   return { duplicate: false, fulfillment: updated };
 };
 
@@ -338,3 +374,57 @@ export const simulateShipmentEvent = async (f, status, opts = {}) => {
 };
 
 export const loadOrderFor = (f) => Order.findById(f.order).select('orderId paymentMethod paymentStatus grandTotal user').lean();
+
+// --------------------------------------------------------------------------------------------------
+// Checkout: is the courier part of a cart deliverable? (the server re-checks this on every order)
+// --------------------------------------------------------------------------------------------------
+/**
+ * groups: [{ sellerKey, sellerName, pickupPincode, items: [{ name, quantity, weightKg, length, breadth, height }] }]
+ * Returns { ok, unavailable, problems: [{ sellerKey, code, message }], perSeller: { [sellerKey]: { serviceable, message } } }.
+ * Never claims a PIN is serviceable unless the active provider says so; without a usable provider nothing is.
+ */
+export const checkCartCourierServiceability = async ({ groups = [], deliveryPincode }) => {
+  const problems = [];
+  const perSeller = {};
+  const cfg = getCourierConfig();
+  const mark = (g, code, message) => { problems.push({ sellerKey: g.sellerKey, code, message }); perSeller[g.sellerKey] = { serviceable: false, message }; };
+  if (!cfg.available) {
+    for (const g of groups) mark(g, 'COURIER_UNAVAILABLE', 'Courier delivery is not available right now, so these items cannot be ordered at the moment.');
+    return { ok: groups.length === 0, unavailable: groups.length > 0, problems, perSeller };
+  }
+  for (const g of groups) {
+    const pkg = packageFromItems(g.items || []);
+    if (!pkg.complete) { mark(g, 'PACKAGE_INCOMPLETE', `Courier delivery is not available for items from ${g.sellerName}.`); continue; }
+    try {
+      const res = await checkServiceability({
+        pickupPincode: g.pickupPincode, deliveryPincode,
+        weightKg: pkg.weightKg, length: pkg.length, breadth: pkg.breadth, height: pkg.height, paymentMethod: 'PREPAID',
+      });
+      if (res.serviceable) perSeller[g.sellerKey] = { serviceable: true, message: '' };
+      else mark(g, 'NOT_SERVICEABLE', `Courier delivery is not available to PIN code ${deliveryPincode} for items from ${g.sellerName}.`);
+    } catch (e) {
+      if (e instanceof CourierError && e.code === 'INVALID_INPUT') {
+        mark(g, 'INVALID_PIN', /Delivery PIN/.test(e.message) ? 'Please enter a valid 6-digit delivery PIN code to order courier-delivered items.' : `Courier delivery is not available for items from ${g.sellerName}.`);
+      } else if (e instanceof CourierError && e.code === 'COURIER_UNAVAILABLE') {
+        mark(g, 'COURIER_UNAVAILABLE', 'Courier delivery is not available right now, so these items cannot be ordered at the moment.');
+      } else {
+        mark(g, 'COURIER_CHECK_FAILED', 'We could not confirm courier delivery for these items right now. Please try again shortly.');
+      }
+    }
+  }
+  return { ok: problems.length === 0, unavailable: problems.some((p) => p.code === 'COURIER_UNAVAILABLE'), problems, perSeller };
+};
+
+/** Build the per-seller package groups for the STANDARD sellers of a cart (pickup PIN read from the seller record). */
+export const buildCourierGroups = async ({ standardSellers = [], products = [], quantityByProduct = new Map(), sellerKeyOf }) => {
+  const ids = standardSellers.map((x) => x.sellerId).filter((id) => /^[a-f0-9]{24}$/i.test(String(id)));
+  const docs = ids.length ? await Seller.find({ _id: { $in: ids } }).select('pickupAddress.pincode').lean() : [];
+  const pinById = new Map(docs.map((d) => [String(d._id), d.pickupAddress?.pincode || '']));
+  return standardSellers.map((sel) => ({
+    sellerKey: sel.sellerKey, sellerName: sel.sellerName, pickupPincode: pinById.get(String(sel.sellerId)) || '',
+    items: products.filter((p) => sellerKeyOf(p) === sel.sellerKey).map((p) => ({
+      name: p.name, quantity: quantityByProduct.get(String(p._id)) || 1,
+      weightKg: p.weightKg, length: p.length, breadth: p.breadth, height: p.height,
+    })),
+  }));
+};

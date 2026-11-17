@@ -120,6 +120,13 @@ const TrackOrder = () => {
   const captainStatus = order?.captainStatus || '';
   const sellerStatus = order?.sellerStatus || '';
   const deliveryOtp = order?.deliveryOtp || '';
+  // Delivery method of each seller's part comes from the server's fulfilment records. Orders without any (legacy)
+  // keep the existing captain-delivery behaviour; courier (STANDARD) parts never show captain instructions.
+  const fulfs = Array.isArray(order?.fulfillments) ? order.fulfillments : [];
+  const courierParts = fulfs.filter((f) => f.fulfillmentType === 'STANDARD');
+  const instantParts = fulfs.filter((f) => f.fulfillmentType !== 'STANDARD');
+  const hasCaptainDelivery = fulfs.length === 0 || instantParts.length > 0;
+  const instantOutForDelivery = fulfs.length === 0 ? true : instantParts.some((f) => f.fulfillmentStatus === 'OUT_FOR_DELIVERY');
   const sellerHasAccepted = [
     'Accepted',
     'ACCEPTED',
@@ -275,6 +282,15 @@ const TrackOrder = () => {
 
   // Live captain tracking (map + polyline) — only while the order is out for delivery
   const isOutForDelivery = sellerHasAccepted && !isDelivered && (orderStatus === 'Out for Delivery' || captainStatus === 'In Transit' || captainStatus === 'Picked Up');
+  // captain map / OTP only while an INSTANT (captain-delivered) part is actually out for delivery
+  const courierRefunds = Array.isArray(order?.courierRefunds) ? order.courierRefunds : [];
+  const refundLine = (r) => {
+    const what = r.kind === 'DELIVERY_FEE' ? 'delivery fee' : 'items';
+    if (r.to === 'WALLET') return r.status === 'COMPLETED' ? `₹${Number(r.amount).toFixed(2)} (${what}) has been credited to your wallet.` : `₹${Number(r.amount).toFixed(2)} (${what}) is being credited to your wallet.`;
+    return r.status === 'COMPLETED' ? `₹${Number(r.amount).toFixed(2)} (${what}) has been refunded to your original payment method.` : `Refund of ₹${Number(r.amount).toFixed(2)} (${what}) has been requested. It will be returned to your original payment method once it is processed.`;
+  };
+  const showCaptainTracking = hasCaptainDelivery && instantOutForDelivery && isOutForDelivery;
+  const COURIER_STATUS_TEXT = { PENDING: 'Order received', CONFIRMED: 'Confirmed by seller', PROCESSING: 'Being prepared', PACKED: 'Packed, waiting for courier', READY_FOR_DISPATCH: 'Packed, waiting for courier pickup', IN_TRANSIT: 'In transit with courier', OUT_FOR_DELIVERY: 'Out for delivery', DELIVERED: 'Delivered', CANCELLED: 'Cancelled', FAILED: 'Delivery could not be completed', RETURN_REQUESTED: 'Return requested', RETURNED: 'Returned to seller' };
   const captainLiveCoords = order?.captainId?.liveLocation?.coordinates;
   const captainPosition = Array.isArray(captainLiveCoords) && captainLiveCoords.length === 2
     ? { lat: captainLiveCoords[1], lng: captainLiveCoords[0] }
@@ -319,6 +335,8 @@ const TrackOrder = () => {
     if (orderStatus === 'Out for Delivery' || captainStatus === 'In Transit') return { text: 'Out for Delivery', color: 'bg-amber-50 text-amber-700 border-amber-200' };
     if (sellerHasAccepted && (captainStatus === 'At Pickup' || orderStatus === 'Reached Store / Pickup')) return { text: 'Captain at Store', color: 'bg-blue-50 text-blue-700 border-blue-200' };
     if (sellerHasAccepted && (orderStatus === 'Accepted' || orderStatus === 'Processing' || sellerStatus === 'Accepted' || sellerStatus === 'ACCEPTED')) return { text: 'Order Accepted', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+    if (orderStatus === 'Return to Origin') return { text: 'Returning to Seller', color: 'bg-amber-50 text-amber-700 border-amber-200' };
+    if (orderStatus === 'Returned to Seller') return { text: 'Returned to Seller', color: 'bg-purple-50 text-purple-700 border-purple-200' };
     if (orderStatus === 'Rejected') return { text: 'Rejected', color: 'bg-red-50 text-red-700 border-red-200' };
     if (orderStatus === 'Payment Pending') return { text: 'Payment Pending', color: 'bg-amber-50 text-amber-800 border-amber-200' };
     return { text: 'Order Placed', color: 'bg-orange-50 text-[#E6A800] border-orange-200/60' };
@@ -404,6 +422,16 @@ const TrackOrder = () => {
                 </span>
               </div>
 
+              {/* Courier return (RTO): not a seller rejection. Refund wording only claims what has actually happened. */}
+              {(orderStatus === 'Return to Origin' || orderStatus === 'Returned to Seller' || courierRefunds.length > 0) && (
+                <div data-testid="courier-return-note" className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs mt-1 space-y-1">
+                  {orderStatus === 'Return to Origin' && <span className="font-extrabold block text-amber-900">The courier could not deliver your order. The parcel is being returned to the seller.</span>}
+                  {orderStatus === 'Returned to Seller' && <span className="font-extrabold block text-amber-900">The courier could not deliver your order. The parcel has been returned to the seller.</span>}
+                  {orderStatus !== 'Return to Origin' && orderStatus !== 'Returned to Seller' && <span className="font-extrabold block text-amber-900">One of your courier parcels could not be delivered and was returned to the seller.</span>}
+                  {courierRefunds.map((r, i) => <span key={i} className="font-medium text-slate-700 block">{refundLine(r)}</span>)}
+                </div>
+              )}
+
               {/* Rejection Alert Box */}
               {orderStatus === 'Rejected' && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-xs mt-1">
@@ -453,7 +481,7 @@ const TrackOrder = () => {
               </div>
             </div>
 
-            {isDelivered && order?.captainId && (
+            {hasCaptainDelivery && isDelivered && order?.captainId && (
               <div className="bg-white rounded-2xl p-4 md:p-5 border border-emerald-100 shadow-xs space-y-3">
                 <div className="flex items-center gap-2">
                   <Truck size={18} className="text-emerald-600" />
@@ -655,7 +683,7 @@ const TrackOrder = () => {
                         <h3 className="text-[13px] md:text-sm font-extrabold text-slate-900 m-0">Return / Replacement</h3>
                       </div>
                       <p className="text-[11px] text-slate-500 m-0">
-                        Items eligible for return within <span className="font-bold text-slate-700">7 days of delivery</span>. Easy door-step pickup by Captain.
+                        Items eligible for return within <span className="font-bold text-slate-700">7 days of delivery</span>. {hasCaptainDelivery ? ' Easy door-step pickup by Captain.' : ' Our team will arrange the return pickup.'}
                       </p>
                     </div>
 
@@ -672,8 +700,30 @@ const TrackOrder = () => {
               </div>
             )}
 
+            {/* Courier (STANDARD) parts: status only. No captain, no OTP, and the server hides simulated courier data. */}
+            {courierParts.length > 0 && (
+              <div data-testid="courier-tracking" className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200 shadow-xs space-y-3">
+                <div className="flex items-center gap-2">
+                  <Truck size={18} className="text-sky-600" />
+                  <h3 className="text-[13px] md:text-sm font-extrabold text-slate-900 m-0">Courier Delivery</h3>
+                </div>
+                {courierParts.map((f) => (
+                  <div key={f._id} className="text-[12px] text-slate-700">
+                    <p className="m-0 font-semibold text-slate-900">{f.sellerName}{(f.items || []).length > 0 ? ' · ' + f.items.map((i) => i.name + ' × ' + i.quantity).join(', ') : ''}</p>
+                    <p className="m-0 text-slate-600">{COURIER_STATUS_TEXT[f.fulfillmentStatus] || f.fulfillmentStatus}</p>
+                    {f.shipmentReference?.awb && (
+                      <p className="m-0 text-slate-500">Tracking ID: <span className="font-mono font-semibold text-slate-800">{f.shipmentReference.awb}</span>
+                        {f.shipmentReference.trackingUrl && <> · <a href={f.shipmentReference.trackingUrl} target="_blank" rel="noreferrer" className="text-sky-700 underline">Track shipment</a></>}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                <p className="m-0 text-[11px] text-slate-500">Delivery by our courier partner. Delivery time depends on the courier.</p>
+              </div>
+            )}
+
             {/* Live Delivery Map (captain position + route polyline, only while Out for Delivery) */}
-            {isOutForDelivery && captainPosition && (
+            {showCaptainTracking && captainPosition && (
               <div className="bg-white rounded-2xl p-3 md:p-4 border border-slate-100 shadow-xs flex flex-col gap-2">
                 <div className="flex items-center gap-2 px-1">
                   <Truck size={16} className="text-[#E6A800]" />
@@ -683,7 +733,7 @@ const TrackOrder = () => {
               </div>
             )}
 
-            {isOutForDelivery && deliveryOtp && !order?.deliveryOtpVerified && (
+            {showCaptainTracking && deliveryOtp && !order?.deliveryOtpVerified && (
               <div className="bg-amber-50 rounded-2xl p-4 md:p-5 border border-amber-200 shadow-xs flex items-center justify-between gap-3">
                 <div>
                   <span className="text-[10px] md:text-xs font-black text-amber-800 uppercase tracking-wider block">Delivery OTP</span>
@@ -694,7 +744,7 @@ const TrackOrder = () => {
             )}
 
             {/* Captain Information (ONLY shown when order is NOT yet delivered) */}
-            {sellerHasAccepted && captainHasAccepted && order?.captainId && !isDelivered && (
+            {hasCaptainDelivery && sellerHasAccepted && captainHasAccepted && order?.captainId && !isDelivered && (
               <div className="bg-white rounded-2xl p-4 md:p-5 border border-slate-100 shadow-xs flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 md:gap-4">
                   <div className="w-11 h-11 md:w-14 md:h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">

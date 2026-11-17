@@ -92,6 +92,10 @@ const refundRequestSchema = new mongoose.Schema(
       initiatedBy: { id: String, email: String, role: String },
     },
     treasuryAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'TreasuryAccount', default: null },
+    // Idempotency key for system-created refunds (e.g. RTO:<fulfilmentId>, RTO-FEE:<orderId>): one refund per key, ever
+    refundKey: { type: String, default: undefined },
+    // Short-lived lock while a wallet credit for this refund is in flight (prevents a double credit)
+    creditClaimedAt: { type: Date, default: null },
     processedAt: {
       type: Date,
       default: null,
@@ -102,6 +106,7 @@ const refundRequestSchema = new mongoose.Schema(
   }
 );
 
+refundRequestSchema.index({ refundKey: 1 }, { unique: true, partialFilterExpression: { refundKey: { $type: 'string' } } });
 refundRequestSchema.index({ orderId: 1, createdAt: -1 });
 refundRequestSchema.index({ userId: 1, createdAt: -1 });
 refundRequestSchema.index({ status: 1, createdAt: -1 });

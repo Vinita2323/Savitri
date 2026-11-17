@@ -3,7 +3,8 @@ import User from '../models/User.model.js';
 import Product from '../models/Product.model.js';
 import Order from '../models/Order.model.js';
 import OrderFulfillment from '../models/OrderFulfillment.model.js';
-import { evaluateCartFulfillment } from '../services/fulfillmentService.js';
+import { evaluateCartFulfillment, sellerKeyForProduct } from '../services/fulfillmentService.js';
+import { checkCartCourierServiceability, buildCourierGroups } from '../services/courier/courierService.js';
 import { orderScopeFilter, orderInScope } from '../middleware/scopeMiddleware.js';
 
 const isId = (v) => mongoose.Types.ObjectId.isValid(String(v || ''));
@@ -43,6 +44,21 @@ export const getFulfillmentOptions = async (req, res) => {
       products,
       customer: { lat: req.query.lat ?? req.query.latitude, lng: req.query.lng ?? req.query.longitude },
     });
+    // Optional early warning: when the customer's PIN is known, say whether the courier can deliver each courier part
+    const pin = String(req.query.pincode || '').trim();
+    if (pin) {
+      const courierSellers = result.sellers.filter((x) => x.selectedMethod === 'STANDARD');
+      if (courierSellers.length) {
+        const quantityByProduct = new Map();
+        const user = await User.findById(req.user.id).select('cart').lean();
+        for (const c of user?.cart || []) quantityByProduct.set(String(c.product?._id || c.product || ''), Number(c.quantity || 1));
+        const groups = await buildCourierGroups({ standardSellers: courierSellers, products, quantityByProduct, sellerKeyOf: sellerKeyForProduct });
+        const check = await checkCartCourierServiceability({ groups, deliveryPincode: pin });
+        for (const x of result.sellers) {
+          if (x.selectedMethod === 'STANDARD') x.courier = { serviceable: check.perSeller[x.sellerKey]?.serviceable === true, message: check.perSeller[x.sellerKey]?.message || '' };
+        }
+      }
+    }
     res.json({ success: true, ...result });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message || 'Could not evaluate delivery options' });

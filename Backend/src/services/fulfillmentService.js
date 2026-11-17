@@ -272,7 +272,14 @@ const INACTIVE = new Set(['CANCELLED', 'FAILED', 'RETURNED']);
 /** Pure: parent Order.orderStatus implied by a set of fulfilments (only meaningful when there are 2 or more). */
 export const rollupParentStatus = (fulfillments = []) => {
   const active = fulfillments.filter((f) => !INACTIVE.has(f.fulfillmentStatus));
-  if (active.length === 0) return 'Rejected';
+  if (active.length === 0) {
+    // Nothing left to deliver. A courier return-to-origin is NOT a seller rejection: FAILED only ever comes from a
+    // courier RTO in progress, RETURNED from a completed RTO. Only when every part was declined by sellers is it Rejected.
+    if (fulfillments.some((f) => f.fulfillmentStatus === 'FAILED')) return 'Return to Origin';
+    // (distinct from 'Returned', which already means a customer-initiated return of a delivered order)
+    if (fulfillments.some((f) => f.fulfillmentStatus === 'RETURNED')) return 'Returned to Seller';
+    return 'Rejected';
+  }
   if (active.every((f) => f.fulfillmentStatus === 'DELIVERED')) return 'Delivered';
   const open = active.filter((f) => f.fulfillmentStatus !== 'DELIVERED');
   // the captain workflow drives the customer-facing tracking, so INSTANT fulfilments take precedence while open

@@ -7,7 +7,7 @@ import { fulfillmentService } from '../../../services/authService';
  * Only appears when a cart has courier-delivered items or items that cannot be delivered; a normal all-instant cart
  * keeps the existing checkout unchanged. The server re-validates everything on placeOrder.
  */
-const DeliveryMethodsCard = ({ lat, lng, cartKey, onChange }) => {
+const DeliveryMethodsCard = ({ lat, lng, pincode, cartKey, onChange }) => {
   const [data, setData] = useState(null);
   const [choice, setChoice] = useState({});
 
@@ -15,7 +15,7 @@ const DeliveryMethodsCard = ({ lat, lng, cartKey, onChange }) => {
     let alive = true;
     (async () => {
       try {
-        const res = await fulfillmentService.getOptions({ lat, lng });
+        const res = await fulfillmentService.getOptions({ lat, lng, pincode: pincode || undefined });
         if (!alive || !res?.success) return;
         setData(res);
         setChoice({});
@@ -24,7 +24,7 @@ const DeliveryMethodsCard = ({ lat, lng, cartKey, onChange }) => {
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lat, lng, cartKey]);
+  }, [lat, lng, pincode, cartKey]);
 
   if (!data || !Array.isArray(data.sellers)) return null;
   const relevant = data.sellers.some((s) => s.standardEligible || !s.deliverable);
@@ -62,8 +62,14 @@ const DeliveryMethodsCard = ({ lat, lng, cartKey, onChange }) => {
                   <span className="font-semibold">{current === 'INSTANT' ? 'Instant delivery' : 'Standard delivery (courier)'}</span>
                 </p>
               )}
-              {s.deliverable && current === 'STANDARD' && (
-                <p className="text-[11px] text-slate-500 m-0 mt-1.5">Courier availability for your PIN code is confirmed after the order is placed. Delivery time depends on the courier.</p>
+              {s.deliverable && current === 'STANDARD' && s.courier?.serviceable === false && (
+                <p data-testid="courier-unavailable" className="text-xs text-rose-600 m-0 mt-1.5 flex items-start gap-1.5"><AlertCircle size={14} className="shrink-0 mt-0.5" />{s.courier.message || 'Courier delivery is not available to your PIN code.'} Please remove these items or choose a different delivery address.</p>
+              )}
+              {s.deliverable && current === 'STANDARD' && s.courier?.serviceable === true && (
+                <p className="text-[11px] text-slate-500 m-0 mt-1.5">Courier delivery is available to your PIN code. Delivery time depends on the courier.</p>
+              )}
+              {s.deliverable && current === 'STANDARD' && !s.courier && (
+                <p className="text-[11px] text-slate-500 m-0 mt-1.5">Courier availability for your PIN code is checked before you pay. Delivery time depends on the courier.</p>
               )}
             </div>
           );

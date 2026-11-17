@@ -75,6 +75,8 @@ const Checkout = () => {
   const [deliveryMethods, setDeliveryMethods] = useState({});
   const [deliveryData, setDeliveryData] = useState(null);
   // COD is not available when any seller's items go by courier (the server enforces this too)
+  // the courier cannot deliver to this PIN: payment is blocked here and refused again by the server
+  const courierBlocked = !!deliveryData?.sellers?.some((s) => (deliveryMethods[s.sellerKey] || s.selectedMethod) === 'STANDARD' && s.courier?.serviceable === false);
   const courierInCart = !!deliveryData?.sellers?.some((s) => (deliveryMethods[s.sellerKey] || s.selectedMethod) === 'STANDARD');
   useEffect(() => { if (courierInCart && selectedPayment === 'COD') setSelectedPayment('UPI'); }, [courierInCart, selectedPayment]);
   const locLat = currentLocation?.lat ?? currentLocation?.latitude;
@@ -638,6 +640,10 @@ const Checkout = () => {
   const isFreeDelivery = safeTotal === 0 || (deliverySettings.isFreeDeliveryEnabled && safeTotal >= deliverySettings.freeDeliveryMinOrder);
   const deliveryCharge = isFreeDelivery ? 0 : deliverySettings.deliveryCharge;
   const isCod = selectedPayment === 'COD';
+  // Delivery methods of the order that was just placed (from the server's fulfilment plan; no plan = legacy = instant)
+  const placedPlan = Array.isArray(placedOrder?.fulfillmentPlan) ? placedOrder.fulfillmentPlan : [];
+  const placedHasCourier = placedPlan.some((x) => x.method === 'STANDARD');
+  const placedHasInstant = placedPlan.length === 0 || placedPlan.some((x) => x.method !== 'STANDARD');
   const isOnlinePay = ['UPI', 'CARD', 'NETBANKING'].includes(selectedPayment);
   const isWalletPay = selectedPayment === 'WALLET';
   const paymentNotFinished = errorMsg.startsWith('Payment was not completed');
@@ -743,7 +749,7 @@ const Checkout = () => {
           )}
         </div>
 
-        <DeliveryMethodsCard lat={locLat} lng={locLng} cartKey={cartItems.map((i) => String(i.product?._id || i.product || i.id)).join(',')} onChange={(m, d) => { setDeliveryMethods(m); setDeliveryData(d); }} />
+        <DeliveryMethodsCard lat={locLat} lng={locLng} pincode={selectedAddress?.pincode} cartKey={cartItems.map((i) => String(i.product?._id || i.product || i.id)).join(',')} onChange={(m, d) => { setDeliveryMethods(m); setDeliveryData(d); }} />
 
         {/* 3. Delivery Instructions (Optional) */}
         <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
@@ -871,7 +877,7 @@ const Checkout = () => {
           {/* Desktop Place Order Button */}
           <div className="hidden md:block pt-3">
             <button
-              disabled={placingOrder || walletInsufficient}
+              disabled={placingOrder || walletInsufficient || courierBlocked}
               className="w-full bg-[#79B433] hover:bg-[#e04b00] disabled:opacity-60 text-white border-none rounded-xl py-3.5 px-6 text-sm font-black cursor-pointer shadow-lg shadow-orange-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               onClick={handlePlaceOrder}
             >
@@ -910,7 +916,7 @@ const Checkout = () => {
           <span className="text-[18px] font-extrabold text-slate-900">₹{finalGrandTotal.toFixed(2)}</span>
         </div>
         <button
-          disabled={placingOrder || walletInsufficient}
+          disabled={placingOrder || walletInsufficient || courierBlocked}
           className="bg-[#79B433] hover:bg-[#e04b00] disabled:opacity-60 text-white border-none rounded-xl py-3.5 px-7 text-[15px] font-bold cursor-pointer shadow-[0_4px_12px_rgba(255,85,0,0.25)] transition-transform duration-200 active:scale-[0.98] flex items-center gap-2"
           onClick={handlePlaceOrder}
         >
@@ -1210,10 +1216,26 @@ const Checkout = () => {
                 <span className="text-[11px] font-semibold text-slate-400 uppercase">Payment Mode</span>
                 <span className="text-[12px] font-bold text-slate-800">{placedOrder.paymentMethod}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase">Estimated Delivery</span>
-                <span className="text-[12px] font-bold text-emerald-600">{placedOrder.deliverySlot?.date} ({placedOrder.deliverySlot?.time})</span>
-              </div>
+              {/* The 30-minute slot only applies to instant (captain) delivery. Courier (STANDARD) parts never show a delivery time. */}
+              {!placedHasCourier && (
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase">Estimated Delivery</span>
+                  <span className="text-[12px] font-bold text-emerald-600">{placedOrder.deliverySlot?.date} ({placedOrder.deliverySlot?.time})</span>
+                </div>
+              )}
+              {placedHasCourier && placedHasInstant && (
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase">Instant Items Delivery</span>
+                  <span className="text-[12px] font-bold text-emerald-600">{placedOrder.deliverySlot?.date} ({placedOrder.deliverySlot?.time})</span>
+                </div>
+              )}
+              {placedHasCourier && (
+                <p data-testid="courier-delivery-note" className="m-0 text-[12px] font-medium text-slate-600 leading-snug">
+                  {placedHasInstant
+                    ? 'Some items will be delivered instantly. The rest will be handled by our courier partner; delivery time will be shared once the courier is assigned.'
+                    : 'Your order has been placed successfully. Delivery will be handled by our courier partner.'}
+                </p>
+              )}
             </div>
 
             <button

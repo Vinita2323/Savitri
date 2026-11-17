@@ -304,6 +304,8 @@ const OrderHistory = () => {
         };
       case 'Cancelled':
       case 'Rejected':
+      case 'Return to Origin':
+      case 'Returned to Seller':
         return {
           bg: 'bg-rose-50 border-rose-200 text-rose-700',
           icon: <XCircle size={10} className="text-rose-600" />,

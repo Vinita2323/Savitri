@@ -31,8 +31,10 @@ import {
 import { evaluateProductSellerEligibility } from '../utils/sellerEligibility.js';
 import OrderFulfillment from '../models/OrderFulfillment.model.js';
 import {
-  evaluateCartFulfillment, ensureOrderFulfillment, syncFulfillmentFromNotification, applyParentRollup, isStandardNotification, isMultiFulfillmentOrder,
+  evaluateCartFulfillment, ensureOrderFulfillment, syncFulfillmentFromNotification, applyParentRollup, isStandardNotification, isMultiFulfillmentOrder, sellerKeyForProduct,
 } from '../services/fulfillmentService.js';
+import { checkCartCourierServiceability, buildCourierGroups } from '../services/courier/courierService.js';
+import { courierRefundsForOrder } from '../services/courier/courierRefundService.js';
 import { debitUserWallet } from '../utils/userWalletHelper.js';
 
 // Helper: Clean base64 image strings or invalid dummy links
@@ -780,6 +782,23 @@ export const placeOrder = async (req, res, next) => {
         message: 'Cash on Delivery is temporarily unavailable for orders that include courier delivery. Please pay online or with your wallet.',
       });
     }
+    // Courier parts must be deliverable to this PIN BEFORE anything is charged. Re-checked here on every order
+    // (the page may be stale or manipulated); with no usable courier provider (e.g. production today) it is refused.
+    const courierSellers = fulfilmentResult.sellers.filter((x) => x.selectedMethod === 'STANDARD');
+    if (courierSellers.length > 0) {
+      const quantityByProduct = new Map();
+      for (const oi of orderItems) quantityByProduct.set(String(oi.product), (quantityByProduct.get(String(oi.product)) || 0) + Number(oi.quantity || 1));
+      const groups = await buildCourierGroups({ standardSellers: courierSellers, products: resolvedItems.map(({ product }) => product), quantityByProduct, sellerKeyOf: sellerKeyForProduct });
+      const courierCheck = await checkCartCourierServiceability({ groups, deliveryPincode: String(shippingAddress?.pincode || shippingAddress?.pinCode || '').trim() });
+      if (!courierCheck.ok) {
+        return res.status(409).json({
+          success: false,
+          code: courierCheck.unavailable ? 'COURIER_UNAVAILABLE' : 'COURIER_NOT_SERVICEABLE',
+          message: courierCheck.problems[0].message,
+          problems: courierCheck.problems,
+        });
+      }
+    }
     const fulfillmentPlan = fulfilmentResult.sellers.map((x) => ({ sellerKey: x.sellerKey, sellerId: x.sellerId, method: x.selectedMethod, locationVerified: x.locationVerified }));
 
     // Fetch dynamic commission & centralized delivery pricing settings
@@ -1324,14 +1343,23 @@ export const getOrderById = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
+    // A captain delivery OTP only makes sense when some part of the order is delivered by our captain.
+    // Courier-only orders (every fulfilment STANDARD) get none, and never expose one.
+    let courierOnly = false;
+    try {
+      const fTypes = await OrderFulfillment.find({ order: order._id }).select('fulfillmentType').lean();
+      courierOnly = fTypes.length > 0 && fTypes.every((f) => f.fulfillmentType === 'STANDARD');
+    } catch (e) { /* legacy behaviour if fulfilments cannot be read */ }
+
     // Auto-generate deliveryOtp if missing so customer can see it on /track-order
-    if (!order.deliveryOtp && order.orderStatus !== 'Delivered' && order.orderStatus !== 'Cancelled' && order.orderStatus !== 'Rejected') {
+    if (!courierOnly && !order.deliveryOtp && order.orderStatus !== 'Delivered' && order.orderStatus !== 'Cancelled' && order.orderStatus !== 'Rejected') {
       const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
       order.deliveryOtp = generatedOtp;
       await Order.findByIdAndUpdate(order._id, { deliveryOtp: generatedOtp });
     }
 
     const orderObj = order.toObject ? order.toObject() : order;
+    if (courierOnly) { delete orderObj.deliveryOtp; delete orderObj.pickupOtp; }
     if (Array.isArray(orderObj.items)) {
       orderObj.items = orderObj.items.map(it => {
         let resolvedImage = it.image;
@@ -1350,8 +1378,9 @@ export const getOrderById = async (req, res, next) => {
         .select('sellerName fulfillmentType deliveryMethod fulfillmentStatus estimatedDeliveryDate shipmentReference.provider shipmentReference.awb shipmentReference.trackingUrl shipmentReference.simulated items.name items.quantity')
         .lean();
       // simulated (mock courier) shipments are never shown to customers as real tracking
-      orderObj.fulfillments = orderObj.fulfillments.map((f) => (f.shipmentReference?.simulated ? { ...f, shipmentReference: { provider: null, awb: null, trackingUrl: null } } : f));
+      orderObj.fulfillments = orderObj.fulfillments.map((f) => ({ ...f, shipmentReference: f.shipmentReference?.simulated ? { provider: null, awb: null, trackingUrl: null } : { provider: f.shipmentReference?.provider || null, awb: f.shipmentReference?.awb || null, trackingUrl: f.shipmentReference?.trackingUrl || null } }));
     } catch (e) { orderObj.fulfillments = []; }
+    try { orderObj.courierRefunds = await courierRefundsForOrder(order._id); } catch (e) { orderObj.courierRefunds = []; }
 
     res.status(200).json({
       success: true,
