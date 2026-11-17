@@ -8,6 +8,7 @@ import { useCart } from '../context/CartContext';
 import { useLocationContext } from '../../../context/LocationContext';
 import { addressService, orderService, walletService } from '../../../services/authService';
 import commissionService from '../../../services/commissionService';
+import DeliveryMethodsCard from '../components/DeliveryMethodsCard';
 import { variantLabel, toSelectedVariants, missingVariantOptions } from '../../../utils/variantLabel';
 
 /** Build delivery slots from the current clock — no hard-coded "Tomorrow" default. */
@@ -71,6 +72,13 @@ const Checkout = () => {
   const [placingOrder, setPlacingOrder] = useState(false);
   const [placedOrder, setPlacedOrder] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [deliveryMethods, setDeliveryMethods] = useState({});
+  const [deliveryData, setDeliveryData] = useState(null);
+  // COD is not available when any seller's items go by courier (the server enforces this too)
+  const courierInCart = !!deliveryData?.sellers?.some((s) => (deliveryMethods[s.sellerKey] || s.selectedMethod) === 'STANDARD');
+  useEffect(() => { if (courierInCart && selectedPayment === 'COD') setSelectedPayment('UPI'); }, [courierInCart, selectedPayment]);
+  const locLat = currentLocation?.lat ?? currentLocation?.latitude;
+  const locLng = currentLocation?.lng ?? currentLocation?.longitude;
   const [walletBalance, setWalletBalance] = useState(null);
 
   // Profile Form State for incomplete profiles
@@ -551,6 +559,9 @@ const Checkout = () => {
         },
         deliveryInstructions,
         paymentMethod: selectedPayment,
+        // delivery method info; the server re-validates everything
+        deliveryMethods,
+        ...(locLat != null && locLng != null ? { deliveryLocation: { lat: Number(locLat), lng: Number(locLng) } } : {}),
       };
 
       // Razorpay for UPI / Card / Net Banking
@@ -732,6 +743,8 @@ const Checkout = () => {
           )}
         </div>
 
+        <DeliveryMethodsCard lat={locLat} lng={locLng} cartKey={cartItems.map((i) => String(i.product?._id || i.product || i.id)).join(',')} onChange={(m, d) => { setDeliveryMethods(m); setDeliveryData(d); }} />
+
         {/* 3. Delivery Instructions (Optional) */}
         <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
           <h3 className="text-[13px] font-bold text-slate-800 m-0 mb-2">Delivery Instructions (Optional)</h3>
@@ -757,8 +770,8 @@ const Checkout = () => {
               return (
                 <div
                   key={pm.id}
-                  onClick={() => setSelectedPayment(pm.id)}
-                  className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                  onClick={() => { if (!(pm.id === 'COD' && courierInCart)) setSelectedPayment(pm.id); }}
+                  className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${isCodOption && courierInCart ? 'opacity-50 cursor-not-allowed ' : ''}${
                     isSelected
                       ? 'border-[#F7941D] bg-orange-50/40 ring-1 ring-[#F7941D]'
                       : 'border-slate-200 hover:border-slate-300 bg-white'
@@ -778,7 +791,9 @@ const Checkout = () => {
                         )}
                       </div>
                       <p className="text-[11px] text-slate-500 m-0">
-                        {codExtra > 0
+                        {isCodOption && courierInCart
+                          ? 'Not available for orders with courier delivery'
+                          : codExtra > 0
                           ? `Pay cash upon delivery (+₹${codExtra} handling fee)`
                           : pm.id === 'WALLET' && walletBalance !== null
                             ? `Balance ₹${walletBalance.toFixed(2)} · ${pm.description}`

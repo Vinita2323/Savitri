@@ -94,6 +94,7 @@ const EmployeeReportsPage = lazy(() => import('../employees/pages/EmployeeReport
 const EmployeeOverviewPage = lazy(() => import('../employees/pages/EmployeeOverviewPage'));
 const BulkUploadsPage = lazy(() => import('../catalog/BulkUploadsPage'));
 const CatalogControlPage = lazy(() => import('../catalog/CatalogControlPage'));
+const FulfillmentsPage = lazy(() => import('../fulfillment/FulfillmentsPage'));
 const EmployeeRegistrationsPage = lazy(() => import('../employees/pages/EmployeeRegistrationsPage'));
 const EmployeeAttendanceReportPage = lazy(() => import('../employees/pages/EmployeeAttendanceReportPage'));
 const EmployeeTaskReviewPage = lazy(() => import('../employees/pages/EmployeeTaskReviewPage'));
@@ -188,6 +189,9 @@ export const AdminLayout = () => {
       case 'catalog_control':
       case 'catalog-control':
         return <CatalogControlPage />;
+      case 'orders_fulfilments':
+      case 'orders-fulfilments':
+        return <FulfillmentsPage />;
       case 'add_product':
         return <AddProductPage />;
       case 'sku_audit':

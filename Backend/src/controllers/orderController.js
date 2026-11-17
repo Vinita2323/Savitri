@@ -29,6 +29,10 @@ import {
   rowsFromAttributes,
 } from '../utils/selectedVariants.js';
 import { evaluateProductSellerEligibility } from '../utils/sellerEligibility.js';
+import OrderFulfillment from '../models/OrderFulfillment.model.js';
+import {
+  evaluateCartFulfillment, ensureOrderFulfillment, syncFulfillmentFromNotification, applyParentRollup, isStandardNotification, isMultiFulfillmentOrder,
+} from '../services/fulfillmentService.js';
 import { debitUserWallet } from '../utils/userWalletHelper.js';
 
 // Helper: Clean base64 image strings or invalid dummy links
@@ -408,6 +412,10 @@ const createSellerOrderNotifications = async ({ order, orderItems, shippingAddre
     if (!sellerGroups[sellerName]) sellerGroups[sellerName] = [];
     sellerGroups[sellerName].push(item);
   }
+  let fulfilmentProducts = [];
+  try {
+    fulfilmentProducts = await Product.find({ _id: { $in: orderItems.map((i) => i.product) } }).select('weightKg length breadth height').lean();
+  } catch (e) { /* snapshot dimensions are optional */ }
 
   await Promise.all(Object.entries(sellerGroups).map(async ([sellerName, groupItems]) => {
     const groupSubtotal = groupItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
@@ -427,7 +435,7 @@ const createSellerOrderNotifications = async ({ order, orderItems, shippingAddre
     const commAmount = Number(((groupSubtotal * commRate) / 100).toFixed(2));
     const netAmount = Number((groupSubtotal - commAmount).toFixed(2));
 
-    await SellerNotification.create({
+    const confirmedNotification = await SellerNotification.create({
       sellerId: assignedSellerId,
       sellerName: actualSellerName,
       order: order._id,
@@ -450,6 +458,9 @@ const createSellerOrderNotifications = async ({ order, orderItems, shippingAddre
       settlementStatus: 'PENDING',
       status: 'NEW',
     });
+    try {
+      await ensureOrderFulfillment({ order, sellerKey: sellerName, groupItems, sellerDoc, assignedSellerId, sellerName: actualSellerName, notification: confirmedNotification, shippingAddress, products: fulfilmentProducts });
+    } catch (fe) { console.error('[Fulfillment] could not create record for order', order.orderId, fe.message); }
 
     invalidateSellerNotifCache();
     setImmediate(() => {
@@ -741,6 +752,36 @@ export const placeOrder = async (req, res, next) => {
       });
     }
 
+    // Fulfilment decision (instant captain delivery vs standard courier) - validated here, never trusted from the client
+    const fulfilmentCustomer = {
+      lat: req.body?.deliveryLocation?.lat ?? req.body?.deliveryLocation?.latitude,
+      lng: req.body?.deliveryLocation?.lng ?? req.body?.deliveryLocation?.longitude,
+    };
+    const fulfilmentResult = await evaluateCartFulfillment({
+      products: resolvedItems.map(({ product }) => product),
+      customer: fulfilmentCustomer,
+      requested: req.body?.deliveryMethods && typeof req.body.deliveryMethods === 'object' ? req.body.deliveryMethods : {},
+    });
+    if (!fulfilmentResult.ok) {
+      const first = fulfilmentResult.blocking[0];
+      return res.status(409).json({
+        success: false,
+        code: 'FULFILLMENT_NOT_AVAILABLE',
+        message: first.rejectionReasons[0]?.message || 'Some items in your cart cannot be delivered to your location.',
+        fulfillment: fulfilmentResult,
+      });
+    }
+    // Cash on delivery is collected by our captain for the whole order; courier (STANDARD) parts cannot be
+    // reconciled with that flow yet, so any order containing courier delivery must be prepaid.
+    if (fulfilmentResult.methods.includes('STANDARD') && !isOnlinePaymentMethod(paymentMethod) && !isWalletPaymentMethod(paymentMethod)) {
+      return res.status(400).json({
+        success: false,
+        code: 'COD_NOT_AVAILABLE_FOR_COURIER',
+        message: 'Cash on Delivery is temporarily unavailable for orders that include courier delivery. Please pay online or with your wallet.',
+      });
+    }
+    const fulfillmentPlan = fulfilmentResult.sellers.map((x) => ({ sellerKey: x.sellerKey, sellerId: x.sellerId, method: x.selectedMethod, locationVerified: x.locationVerified }));
+
     // Fetch dynamic commission & centralized delivery pricing settings
     let globalSellerCommRate = 10;
     let globalCaptainCommRate = 5;
@@ -856,6 +897,7 @@ export const placeOrder = async (req, res, next) => {
       shippingAddress,
       deliverySlot,
       deliveryInstructions,
+      fulfillmentPlan,
       paymentMethod,
       paymentStatus: walletPayment ? 'Paid' : 'Pending',
       orderStatus: isOnlinePaymentMethod(paymentMethod) ? 'Payment Pending' : 'Placed',
@@ -997,6 +1039,9 @@ export const placeOrder = async (req, res, next) => {
         settlementStatus: 'PENDING',
         status: 'NEW',
       });
+      try {
+        await ensureOrderFulfillment({ order, sellerKey: sellerName, groupItems, sellerDoc, assignedSellerId, sellerName: actualSellerName, notification, shippingAddress, products: resolvedItems.map(({ product }) => product) });
+      } catch (fe) { console.error('[Fulfillment] could not create record for order', order.orderId, fe.message); }
 
       invalidateSellerNotifCache();
 
@@ -1300,6 +1345,14 @@ export const getOrderById = async (req, res, next) => {
       });
     }
 
+    try {
+      orderObj.fulfillments = await OrderFulfillment.find({ order: order._id })
+        .select('sellerName fulfillmentType deliveryMethod fulfillmentStatus estimatedDeliveryDate shipmentReference.provider shipmentReference.awb shipmentReference.trackingUrl shipmentReference.simulated items.name items.quantity')
+        .lean();
+      // simulated (mock courier) shipments are never shown to customers as real tracking
+      orderObj.fulfillments = orderObj.fulfillments.map((f) => (f.shipmentReference?.simulated ? { ...f, shipmentReference: { provider: null, awb: null, trackingUrl: null } } : f));
+    } catch (e) { orderObj.fulfillments = []; }
+
     res.status(200).json({
       success: true,
       order: orderObj,
@@ -1384,7 +1437,16 @@ export const getSellerNotifications = async (req, res, next) => {
       }
     }
 
+    let fulfilmentByNotification = new Map();
+    try {
+      const frows = await OrderFulfillment.find({ notification: { $in: rawNotifications.map((n) => n._id) } })
+        .select('notification fulfillmentType deliveryMethod fulfillmentStatus pickupAddressSnapshot pickupAddressStatus dispatchReady requiresCourierServiceabilityCheck shipmentReference shipment parcel items.name items.quantity items.weightKg items.length items.breadth items.height')
+        .lean();
+      fulfilmentByNotification = new Map(frows.map((f) => [String(f.notification), f]));
+    } catch (e) { /* fulfilment info is additive */ }
+
     const notifications = rawNotifications.map(n => {
+      n.fulfillment = fulfilmentByNotification.get(String(n._id)) || null;
       if (!n.pickupOtp) {
         n.pickupOtp = (n.orderId ? String(n.orderId).replace(/\D/g, '').slice(-4) : '1234') || '1234';
       }
@@ -1489,6 +1551,7 @@ export const acceptSellerOrder = async (req, res, next) => {
     }
     await notification.save();
     invalidateSellerNotifCache();
+    await syncFulfillmentFromNotification(notification);
 
     // Update parent order
     if (notification.order) {
@@ -1502,6 +1565,7 @@ export const acceptSellerOrder = async (req, res, next) => {
         },
         { new: true }
       ).select('user orderId');
+      await applyParentRollup(notification.order); // multi-seller orders: parent status follows all fulfilments
 
       if (parentOrder?.user && parentOrder?.orderId) {
         notifyUserOrderEvent({
@@ -1563,6 +1627,7 @@ export const rejectSellerOrder = async (req, res, next) => {
     notification.rejectedAt = now;
     await notification.save();
     invalidateSellerNotifCache();
+    await syncFulfillmentFromNotification(notification);
 
     // Restore stock for items in this notification
     if (Array.isArray(notification.items)) {
@@ -1577,18 +1642,21 @@ export const rejectSellerOrder = async (req, res, next) => {
 
     // Update parent order
     if (notification.order) {
-      const parentOrder = await Order.findByIdAndUpdate(
-        notification.order,
-        {
-          orderStatus: 'Rejected',
-          sellerStatus: 'Rejected',
-          rejectionReason: finalReason,
-          rejectedAt: now,
-        },
-        { new: true }
-      ).select('user orderId');
+      const rejectionFields = { orderStatus: 'Rejected', sellerStatus: 'Rejected', rejectionReason: finalReason, rejectedAt: now };
+      let parentOrder;
+      let parentFailed = true;
+      if (await isMultiFulfillmentOrder(notification.order)) {
+        // Multi-seller order: this seller's reason/time stay on its notification + fulfilment; the parent only
+        // fails when the roll-up says every active fulfilment is gone.
+        parentOrder = await Order.findById(notification.order).select('user orderId');
+        const rolledUp = await applyParentRollup(notification.order);
+        parentFailed = rolledUp === 'Rejected';
+        if (parentFailed) await Order.findByIdAndUpdate(notification.order, { sellerStatus: 'Rejected', rejectionReason: finalReason, rejectedAt: now });
+      } else {
+        parentOrder = await Order.findByIdAndUpdate(notification.order, rejectionFields, { new: true }).select('user orderId');
+      }
 
-      if (parentOrder?.user && parentOrder?.orderId) {
+      if (parentFailed && parentOrder?.user && parentOrder?.orderId) {
         notifyUserOrderEvent({
           userId: parentOrder.user,
           orderId: parentOrder.orderId,
@@ -1693,18 +1761,28 @@ export const updateSellerOrderStatus = async (req, res, next) => {
     notification.status = mappedNotificationStatus;
     await notification.save();
     invalidateSellerNotifCache();
+    await syncFulfillmentFromNotification(notification);
 
+    let rolledUpStatus = null;
     if (notification.order) {
-      const parentOrder = await Order.findByIdAndUpdate(
-        notification.order,
-        {
-          orderStatus: mappedOrderStatus,
-          sellerStatus: mappedNotificationStatus,
-          ...(mappedNotificationStatus === 'DELIVERED' ? { paymentStatus: 'Paid' } : {}),
-          ...(mappedNotificationStatus === 'REJECTED' ? { rejectionReason: notification.rejectionReason } : {}),
-        },
-        { new: true }
-      ).select('user orderId');
+      const multi = await isMultiFulfillmentOrder(notification.order);
+      const rejecting = mappedNotificationStatus === 'REJECTED';
+      // Multi-seller order: one seller's rejection stays on its own notification/fulfilment, and a seller's
+      // "Delivered" is not proof that the whole order's cash was collected (payment is settled after the roll-up).
+      const parentUpdate = multi && rejecting ? {} : {
+        orderStatus: mappedOrderStatus,
+        sellerStatus: mappedNotificationStatus,
+        ...(mappedNotificationStatus === 'DELIVERED' && !multi ? { paymentStatus: 'Paid' } : {}),
+        ...(rejecting ? { rejectionReason: notification.rejectionReason } : {}),
+      };
+      const parentOrder = await Order.findByIdAndUpdate(notification.order, parentUpdate, { new: true }).select('user orderId');
+      rolledUpStatus = await applyParentRollup(notification.order);
+      if (multi && rolledUpStatus === 'Delivered' && mappedNotificationStatus === 'DELIVERED') {
+        await Order.findByIdAndUpdate(notification.order, { paymentStatus: 'Paid' });
+      }
+      if (multi && rejecting && rolledUpStatus === 'Rejected') {
+        await Order.findByIdAndUpdate(notification.order, { sellerStatus: 'Rejected', rejectionReason: notification.rejectionReason, rejectedAt: notification.rejectedAt || now });
+      }
 
       // Only the 6 customer-facing events (skip Packed / Processing / etc.)
       const eventTypeMap = {
@@ -1715,7 +1793,9 @@ export const updateSellerOrderStatus = async (req, res, next) => {
         Cancelled: 'ORDER_CANCELLED',
       };
       const notifType = eventTypeMap[mappedOrderStatus];
-      if (notifType && parentOrder?.user && parentOrder?.orderId) {
+      // a multi-seller order is only "delivered" / "failed" for the customer when every fulfilment is
+      const parentStillOpen = rolledUpStatus && ['Delivered', 'Rejected'].includes(mappedOrderStatus) && rolledUpStatus !== mappedOrderStatus;
+      if (notifType && !parentStillOpen && parentOrder?.user && parentOrder?.orderId) {
         notifyUserOrderEvent({
           userId: parentOrder.user,
           orderId: parentOrder.orderId,
@@ -1725,7 +1805,8 @@ export const updateSellerOrderStatus = async (req, res, next) => {
       }
     }
 
-    if (mappedNotificationStatus === 'PACKED') {
+    // Courier (STANDARD) fulfilments are never dispatched to our captains
+    if (mappedNotificationStatus === 'PACKED' && !(await isStandardNotification(notification._id))) {
       await autoAssignCaptainToOrder(notification);
     }
 

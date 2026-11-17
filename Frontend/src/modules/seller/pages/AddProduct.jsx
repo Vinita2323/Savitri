@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  FileText, Upload, Tag, DollarSign, Boxes, CheckCircle, Package, Plus, ArrowLeft, ShieldCheck, RotateCcw, AlertCircle, Sparkles
+  FileText, Upload, Tag, DollarSign, Boxes, CheckCircle, Package, Plus, ArrowLeft, ShieldCheck, RotateCcw, AlertCircle, Sparkles, Truck, ChevronDown
 } from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { categoryService, productService, authService, bannerService } from '../../../services/authService';
@@ -63,11 +63,36 @@ const AddProduct = () => {
     galleryImages: [],
     hasVariants: false,
     variantOptions: [],
-    variants: []
+    variants: [],
+    // Shipping & package details (optional; only validated when courier shipping is enabled)
+    shippingEnabled: false,
+    fulfillmentType: 'INSTANT',
+    weightKg: '',
+    length: '',
+    breadth: '',
+    height: '',
+    countryOfOrigin: '',
+    isFragile: false,
+    requiresSpecialHandling: false
   };
 
 
   const [formData, setFormData] = useState(initialData);
+  const [shipOpen, setShipOpen] = useState(false);
+
+  // Courier shipping needs weight + all three dimensions; mirrors the backend rule
+  const shippingProblems = (() => {
+    const wantsCourier = formData.shippingEnabled && formData.fulfillmentType !== 'INSTANT';
+    if (!wantsCourier) return [];
+    const bad = (v) => !(Number(v) > 0);
+    const p = [];
+    if (bad(formData.weightKg)) p.push('Weight (kg) must be greater than 0');
+    if (bad(formData.length)) p.push('Length (cm) must be greater than 0');
+    if (bad(formData.breadth)) p.push('Breadth (cm) must be greater than 0');
+    if (bad(formData.height)) p.push('Height (cm) must be greater than 0');
+    if (formData.hsnCode && !/^\d{4,8}$/.test(String(formData.hsnCode).trim())) p.push('HSN code must be 4 to 8 digits');
+    return p;
+  })();
 
   // Fetch product to edit if in Edit Mode
   useEffect(() => {
@@ -118,8 +143,18 @@ const AddProduct = () => {
             galleryImages: Array.isArray(prod.galleryImages) ? prod.galleryImages : [],
             hasVariants: Boolean(prod.hasVariants || (Array.isArray(prod.variants) && prod.variants.length > 0)),
             variantOptions: Array.isArray(prod.variantOptions) ? prod.variantOptions : [],
-            variants: Array.isArray(prod.variants) ? prod.variants : []
+            variants: Array.isArray(prod.variants) ? prod.variants : [],
+            shippingEnabled: Boolean(prod.shippingEnabled),
+            fulfillmentType: prod.fulfillmentType || 'INSTANT',
+            weightKg: prod.weightKg ? String(prod.weightKg) : '',
+            length: prod.length ? String(prod.length) : '',
+            breadth: prod.breadth ? String(prod.breadth) : '',
+            height: prod.height ? String(prod.height) : '',
+            countryOfOrigin: prod.countryOfOrigin || '',
+            isFragile: Boolean(prod.isFragile),
+            requiresSpecialHandling: Boolean(prod.requiresSpecialHandling)
           });
+          if (prod.shippingEnabled || (prod.fulfillmentType && prod.fulfillmentType !== 'INSTANT')) setShipOpen(true);
 
           if (Array.isArray(prod.homeSections) && prod.homeSections.length > 0) {
             setSelectedHomeSections(prod.homeSections);
@@ -333,6 +368,12 @@ const AddProduct = () => {
 
     // TEMP: soft validation — auto-fill missing fields instead of blocking submit
     // (variant / price / stock hard checks disabled for now)
+
+    if (shippingProblems.length > 0) {
+      setShipOpen(true);
+      showToast(shippingProblems[0]);
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -908,6 +949,94 @@ const AddProduct = () => {
               />
             </div>
           </div>
+        </div>
+
+        {/* Shipping & Package Details (collapsible) */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setShipOpen(o => !o)}
+            className="w-full flex items-center justify-between gap-3 p-6 text-left cursor-pointer bg-transparent border-none"
+            aria-expanded={shipOpen}
+          >
+            <span className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+              <Truck size={18} className="text-[#F7941D]" /> Shipping & Package Details
+              {shippingProblems.length > 0 && <span className="text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">Incomplete</span>}
+            </span>
+            <ChevronDown size={18} className={`text-slate-500 transition-transform ${shipOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {shipOpen && (
+            <div className="px-6 pb-6 space-y-4 border-t border-slate-100 pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Fulfillment Type</label>
+                  <select
+                    value={formData.fulfillmentType}
+                    onChange={(e) => handleInputChange('fulfillmentType', e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#F7941D]"
+                  >
+                    <option value="INSTANT">Instant (local delivery)</option>
+                    <option value="STANDARD">Standard (courier shipping)</option>
+                    <option value="BOTH">Both</option>
+                  </select>
+                </div>
+                <label className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 cursor-pointer md:mt-6">
+                  <span className="text-sm font-medium text-slate-700">Shipping enabled</span>
+                  <input
+                    type="checkbox"
+                    checked={formData.shippingEnabled}
+                    onChange={(e) => handleInputChange('shippingEnabled', e.target.checked)}
+                    className="h-4 w-4 accent-[#F7941D]"
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  ['weightKg', 'Weight (kg)', 'e.g. 0.5'],
+                  ['length', 'Length (cm)', 'e.g. 20'],
+                  ['breadth', 'Breadth (cm)', 'e.g. 15'],
+                  ['height', 'Height (cm)', 'e.g. 10'],
+                ].map(([key, label, ph]) => (
+                  <div key={key}>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      inputMode="decimal"
+                      placeholder={ph}
+                      value={formData[key]}
+                      onChange={(e) => handleInputChange(key, e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#F7941D]"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Country of Origin (optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. India"
+                    value={formData.countryOfOrigin}
+                    onChange={(e) => handleInputChange('countryOfOrigin', e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#F7941D]"
+                  />
+                </div>
+                <p className="text-xs text-slate-500 md:mt-7">HSN code is set in the Pricing &amp; Tax section above. These are product/package details; final shipment packaging may be confirmed while packing.</p>
+              </div>
+
+
+              {shippingProblems.length > 0 && (
+                <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-sm text-rose-700" role="alert">
+                  <p className="font-semibold mb-1 flex items-center gap-1.5"><AlertCircle size={14} /> Complete these to enable standard shipping:</p>
+                  <ul className="list-disc pl-5 space-y-0.5">{shippingProblems.map((m) => <li key={m}>{m}</li>)}</ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Card 5: Inventory & SKU */}

@@ -14,10 +14,13 @@ import { evaluateSellerStorefrontEligibility, evaluateProductSellerEligibility }
 import { getEffectiveStock, syncRootStockFromVariants } from '../utils/productStock.js';
 import { canAccessProduct, canAccessSellerId } from '../utils/accessControl.js';
 import { normalizeRole } from '../middleware/authMiddleware.js';
+import { normalizeProductShipping } from '../utils/shippingValidation.js';
 
 // Fields only the platform (admin moderation or the bulk importer) may write
 const PLATFORM_ONLY_FIELDS = ['adminBlocked', 'blockedReason', 'blockedAt', 'blockedBy', 'importId', 'source', 'publishedAt', 'purchasePrice_internal'];
 // Never shown to customers
+// Courier-shippable products (pan-India) are not tied to the seller's local service radius, so every customer can see them.
+const STANDARD_SHIPPING_CLAUSE = { shippingEnabled: true, shippingReady: true, fulfillmentType: { $in: ['STANDARD', 'BOTH'] } };
 const PRIVATE_PRODUCT_FIELDS = ['purchasePrice', 'blockedReason', 'blockedAt', 'blockedBy', 'importId', 'source', 'barcode'];
 
 // High-speed In-memory Cache for Products listing
@@ -152,6 +155,12 @@ export const createProduct = async (req, res) => {
       variants
     } = req.body;
 
+    // Phase 1 shipping details (optional; validated only when sent)
+    const shipping = normalizeProductShipping(req.body);
+    if (shipping.errors.length) {
+      return res.status(400).json({ success: false, message: shipping.errors[0], errors: shipping.errors });
+    }
+
     // TEMP: allow create even if name is blank — use a placeholder
     const productName =
       name && typeof name === 'string' && name.trim()
@@ -242,7 +251,8 @@ export const createProduct = async (req, res) => {
       returnPolicy: finalReturnPolicy,
       hasVariants: isMultiVariant,
       variantOptions: cleanVariantOptions,
-      variants: processedVariants
+      variants: processedVariants,
+      ...shipping.set
     });
 
 
@@ -362,7 +372,7 @@ export const getProducts = async (req, res) => {
       // Customer Storefront: Find sellers covering this user's location based on each seller's serviceRadius
       const { eligibleSellerIds, eligibleSellerNames } = await getEligibleSellersForLocation(userLat, userLng);
 
-      if (!eligibleSellerIds || eligibleSellerIds.length === 0) {
+      if ((!eligibleSellerIds || eligibleSellerIds.length === 0) && !(await Product.exists({ ...STANDARD_SHIPPING_CLAUSE, status: 'Published' }))) {
         const page = Math.max(1, Number(req.query.page) || 1);
         const limit = req.query.limit !== undefined 
           ? (Number(req.query.limit) === 0 ? 0 : Math.min(100, Math.max(1, Number(req.query.limit))))
@@ -382,17 +392,22 @@ export const getProducts = async (req, res) => {
       }
 
       // Prefer sellerId match so name collisions cannot surface ineligible stores' products
-      const eligibleIdStrings = eligibleSellerIds.map((id) => String(id));
+      const eligibleIdStrings = (eligibleSellerIds || []).map((id) => String(id));
       query.$or = [
-        { sellerId: { $in: eligibleSellerIds } },
+        { sellerId: { $in: eligibleSellerIds || [] } },
         { seller: { $in: eligibleIdStrings } },
         {
           $and: [
             { $or: [{ sellerId: null }, { sellerId: { $exists: false } }] },
-            { seller: { $in: eligibleSellerNames } },
+            { seller: { $in: eligibleSellerNames || [] } },
           ],
         },
+        // sellers in other cities whose products can be shipped by courier
+        STANDARD_SHIPPING_CLAUSE,
       ];
+    } else if (await Product.exists({ ...STANDARD_SHIPPING_CLAUSE, status: 'Published' })) {
+      // No usable location: only courier-shippable products can be shown (they do not depend on the customer's area)
+      Object.assign(query, STANDARD_SHIPPING_CLAUSE);
     } else {
       // Customer Storefront without valid location coordinates:
       // DO NOT return arbitrary global products. Prompt user to select delivery location.
@@ -448,7 +463,7 @@ export const getProducts = async (req, res) => {
       : 50;
 
     let dbQuery = Product.find(query)
-      .select(`name category subCategory brand unitValue unitType unit seller sellerId mrp salePrice stock mainImage homeSections status isFeatured isReturnable sku createdAt hasVariants variantOptions variants isPublished adminBlocked listingStatus${privileged ? ' purchasePrice barcode weight blockedReason source importId' : ''}`)
+      .select(`name category subCategory brand unitValue unitType unit seller sellerId mrp salePrice stock mainImage homeSections status isFeatured isReturnable sku createdAt hasVariants variantOptions variants isPublished adminBlocked listingStatus fulfillmentType shippingReady${privileged ? ' purchasePrice barcode weight blockedReason source importId hsnCode shippingEnabled fulfillmentType weightKg length breadth height countryOfOrigin isFragile requiresSpecialHandling shippingReady' : ''}`)
       .sort({ createdAt: -1 })
       .lean();
 
@@ -578,6 +593,13 @@ export const updateProduct = async (req, res) => {
     PLATFORM_ONLY_FIELDS.forEach((f) => delete updateData[f]);
     delete updateData.isPublished;
     delete updateData.listingStatus;
+    // shippingReady is computed server-side; shipping fields are validated against the stored product
+    delete updateData.shippingReady;
+    const shipping = normalizeProductShipping(req.body, product);
+    if (shipping.errors.length) {
+      return res.status(400).json({ success: false, message: shipping.errors[0], errors: shipping.errors });
+    }
+    if (shipping.touched) Object.assign(updateData, shipping.set);
     // Ownership fields cannot be reassigned by sellers.
     if (req.user?.role === 'seller') {
       delete updateData.sellerId;

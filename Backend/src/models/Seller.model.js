@@ -136,6 +136,24 @@ const sellerSchema = new mongoose.Schema(
       area: String,
       pincode: String,
     },
+    // Courier pickup / dispatch address (Phase 1). Separate from the registered business address and from
+    // warehouseLocation (which drives local-delivery eligibility). Verification is admin-only.
+    pickupAddress: {
+      contactPerson: { type: String, default: '' },
+      phone: { type: String, default: '' },
+      addressLine1: { type: String, default: '' },
+      addressLine2: { type: String, default: '' },
+      landmark: { type: String, default: '' },
+      city: { type: String, default: '' },
+      state: { type: String, default: '' },
+      pincode: { type: String, default: '' },
+      country: { type: String, default: 'India' },
+      latitude: { type: Number, default: null },
+      longitude: { type: Number, default: null },
+    },
+    isPickupAddressVerified: { type: Boolean, default: false },
+    pickupAddressStatus: { type: String, enum: ['PENDING', 'VERIFIED', 'REJECTED'], default: 'PENDING' },
+    pickupAddressUpdatedAt: { type: Date, default: null },
     // FCM Push Notification Tokens (SOP Standard)
     fcmTokens: {
       type: [String],

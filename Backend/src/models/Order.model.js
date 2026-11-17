@@ -53,6 +53,12 @@ const orderSchema = new mongoose.Schema(
       time: { type: String, default: 'Standard Delivery' },
     },
     deliveryInstructions: { type: String, default: '' },
+    // Delivery method chosen per seller at checkout (decided server-side; see services/fulfillmentService.js).
+    // Legacy orders have no plan and are treated as INSTANT.
+    fulfillmentPlan: {
+      type: [{ sellerKey: String, sellerId: { type: String, default: '' }, method: { type: String, enum: ['INSTANT', 'STANDARD'] }, locationVerified: { type: Boolean, default: false }, _id: false }],
+      default: [],
+    },
     orderSource: {
       type: String,
       enum: ['ONLINE', 'POS', 'ADMIN', 'APP'],

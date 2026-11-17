@@ -15,6 +15,7 @@ import CodCashCollection from '../models/CodCashCollection.model.js';
 import CaptainCashSettlement from '../models/CaptainCashSettlement.model.js';
 import { getVehicleMatchPattern } from './transportBookingController.js';
 import { notifyUserOrderEvent } from '../utils/userNotificationHelper.js';
+import { instantNotificationFilter, syncInstantFulfillmentsForOrder } from '../services/fulfillmentService.js';
 
 // In-memory fast cache for Captain Dashboard stats
 const captainDashboardCache = new Map();
@@ -777,7 +778,7 @@ export const updateDeliveryStatus = async (req, res, next) => {
       updates.orderStatus = 'Reached Store / Pickup';
       try {
         await SellerNotification.updateMany(
-          { order: order._id },
+          await instantNotificationFilter(order._id),
           { $set: { status: 'Reached Store' } }
         );
       } catch (err) {
@@ -791,7 +792,7 @@ export const updateDeliveryStatus = async (req, res, next) => {
       updates.orderStatus = 'Out for Delivery';
       try {
         await SellerNotification.updateMany(
-          { order: order._id },
+          await instantNotificationFilter(order._id),
           { $set: { status: 'OUT_FOR_DELIVERY' } }
         );
       } catch (err) {
@@ -825,7 +826,7 @@ export const updateDeliveryStatus = async (req, res, next) => {
       updates.paymentStatus = 'Paid';
       try {
         await SellerNotification.updateMany(
-          { order: order._id },
+          await instantNotificationFilter(order._id),
           {
             $set: {
               status: 'DELIVERED',
@@ -841,7 +842,7 @@ export const updateDeliveryStatus = async (req, res, next) => {
       // Credit seller wallets on captain-completed delivery (#75)
       try {
         const { processSellerSettlement } = await import('./orderController.js');
-        const sellerNotifs = await SellerNotification.find({ order: order._id }).select('_id');
+        const sellerNotifs = await SellerNotification.find(await instantNotificationFilter(order._id)).select('_id');
         for (const sn of sellerNotifs) {
           await processSellerSettlement(sn._id);
         }
@@ -947,6 +948,10 @@ export const updateDeliveryStatus = async (req, res, next) => {
       { new: true }
     );
 
+    // Multi-seller orders: delivering the instant part must not close the whole order while a courier part is open
+    const rolledUp = await syncInstantFulfillmentsForOrder(order._id);
+    if (rolledUp && updatedOrder) updatedOrder.orderStatus = rolledUp;
+
     // Customer inbox: only Out for Delivery / Delivered (not At Pickup / Assigned / etc.)
     if (updatedOrder?.user && updatedOrder?.orderId) {
       if (updates.orderStatus === 'Out for Delivery') {
@@ -956,7 +961,7 @@ export const updateDeliveryStatus = async (req, res, next) => {
           order: updatedOrder._id,
           type: 'ORDER_OUT_FOR_DELIVERY',
         });
-      } else if (updates.orderStatus === 'Delivered') {
+      } else if (updates.orderStatus === 'Delivered' && (!rolledUp || rolledUp === 'Delivered')) {
         notifyUserOrderEvent({
           userId: updatedOrder.user,
           orderId: updatedOrder.orderId,
@@ -1055,7 +1060,7 @@ export const verifyOrderPickupOtp = async (req, res, next) => {
 
     try {
       await SellerNotification.updateMany(
-        { order: order._id },
+        await instantNotificationFilter(order._id),
         {
           $set: {
             status: 'OUT_FOR_DELIVERY',
@@ -1067,6 +1072,7 @@ export const verifyOrderPickupOtp = async (req, res, next) => {
     } catch (notifErr) {
       console.warn('[verifyOrderPickupOtp] Notification update error:', notifErr.message);
     }
+    await syncInstantFulfillmentsForOrder(order._id);
 
     console.log(`[Captain verifyOrderPickupOtp] Verified seller pickup OTP for Order #${order.orderId}, status is now In Transit`);
     invalidateCaptainDashboardCache(captainId);
@@ -1115,7 +1121,7 @@ export const submitProofOfDelivery = async (req, res, next) => {
 
     try {
       await SellerNotification.updateMany(
-        { order: order._id },
+        await instantNotificationFilter(order._id),
         { $set: { proofOfDeliveryUrl: proofUrl } }
       );
     } catch (err) {

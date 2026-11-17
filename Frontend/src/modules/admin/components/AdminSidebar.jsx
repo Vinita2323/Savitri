@@ -259,6 +259,7 @@ export const AdminSidebar = () => {
             { id: 'orders_delivered', label: 'Delivered Order', icon: CheckCircle },
             { id: 'orders_cancelled', label: 'Cancelled Order', icon: XCircle },
             { id: 'orders_return', label: 'Return', icon: RefreshCw },
+            { id: 'orders_fulfilments', label: 'Fulfilments', icon: Truck },
           ]
         },
       ]

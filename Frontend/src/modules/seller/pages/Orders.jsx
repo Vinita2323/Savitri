@@ -6,6 +6,7 @@ import {
 import { orderService } from '../../../services/authService';
 import { getImageUrl, handleImageError } from '../../../utils/imageUtils';
 import { selectedVariantRows, variantSummary } from '../../../utils/variantLabel';
+import { FulfillmentBadge, FulfillmentPanel } from '../components/FulfillmentInfo';
 
 const formatSellerPaymentLabel = (n) => {
   const method = String(n?.paymentMethod || '').toUpperCase();
@@ -506,6 +507,7 @@ const Orders = () => {
                   <td className="px-5 py-4 font-bold text-slate-900 font-mono flex items-center gap-1.5">
                     {n.status === 'NEW' && <span className="w-2 h-2 rounded-full bg-[#ff7526] animate-ping shrink-0" title="New incoming order" />}
                     {n.orderId}
+                    <FulfillmentBadge fulfillment={n.fulfillment} />
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex flex-col">
@@ -1017,6 +1019,8 @@ const Orders = () => {
                     )}
                   </div>
                 </div>
+
+                <FulfillmentPanel fulfillment={selectedNotification.fulfillment} />
 
                 {/* Delivery Address Details Card */}
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">

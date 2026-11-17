@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { 
   User, Store, Image as ImageIcon, CreditCard, Edit, CheckCircle2, Save, Check, MapPin, 
   Loader2, Upload, AlertCircle, Search, Navigation, Crown, Zap, Star, Shield, Clock, XCircle, ArrowRight, ExternalLink, Receipt,
-  Eye, FileText, UploadCloud, X, FileCheck, Building2, Phone, Mail, Calendar, ShieldCheck, Briefcase, Tag
+  Eye, FileText, UploadCloud, X, FileCheck, Building2, Phone, Mail, Calendar, ShieldCheck, Briefcase, Tag, Truck
 } from 'lucide-react';
 import { authService, membershipService, categoryService, profileEditRequestService } from '../../../services/authService';
 import { MapService } from '../../../services/MapService';
 import LocationSearchModal from '../../../components/LocationSearchModal';
+import PickupAddressSection from '../components/PickupAddressSection';
 
 const durationLabel = (t) => ({ monthly: '1 Month', halfYearly: '6 Months', yearly: '12 Months' }[t] || t);
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -566,6 +567,19 @@ const Settings = () => {
 
             <button
               type="button"
+              onClick={() => setActiveTab('pickup')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer text-left border-none ${
+                activeTab === 'pickup'
+                  ? 'bg-orange-50 text-[#ff7526] border border-orange-200/80 font-semibold'
+                  : 'bg-transparent text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Truck size={18} />
+              Pickup Address
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveTab('branding')}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer text-left border-none ${
                 activeTab === 'branding'
@@ -1115,6 +1129,9 @@ const Settings = () => {
                   </div>
                 </div>
               )}
+
+              {/* TAB: PICKUP / DISPATCH ADDRESS (courier shipping) */}
+              {activeTab === 'pickup' && <PickupAddressSection />}
 
               {/* TAB 3: STORE BRANDING */}
               {activeTab === 'branding' && (

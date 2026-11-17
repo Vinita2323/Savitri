@@ -151,6 +151,19 @@ const productSchema = new mongoose.Schema(
     barcode: { type: String, default: '', trim: true },
     purchasePrice: { type: Number, min: 0, default: 0 },
     weight: { type: String, default: '' },
+    // ── Shipping & package details (Phase 1; additive, safe defaults so existing products are unaffected) ──
+    // `weight` above stays the free-text label used by bulk upload; `weightKg` is the numeric shipping weight.
+    shippingEnabled: { type: Boolean, default: false },
+    fulfillmentType: { type: String, enum: ['INSTANT', 'STANDARD', 'BOTH'], default: 'INSTANT' },
+    weightKg: { type: Number, min: 0, default: null },
+    length: { type: Number, min: 0, default: null },   // cm
+    breadth: { type: Number, min: 0, default: null },  // cm
+    height: { type: Number, min: 0, default: null },   // cm
+    countryOfOrigin: { type: String, default: '', trim: true },
+    isFragile: { type: Boolean, default: false },
+    requiresSpecialHandling: { type: Boolean, default: false },
+    // Server-computed: courier shipping enabled AND weight + dimensions valid. Never taken from a request.
+    shippingReady: { type: Boolean, default: false },
     source: { type: String, enum: ['manual', 'bulk'], default: 'manual' },
     importId: { type: mongoose.Schema.Types.ObjectId, ref: 'BulkImport', default: null },
     ratingAverage: {

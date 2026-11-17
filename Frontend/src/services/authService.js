@@ -444,6 +444,35 @@ export const categoryService = {
   },
 };
 
+// Phase 1: seller pickup / dispatch address and shipping configuration
+export const shippingService = {
+  getMyPickupAddress: async () => (await API.get('/shipping/seller/pickup-address')).data,
+  saveMyPickupAddress: async (data) => (await API.put('/shipping/seller/pickup-address', data)).data,
+  getMyShippingConfig: async () => (await API.get('/shipping/seller/config')).data,
+  getSellerPickupAddressForAdmin: async (sellerId) => (await API.get(`/shipping/admin/sellers/${sellerId}/pickup-address`)).data,
+};
+
+// Phase 2: delivery method decision (instant captain vs standard courier) and seller-level fulfilments
+export const fulfillmentService = {
+  getOptions: async (params = {}) => (await API.get('/fulfillment/options', { params })).data,
+  getOrderFulfillments: async (orderId) => (await API.get(`/fulfillment/order/${orderId}`)).data,
+  getSellerFulfillments: async (params = {}) => (await API.get('/fulfillment/seller/orders', { params })).data,
+  getAdminFulfillments: async (params = {}) => (await API.get('/fulfillment/admin/orders', { params })).data,
+};
+
+// Courier foundation (mock provider in development). Seller + admin only.
+export const courierService = {
+  status: async () => (await API.get('/courier/status')).data,
+  serviceability: async (body) => (await API.post('/courier/serviceability', body)).data,
+  get: async (id) => (await API.get(`/courier/fulfillment/${id}`)).data,
+  confirmPackage: async (id, body) => (await API.post(`/courier/fulfillment/${id}/package`, body)).data,
+  quote: async (id) => (await API.post(`/courier/fulfillment/${id}/quote`)).data,
+  createShipment: async (id, courierId) => (await API.post(`/courier/fulfillment/${id}/shipment`, { courierId })).data,
+  schedulePickup: async (id, pickupDate) => (await API.post(`/courier/fulfillment/${id}/pickup`, { pickupDate })).data,
+  label: async (id) => (await API.get(`/courier/fulfillment/${id}/label`)).data,
+  simulate: async (id, status) => (await API.post(`/courier/fulfillment/${id}/simulate`, { status })).data,
+};
+
 export const productService = {
   getProducts: async (params = {}) => {
     const response = await API.get('/products', { params });
