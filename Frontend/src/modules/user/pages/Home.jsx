@@ -962,7 +962,7 @@ const Home = () => {
         
         {/* Toast Notification */}
         {toastMessage && (
-          <div className="fixed bottom-[90px] left-1/2 -translate-x-1/2 bg-slate-800 text-white px-5 py-2.5 rounded-full text-[13px] font-medium shadow-xl z-50 max-w-[90%] text-center flex items-center gap-2 transition-all duration-300">
+          <div className="fixed bottom-[calc(90px+var(--safe-bottom))] left-1/2 -translate-x-1/2 bg-slate-800 text-white px-5 py-2.5 rounded-full text-[13px] font-medium shadow-xl z-50 max-w-[90%] text-center flex items-center gap-2 transition-all duration-300">
             {toastMessage.toLowerCase().includes('cart') ? <ShoppingCart size={14} className="shrink-0" /> : <Mic size={14} className="shrink-0" />}
             <span className="truncate">{toastMessage}</span>
           </div>

@@ -1002,7 +1002,7 @@ const Checkout = () => {
       {/* Address Selection Modal */}
       {isAddressModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-white w-full max-w-[480px] sm:max-w-xl rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl animate-fade-in-up flex flex-col max-h-[80vh]">
+          <div className="bg-white w-full max-w-[480px] sm:max-w-xl rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl animate-fade-in-up flex flex-col max-h-[80dvh]">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-3">
               <h3 className="text-[16px] font-extrabold text-slate-900 m-0">Select Delivery Address</h3>
               <button
@@ -1077,7 +1077,7 @@ const Checkout = () => {
       {/* New Address Modal */}
       {isNewAddressModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[150] flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-white w-full max-w-[480px] sm:max-w-xl rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl animate-fade-in-up flex flex-col max-h-[85vh] overflow-y-auto">
+          <div className="bg-white w-full max-w-[480px] sm:max-w-xl rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl animate-fade-in-up flex flex-col max-h-[85dvh] overflow-y-auto">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-3">
               <h3 className="text-[16px] font-extrabold text-slate-900 m-0">Add New Delivery Address</h3>
               <button

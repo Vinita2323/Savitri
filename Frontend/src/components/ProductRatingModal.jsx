@@ -210,7 +210,7 @@ const ProductRatingModal = ({
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-fadeIn">
       {/* Modal Card / Bottom Sheet */}
       <div 
-        className="w-full max-w-[480px] bg-white rounded-t-[28px] sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-slideUp border border-slate-100"
+        className="w-full max-w-[480px] bg-white rounded-t-[28px] sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] animate-slideUp border border-slate-100"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

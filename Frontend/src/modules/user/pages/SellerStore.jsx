@@ -481,7 +481,7 @@ export const SellerStore = () => {
 
       {/* Floating Toast Notification */}
       {toastMessage && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-full text-xs md:text-sm font-semibold shadow-xl z-50 whitespace-nowrap flex items-center gap-2 transition-all animate-slideUp ${
+        <div className={`fixed bottom-[calc(1.5rem+var(--safe-bottom))] left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-full text-xs md:text-sm font-semibold shadow-xl z-50 whitespace-nowrap flex items-center gap-2 transition-all animate-slideUp ${
           toastType === 'wishlist' 
             ? 'bg-rose-600 text-white' 
             : toastType === 'success' 

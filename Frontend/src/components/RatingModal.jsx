@@ -114,7 +114,7 @@ const RatingModal = ({
       }}
     >
       <div
-        className="w-full max-w-md bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[92vh] animate-in fade-in slide-in-from-bottom duration-300"
+        className="w-full max-w-md bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[92dvh] animate-in fade-in slide-in-from-bottom duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Handle for mobile drag visual */}

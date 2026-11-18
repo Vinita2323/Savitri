@@ -142,7 +142,7 @@ const Payment = () => {
       </div>
 
       {/* Payment Action Button Sticky Footer */}
-      <div className="absolute bottom-0 left-0 w-full py-4 px-5 pb-6 bg-white border-t border-slate-100 z-[90] flex justify-between items-center shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
+      <div className="absolute bottom-0 left-0 w-full py-4 px-5 pb-[max(1.5rem,var(--safe-bottom))] bg-white border-t border-slate-100 z-[90] flex justify-between items-center shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
         <div className="flex flex-col gap-0.5">
           <span className="text-[12px] font-medium text-slate-500">Total Payable</span>
           <span className="text-[18px] font-extrabold text-slate-900">₹490.00</span>

@@ -48,7 +48,7 @@ const RatingBreakdownModal = ({ isOpen, onClose, targetId, targetType = 'captain
       }}
     >
       <div
-        className="w-full max-w-md bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[88vh] animate-in fade-in slide-in-from-bottom duration-300"
+        className="w-full max-w-md bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[88dvh] animate-in fade-in slide-in-from-bottom duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Handle visual */}

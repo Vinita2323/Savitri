@@ -241,7 +241,7 @@ const SavedAddresses = () => {
       </div>
 
       {/* Bottom Sticky Action (Mobile only) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 p-5 bg-white/95 backdrop-blur-md border-t border-slate-100 max-w-[480px] mx-auto z-20">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 p-5 pb-[max(1.25rem,var(--safe-bottom))] bg-white/95 backdrop-blur-md border-t border-slate-100 max-w-[480px] mx-auto z-20">
         <button 
           onClick={handleAddNew}
           className="w-full bg-[#689A2B] text-white rounded-2xl py-4 font-bold text-[15px] flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(121, 180, 51,0.25)] border-none cursor-pointer active:scale-[0.98] transition-transform"

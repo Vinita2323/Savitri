@@ -744,7 +744,7 @@ const Categories = () => {
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-xl z-[100] animate-fade-in-up whitespace-nowrap flex items-center gap-2 border border-slate-700">
+        <div className="fixed bottom-[calc(6rem+var(--safe-bottom))] left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-xl z-[100] animate-fade-in-up whitespace-nowrap flex items-center gap-2 border border-slate-700">
           <span>{toastMessage}</span>
         </div>
       )}

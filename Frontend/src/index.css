@@ -150,12 +150,38 @@
   scrollbar-width: none;
 }
 
+/*
+ * System insets (Android navigation / gesture bar, display cutouts). Every screen takes them from here instead of
+ * hard-coding paddings. They are 0 where the browser does not draw behind the system bars, and the real bar height
+ * where the app is edge-to-edge (installed web app, TWA, WebView with viewport-fit=cover).
+ */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
 .pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: var(--safe-bottom);
 }
 
 .pt-safe {
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: var(--safe-top);
+}
+
+/*
+ * Bottom sheets (white panel with rounded top corners, anchored to the bottom of a full-screen overlay): extend the
+ * panel by the bottom inset so its last buttons sit above the system navigation bar while the white background still
+ * reaches the screen edge. Applies to every sheet in the app, including future ones.
+ */
+@media (max-width: 639.98px) {
+  .fixed.inset-0 > [class*="rounded-t-"]::after {
+    content: '';
+    display: block;
+    height: var(--safe-bottom);
+    flex-shrink: 0;
+  }
 }
 
 .web-app-container {
