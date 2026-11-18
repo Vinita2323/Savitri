@@ -96,7 +96,7 @@ const Reports = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 font-sans pb-12">
+    <div className="w-full space-y-6 font-sans pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Business Reports & Analytics</h1>

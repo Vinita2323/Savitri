@@ -52,7 +52,7 @@ const SubCategory = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 font-sans">
+    <div className="w-full space-y-6 font-sans">
       
       {/* Unified Single Card Container */}
       <div className="rounded-xl overflow-hidden shadow-sm border border-slate-200 bg-white">

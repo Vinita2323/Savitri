@@ -122,7 +122,7 @@ const Wallet = () => {
   const isBankDetailsMissing = !walletData.bankDetails?.accountNumber || !walletData.bankDetails?.ifscCode;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 font-sans pb-12">
+    <div className="w-full space-y-6 font-sans pb-12">
       
       {/* Toast Notification */}
       {toastMsg && (

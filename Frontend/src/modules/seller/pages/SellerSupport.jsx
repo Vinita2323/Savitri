@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
   PhoneCall, 
@@ -17,6 +17,8 @@ import supportService from '../../../services/supportService';
 
 const SellerSupport = () => {
   const navigate = useNavigate();
+  // inside the seller panel (/seller/help) the page fills the content area; the standalone support page stays centred
+  const inPanel = useLocation().pathname.startsWith('/seller/help');
   const [faqs, setFaqs] = useState([]);
   const [supportSettings, setSupportSettings] = useState({
     sellerPhone: '+91 63774 60692',
@@ -66,7 +68,7 @@ const SellerSupport = () => {
   };
 
   return (
-    <div className="space-y-4 font-sans text-slate-800 pb-12 animate-fadeIn max-w-5xl mx-auto">
+    <div className={`space-y-4 font-sans text-slate-800 pb-12 animate-fadeIn ${inPanel ? 'w-full' : 'max-w-5xl mx-auto'}`}>
       
       {/* Header Banner */}
       <div className="bg-[#1A2E0A] text-white p-6 rounded-2xl shadow-sm relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

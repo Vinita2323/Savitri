@@ -287,7 +287,7 @@ const Dashboard = () => {
   });
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 font-sans pb-12">
+    <div className="w-full space-y-6 font-sans pb-12">
       
       {/* Top Welcome Header Banner */}
       <div className="bg-gradient-to-r from-[#ff7526] via-[#ff6814] to-[#e65507] rounded-2xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">

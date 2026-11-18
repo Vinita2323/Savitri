@@ -11,7 +11,7 @@ const Dispatch = () => {
   const [dispatches, setDispatches] = useState(mockDispatches);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Logistics & Dispatch Control</h1>

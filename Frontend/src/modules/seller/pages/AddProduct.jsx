@@ -504,7 +504,7 @@ const AddProduct = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-16 font-sans relative max-w-7xl mx-auto">
+    <div className="space-y-6 animate-fadeIn pb-16 font-sans relative w-full">
       {/* Product Creation Success Modal */}
       {createdSuccessModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -611,7 +611,7 @@ const AddProduct = () => {
         </div>
       )}
 
-      <form onSubmit={(e) => handleFormSubmit(e, 'Published')} className="max-w-4xl mx-auto space-y-6">
+      <form onSubmit={(e) => handleFormSubmit(e, 'Published')} className="w-full space-y-6">
         {/* Card 1: Basic Information */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
           <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">

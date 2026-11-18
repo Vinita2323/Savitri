@@ -15,6 +15,8 @@ const Products = () => {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useState(1);
+  const [serverTotal, setServerTotal] = useState(null); // how many products the server says this seller has
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -116,10 +118,20 @@ const Products = () => {
       if (sellerId) params.sellerId = sellerId;
       if (sellerName) params.seller = sellerName;
 
-      const res = await productService.getProducts(params);
-      if (res && res.products && Array.isArray(res.products)) {
-        apiProds = res.products;
+      // The server returns at most 100 products per request (50 by default), so read every page until the whole
+      // catalogue is loaded. Without this a seller with more than 50 products would silently lose the rest.
+      const PER_REQUEST = 100;
+      let pageNo = 1;
+      let total = null;
+      for (;;) {
+        const res = await productService.getProducts({ ...params, page: pageNo, limit: PER_REQUEST });
+        const batch = res && Array.isArray(res.products) ? res.products : [];
+        if (total === null && typeof res?.total === 'number') total = res.total;
+        apiProds = apiProds.concat(batch);
+        if (batch.length === 0 || batch.length < PER_REQUEST || (total !== null && apiProds.length >= total) || pageNo >= 200) break;
+        pageNo += 1;
       }
+      setServerTotal(total !== null ? total : apiProds.length);
     } catch (err) {
       console.warn('Error fetching products from API:', err.message);
     }
@@ -171,13 +183,35 @@ const Products = () => {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
+  // Pagination over the (filtered) list
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * pageSize;
+  const visibleProducts = filteredProducts.slice(pageStart, pageStart + pageSize);
+  const pageNumbers = (() => {
+    const set = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+    const nums = [...set].filter((n) => n >= 1 && n <= totalPages).sort((a, b) => a - b);
+    const out = [];
+    nums.forEach((n, i) => { if (i > 0 && n - nums[i - 1] > 1) out.push('gap-' + n); out.push(n); });
+    return out;
+  })();
+  useEffect(() => { setPage(1); }, [searchTerm, categoryFilter, statusFilter, pageSize]);
+
+  // The header checkbox selects / unselects the products on the current page; "Select all N" in the bar below picks the
+  // whole filtered list.
+  const pageIds = visibleProducts.map(p => p.id);
+  const allOnPageSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.includes(id));
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedIds(filteredProducts.map(p => p.id));
+      setSelectedIds(prev => Array.from(new Set([...prev, ...pageIds])));
     } else {
-      setSelectedIds([]);
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
     }
   };
+  const selectAllFiltered = () => setSelectedIds(filteredProducts.map(p => p.id));
+  const clearSelection = () => setSelectedIds([]);
+  // a different search / filter means a different list, so start with nothing selected
+  useEffect(() => { setSelectedIds([]); }, [searchTerm, categoryFilter, statusFilter]);
 
   const handleSelectOne = (id) => {
     if (selectedIds.includes(id)) {
@@ -386,7 +420,7 @@ const Products = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 font-sans">
+    <div className="w-full space-y-6 font-sans">
       
       {/* Toast Notification */}
       {toastMsg && (
@@ -537,6 +571,23 @@ const Products = () => {
 
         </div>
 
+        {/* Selection summary: how many products are ticked, with one-click select-all / clear */}
+        {selectedIds.length > 0 && (
+          <div data-testid="selection-bar" role="status" aria-live="polite" className="px-4 sm:px-5 py-2.5 bg-orange-50 border-y border-orange-200 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <span data-testid="selection-count" className="font-bold text-[#c2610c]">{selectedIds.length} product{selectedIds.length === 1 ? '' : 's'} selected</span>
+              {selectedIds.length < filteredProducts.length && (
+                <button type="button" onClick={selectAllFiltered} className="bg-transparent border-none p-0 text-sm font-semibold text-slate-700 underline cursor-pointer hover:text-slate-900">
+                  Select all {filteredProducts.length} products
+                </button>
+              )}
+            </div>
+            <button type="button" data-testid="selection-clear" onClick={clearSelection} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-orange-300 bg-white text-[#c2610c] text-sm font-bold cursor-pointer hover:bg-orange-100">
+              <X size={14} /> Clear selection
+            </button>
+          </div>
+        )}
+
         {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -546,7 +597,7 @@ const Products = () => {
                   <input 
                     type="checkbox" 
                     onChange={handleSelectAll} 
-                    checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0} 
+                    checked={allOnPageSelected} 
                     className="rounded text-[#ff7526] focus:ring-[#ff7526] cursor-pointer" 
                   />
                 </th>
@@ -568,7 +619,7 @@ const Products = () => {
                     </div>
                   </td>
                 </tr>
-              ) : filteredProducts.slice(0, pageSize).map((product) => (
+              ) : visibleProducts.map((product) => (
                 <tr key={product.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="px-5 py-4">
                     <input 
@@ -659,6 +710,28 @@ const Products = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {!loading && filteredProducts.length > 0 && (
+          <div data-testid="products-pagination" className="px-4 sm:px-5 py-3 border-t border-slate-100 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-600">
+            <div className="text-center sm:text-left">
+              <span data-testid="products-range">Showing {pageStart + 1}–{Math.min(pageStart + pageSize, filteredProducts.length)} of {filteredProducts.length} product{filteredProducts.length === 1 ? '' : 's'}</span>
+              {filteredProducts.length !== products.length && <span className="text-slate-400"> (filtered from {products.length})</span>}
+              {serverTotal !== null && serverTotal !== products.length && (
+                <span className="block text-amber-700 text-xs mt-0.5">Loaded {products.length} of {serverTotal} products. Press Refresh to reload.</span>
+              )}
+            </div>
+            {totalPages > 1 && (
+              <nav className="flex flex-wrap items-center justify-center gap-1.5" aria-label="Product pages">
+                <button type="button" onClick={() => setPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50">Previous</button>
+                {pageNumbers.map((n) => (typeof n === 'string'
+                  ? <span key={n} className="px-1 text-slate-400">…</span>
+                  : <button key={n} type="button" onClick={() => setPage(n)} aria-current={n === currentPage ? 'page' : undefined} className={'min-w-9 px-3 py-1.5 rounded-lg border text-sm font-semibold cursor-pointer ' + (n === currentPage ? 'bg-[#ff7526] border-[#ff7526] text-white' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50')}>{n}</button>))}
+                <button type="button" onClick={() => setPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50">Next</button>
+              </nav>
+            )}
+          </div>
+        )}
 
       </div>
 
