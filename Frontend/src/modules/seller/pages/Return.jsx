@@ -223,7 +223,7 @@ const Return = () => {
       <div className="rounded-2xl overflow-hidden shadow-xs border border-slate-200 bg-white">
         
         {/* Banner Header */}
-        <div className="bg-[#ff7526] px-5 py-3.5 flex justify-between items-center text-white">
+        <div className="bg-[#ff7526] px-4 sm:px-5 py-3.5 flex flex-wrap justify-between items-center gap-x-3 gap-y-1 text-white">
           <h2 className="font-bold text-base md:text-lg tracking-wide m-0 flex items-center gap-2">
             <span>📦</span> Item Returns Management
           </h2>
@@ -231,15 +231,15 @@ const Return = () => {
         </div>
 
         {/* Filter Controls Bar */}
-        <div className="p-4 bg-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 text-sm text-slate-700">
+        <div className="p-3 sm:p-4 bg-white border-b border-slate-100 flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 sm:gap-4 text-sm text-slate-700">
           
           {/* Status Dropdown */}
-          <div className="flex items-center gap-2">
-            <span className="text-slate-500 font-medium text-xs uppercase tracking-wider">Status:</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-slate-500 font-medium text-xs uppercase tracking-wider shrink-0">Status:</span>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="border border-slate-200 rounded-xl px-3 py-2 text-slate-800 bg-white outline-none focus:border-[#ff7526] cursor-pointer text-xs font-bold transition-all"
+              className="border border-slate-200 rounded-xl px-3 py-2 text-slate-800 bg-white outline-none focus:border-[#ff7526] cursor-pointer text-xs font-bold transition-all flex-1 min-w-0 sm:flex-none"
             >
               <option value="All">All Statuses</option>
               <option value="REQUESTED">Pending Request (Action Needed)</option>
@@ -253,13 +253,13 @@ const Return = () => {
           </div>
 
           {/* Search Field */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <input
               type="text"
               placeholder="Search Return ID, Order, Customer, Product..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="border border-slate-200 rounded-xl px-3.5 py-2 text-slate-700 outline-none focus:border-[#ff7526] text-xs font-medium w-56 sm:w-72 transition-all placeholder:text-slate-400"
+              className="border border-slate-200 rounded-xl px-3.5 py-2 text-slate-700 outline-none focus:border-[#ff7526] text-xs font-medium w-full min-w-0 sm:w-72 transition-all placeholder:text-slate-400"
             />
           </div>
 

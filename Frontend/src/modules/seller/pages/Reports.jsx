@@ -102,7 +102,7 @@ const Reports = () => {
           <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Business Reports & Analytics</h1>
           <p className="text-sm font-normal text-slate-500 mt-1">Export financial ledgers, GST reports, and warehouse turnover statement.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={fetchReports}
@@ -136,19 +136,19 @@ const Reports = () => {
             <Calendar size={18} className="text-[#ff7526]" />
             <span className="text-sm font-normal text-slate-600">Date Range:</span>
           </div>
-          <div className="flex items-center gap-1.5 bg-slate-50 p-1 border border-slate-200 rounded-lg">
+          <div className="flex items-center gap-1.5 bg-slate-50 p-1 border border-slate-200 rounded-lg w-full sm:w-auto min-w-0">
             <input
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="bg-transparent border-none outline-none text-slate-700 text-sm font-normal cursor-pointer"
+              className="bg-transparent border-none outline-none text-slate-700 text-sm font-normal cursor-pointer w-0 min-w-0 flex-1 sm:w-auto sm:flex-none"
             />
             <span className="text-slate-400 font-normal">to</span>
             <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="bg-transparent border-none outline-none text-slate-700 text-sm font-normal cursor-pointer"
+              className="bg-transparent border-none outline-none text-slate-700 text-sm font-normal cursor-pointer w-0 min-w-0 flex-1 sm:w-auto sm:flex-none"
             />
           </div>
         </div>

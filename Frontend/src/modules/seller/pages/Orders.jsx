@@ -384,19 +384,19 @@ const Orders = () => {
           {/* From - To Date Filters */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-slate-600 font-normal">Order Date Range</span>
-            <div className="flex items-center gap-1 bg-slate-50 p-1 border border-slate-200 rounded-lg">
+            <div className="flex items-center gap-1 bg-slate-50 p-1 border border-slate-200 rounded-lg w-full sm:w-auto min-w-0">
               <input 
                 type="date" 
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="bg-transparent border-none outline-none text-slate-700 text-sm font-normal cursor-pointer"
+                className="bg-transparent border-none outline-none text-slate-700 text-sm font-normal cursor-pointer w-0 min-w-0 flex-1 sm:w-auto sm:flex-none"
               />
               <span className="text-slate-400 font-normal">-</span>
               <input 
                 type="date" 
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="bg-transparent border-none outline-none text-slate-700 text-sm font-normal cursor-pointer"
+                className="bg-transparent border-none outline-none text-slate-700 text-sm font-normal cursor-pointer w-0 min-w-0 flex-1 sm:w-auto sm:flex-none"
               />
             </div>
           </div>

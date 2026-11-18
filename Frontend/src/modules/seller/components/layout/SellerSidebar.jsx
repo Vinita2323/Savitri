@@ -18,10 +18,14 @@ import {
   ChevronUp,
   HelpCircle,
   Gift,
-  UploadCloud
+  UploadCloud,
+  X
 } from 'lucide-react';
 
-const SellerSidebar = ({ isOpen, setIsOpen }) => {
+// Desktop (>= 1024px): the original fixed sidebar. Phones/tablets: the same navigation as a slide-in drawer.
+const SellerSidebar = ({ isOpen: isOpenProp, isCompact = false, mobileOpen = false, onMobileClose }) => {
+  // inside the drawer the full labels are always shown, whatever the desktop collapse state is
+  const isOpen = isCompact ? true : isOpenProp;
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -51,9 +55,26 @@ const SellerSidebar = ({ isOpen, setIsOpen }) => {
   };
 
   return (
-    <aside className={`${isOpen ? 'w-64' : 'w-20'} bg-[#1A2E0A] text-white transition-all duration-300 flex flex-col h-full shadow-xl z-40 shrink-0 font-sans`}>
+    <aside
+      className={`${isCompact ? 'fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw]' : `${isOpen ? 'w-64' : 'w-20'} z-40 shrink-0`} bg-[#1A2E0A] text-white transition-all duration-300 flex flex-col h-full shadow-xl font-sans ${isCompact ? (mobileOpen ? 'translate-x-0' : '-translate-x-full invisible') : ''}`}
+      style={isCompact ? { height: '100dvh' } : undefined}
+      aria-hidden={isCompact && !mobileOpen ? true : undefined}
+      role={isCompact ? 'dialog' : undefined}
+      aria-modal={isCompact && mobileOpen ? true : undefined}
+      aria-label="Seller navigation"
+    >
       {/* Brand Header - White Background Logo Section */}
-      <div className="h-20 bg-white flex items-center justify-center px-3 border-b border-slate-200 shrink-0">
+      <div className="h-20 bg-white flex items-center justify-center px-3 border-b border-slate-200 shrink-0 relative">
+        {isCompact && (
+          <button
+            type="button"
+            onClick={onMobileClose}
+            aria-label="Close menu"
+            className="absolute right-2 top-2 w-10 h-10 flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 bg-transparent border-none cursor-pointer"
+          >
+            <X size={22} />
+          </button>
+        )}
         <Link to="/seller/dashboard" className="flex items-center justify-center w-full">
           <img 
             src="/LogoSavitri.png" 
@@ -64,7 +85,10 @@ const SellerSidebar = ({ isOpen, setIsOpen }) => {
       </div>
 
       {/* Navigation List */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5 [&::-webkit-scrollbar]:hidden">
+      <nav
+        className="flex-1 overflow-y-auto overscroll-contain py-4 px-3 space-y-1.5 [&::-webkit-scrollbar]:hidden"
+        onClick={(e) => { if (isCompact && e.target.closest && e.target.closest('a')) onMobileClose?.(); }}
+      >
         
         {/* 1. Dashboard */}
         <Link

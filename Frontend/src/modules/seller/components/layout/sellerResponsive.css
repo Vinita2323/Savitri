@@ -1,0 +1,96 @@
+/*
+ * Seller panel: mobile layout helpers.
+ * Below 1024px (phones and tablets) every data table inside the seller content area is shown as a stack of labelled cards
+ * (labels are read from the table's own header cells by useResponsiveTables). Desktop / tablet tables are untouched.
+ * A table can opt out with the attribute data-no-cards.
+ */
+@media (max-width: 1023.98px) {
+  .seller-main table[data-rt] { display: block; width: 100%; min-width: 0 !important; border-collapse: separate; }
+  .seller-main table[data-rt] tbody { display: block; }
+  .seller-main table[data-rt] tr { display: block; }
+
+  /* header row is hidden, except a select-all checkbox which stays usable */
+  .seller-main table[data-rt] thead { display: block; }
+  .seller-main table[data-rt] thead tr { display: block; padding: 0; }
+  .seller-main table[data-rt] thead th { display: none; }
+  .seller-main table[data-rt] thead th:has(input[type="checkbox"]) {
+    display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem;
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; width: auto;
+  }
+  .seller-main table[data-rt] thead th:has(input[type="checkbox"])::after { content: 'Select all'; font-size: 12px; font-weight: 600; color: #475569; }
+
+  .seller-main table[data-rt] tbody tr {
+    border: 1px solid #e2e8f0; border-radius: 14px; margin: 0 0 0.75rem; padding: 0.35rem 0.85rem;
+    background: #fff; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); overflow: hidden;
+  }
+  .seller-main table[data-rt] tbody tr:last-child { margin-bottom: 0; }
+  .seller-main table[data-rt] tbody td {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+    padding: 0.5rem 0 !important; border: 0 !important; border-bottom: 1px dashed #eef2f7 !important;
+    width: auto !important; min-width: 0 !important; max-width: none !important;
+    white-space: normal !important; text-align: right !important; word-break: break-word;
+  }
+  .seller-main table[data-rt] tbody td:last-child { border-bottom: 0 !important; }
+  .seller-main table[data-rt] tbody td::before {
+    content: attr(data-label); flex: 0 0 34%; max-width: 40%; text-align: left;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: #94a3b8;
+  }
+  .seller-main table[data-rt] tbody td[data-label=""]::before { display: none; }
+  .seller-main table[data-rt] tbody td > * { min-width: 0; max-width: 100%; }
+  /* long values may wrap instead of forcing the card wider; small badges / chips stay on one line */
+  .seller-main table[data-rt] tbody td { overflow-wrap: break-word; }
+  .seller-main table[data-rt] tbody td .inline-flex, .seller-main table[data-rt] tbody td [class*="rounded-full"], .seller-main table[data-rt] tbody td [class*="rounded-md"] { white-space: nowrap; flex-shrink: 0; }
+  /* empty / loading placeholder rows span the whole table */
+  /* cells that hold several buttons (quick actions): label on top, buttons below, left aligned */
+  .seller-main table[data-rt] tbody td:has(button ~ button), .seller-main table[data-rt] tbody td:has(div > button ~ button) { flex-direction: column; align-items: flex-start; text-align: left !important; }
+  .seller-main table[data-rt] tbody td:has(button ~ button)::before, .seller-main table[data-rt] tbody td:has(div > button ~ button)::before { flex: none; max-width: 100%; }
+  .seller-main table[data-rt] tbody td:has(button ~ button) > *, .seller-main table[data-rt] tbody td:has(div > button ~ button) > * { max-width: 100%; flex-wrap: wrap; }
+  .seller-main table[data-rt] tbody td[colspan] { display: block; text-align: center !important; }
+  .seller-main table[data-rt] tbody td[colspan]::before { display: none; }
+}
+
+/*
+ * Safety net for filter bars: a dropdown is as wide as its longest option and some inputs have fixed widths. On
+ * phones and tablets they may never be wider than the space they sit in.
+ */
+@media (max-width: 1023.98px) {
+  .seller-main select { max-width: 100%; min-width: 0; text-overflow: ellipsis; }
+  .seller-main input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) { max-width: 100%; min-width: 0; }
+  .seller-main :has(> select), .seller-main :has(> input[type="text"]), .seller-main :has(> input[type="search"]) { min-width: 0; max-width: 100%; }
+}
+
+/* never let a long unbroken word (names, emails, IDs) stretch the content area on phones */
+@media (max-width: 1023.98px) {
+  .seller-main { overflow-wrap: break-word; }
+}
+
+/*
+ * Dialogs / drawers on phones and tablets: a tall panel that is vertically centred inside a scrolling overlay gets its top
+ * cut off and unreachable. Keep short panels centred, but let tall ones start at the top and scroll normally.
+ */
+@media (max-width: 1023.98px) {
+  .seller-shell div.fixed.inset-0.items-center { align-items: flex-start; overflow-y: auto; overscroll-behavior: contain; }
+  .seller-shell div.fixed.inset-0.items-center > :first-child { margin-top: auto; margin-bottom: auto; max-width: 100%; }
+}
+
+/*
+ * Touch-friendly controls on phones: comfortable tap targets, and 16px text in fields so mobile browsers do not
+ * zoom the page when a field is focused.
+ */
+@media (max-width: 767.98px) {
+  .seller-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]),
+  .seller-shell select,
+  .seller-shell textarea { font-size: 16px; }
+  .seller-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]),
+  .seller-shell select { min-height: 44px; }
+  .seller-shell input[type="checkbox"], .seller-shell input[type="radio"] { width: 20px; height: 20px; flex-shrink: 0; }
+  .seller-shell button:not([role="switch"]) { min-height: 40px; }
+  .seller-shell button:has(> svg:only-child) { min-width: 40px; }
+}
+
+/* larger tablets: cards in two columns instead of one very wide stretched card */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .seller-main table[data-rt] tbody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; align-items: start; }
+  .seller-main table[data-rt] tbody tr { margin: 0; }
+  .seller-main table[data-rt] tbody tr:has(td[colspan]) { grid-column: 1 / -1; }
+}

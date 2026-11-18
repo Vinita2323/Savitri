@@ -99,13 +99,14 @@ const SellerHeader = ({ isSidebarOpen, toggleSidebar }) => {
   };
 
   return (
-    <header className="h-20 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-xs font-sans relative">
+    <header className="h-16 sm:h-20 bg-white border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between gap-2 shrink-0 z-30 shadow-xs font-sans relative">
       {/* Left Section: Toggle Button & Store Name */}
-      <div className="flex items-center gap-3 sm:gap-5">
+      <div className="flex items-center gap-2 sm:gap-5 min-w-0">
         <button 
           onClick={toggleSidebar}
-          className="p-1.5 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors border-none bg-transparent cursor-pointer"
+          className="w-11 h-11 sm:w-auto sm:h-auto sm:p-1.5 flex items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 transition-colors border-none bg-transparent cursor-pointer shrink-0"
           title="Toggle Sidebar"
+          aria-label="Open or close the navigation menu"
         >
           {isSidebarOpen ? <X size={22} className="text-slate-700" /> : <Menu size={22} className="text-slate-700" />}
         </button>
@@ -146,13 +147,13 @@ const SellerHeader = ({ isSidebarOpen, toggleSidebar }) => {
       </div>
 
       {/* Right Section: Online/Offline Toggle Tab & Quick Actions */}
-      <div className="flex items-center gap-3 sm:gap-4 text-slate-700">
+      <div className="flex items-center gap-1 sm:gap-4 text-slate-700 shrink-0">
         {/* ── ONLINE / OFFLINE TOGGLE TAB ── */}
         <div className="flex items-center">
           <button
             onClick={handleToggleOnlineStatus}
             disabled={togglingStatus}
-            className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all cursor-pointer shadow-2xs ${
+            className={`group relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-full border transition-all cursor-pointer shadow-2xs ${
               isOnline 
                 ? 'bg-emerald-50/90 border-emerald-200 text-emerald-700 hover:bg-emerald-100' 
                 : 'bg-slate-100 border-slate-300 text-slate-600 hover:bg-slate-200'
@@ -190,8 +191,9 @@ const SellerHeader = ({ isSidebarOpen, toggleSidebar }) => {
         {/* Settings Icon */}
         <button 
           onClick={() => navigate('/seller/settings')}
-          className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors border-none bg-transparent cursor-pointer"
+          className="w-10 h-10 sm:w-auto sm:h-auto sm:p-1.5 flex items-center justify-center rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors border-none bg-transparent cursor-pointer"
           title="Store Settings"
+          aria-label="Store settings"
         >
           <Settings size={20} />
         </button>
@@ -199,7 +201,7 @@ const SellerHeader = ({ isSidebarOpen, toggleSidebar }) => {
         {/* Location Icon */}
         <button 
           onClick={handleLocationClick}
-          className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors border-none bg-transparent cursor-pointer"
+          className="hidden sm:flex p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors border-none bg-transparent cursor-pointer"
           title="Store Location"
         >
           <MapPin size={20} />
@@ -208,7 +210,7 @@ const SellerHeader = ({ isSidebarOpen, toggleSidebar }) => {
         {/* Logout Icon */}
         <button 
           onClick={handleLogout}
-          className="p-1.5 rounded-lg text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition-colors border-none bg-transparent cursor-pointer"
+          className="hidden sm:flex p-1.5 rounded-lg text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition-colors border-none bg-transparent cursor-pointer"
           title="Logout"
         >
           <LogOut size={20} />
@@ -217,7 +219,7 @@ const SellerHeader = ({ isSidebarOpen, toggleSidebar }) => {
 
       {/* Floating Status Notification Toast */}
       {toastText && (
-        <div className="fixed top-24 right-6 z-50 bg-slate-900 text-white text-xs font-medium py-2.5 px-4 rounded-xl shadow-xl flex items-center gap-2 animate-slideDown border border-slate-800">
+        <div className="fixed top-20 sm:top-24 left-3 right-3 sm:left-auto sm:right-6 z-50 bg-slate-900 text-white text-xs font-medium py-2.5 px-4 rounded-xl shadow-xl flex items-center gap-2 animate-slideDown border border-slate-800">
           <span>{toastText}</span>
         </div>
       )}

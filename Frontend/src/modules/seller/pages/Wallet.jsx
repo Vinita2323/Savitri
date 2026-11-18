@@ -251,12 +251,12 @@ const Wallet = () => {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-200 bg-white">
+        <div className="flex border-b border-slate-200 bg-white overflow-x-auto [&::-webkit-scrollbar]:hidden">
           {['Transactions', 'Withdrawals', 'Commissions'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`py-3.5 px-6 font-extrabold text-xs cursor-pointer transition-colors border-b-2 uppercase tracking-wider ${
+              className={`py-3.5 px-4 sm:px-6 font-extrabold text-xs cursor-pointer transition-colors border-b-2 uppercase tracking-wider shrink-0 whitespace-nowrap ${
                 activeTab === tab
                   ? 'border-[#ff7526] text-[#ff7526] bg-white'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
