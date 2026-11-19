@@ -6,7 +6,6 @@ import {
   BookOpen,
   Receipt,
   Store,
-  Building2,
   Wallet,
   Bike,
   RotateCcw,
@@ -83,11 +82,6 @@ export const SuperAdminSidebar = () => {
     {
       group: 'OPERATIONS & INVENTORY',
       items: [
-        {
-          to: '/super-admin/brands',
-          label: 'Business Brands',
-          icon: Building2,
-        },
         {
           to: '/super-admin/stores',
           label: 'Stores & Sellers',

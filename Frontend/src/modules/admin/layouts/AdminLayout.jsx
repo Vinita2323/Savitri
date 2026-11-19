@@ -12,7 +12,6 @@ const SellerManagement = lazy(() => import('../pages/AdminSubPages').then(m => (
 const SellersOverview = lazy(() => import('../pages/AdminSubPages').then(m => ({ default: m.SellersOverview })));
 const CaptainManagement = lazy(() => import('../pages/AdminSubPages').then(m => ({ default: m.CaptainManagement })));
 const CategoryManagement = lazy(() => import('../pages/AdminSubPages').then(m => ({ default: m.CategoryManagement })));
-const BrandManagement = lazy(() => import('../pages/AdminSubPages').then(m => ({ default: m.BrandManagement })));
 const ProductManagement = lazy(() => import('../pages/AdminSubPages').then(m => ({ default: m.ProductManagement })));
 const AddProductPage = lazy(() => import('../pages/AdminSubPages').then(m => ({ default: m.AddProductPage })));
 const SkuAuditManagement = lazy(() => import('../pages/AdminSubPages').then(m => ({ default: m.SkuAuditManagement })));
@@ -104,9 +103,9 @@ const EmployeeActivityPage = lazy(() => import('../employees/pages/EmployeeActiv
 export const AdminLayout = () => {
   const { activeTab, setActiveTab, tabData, sidebarOpen, setSidebarOpen, isCompact } = useAdmin();
 
-  const renderActiveTabContent = () => {
-    // The URL form is hyphenated ("/admin/employee-directory") while the employee tab keys use underscores.
-    const tabKey = typeof activeTab === 'string' && activeTab.startsWith('employee') ? activeTab.replace(/-/g, '_') : activeTab;
+  const renderActiveTabContent = (keyOverride) => {
+    // The URL form is hyphenated ("/admin/employee-directory") while the tab keys use underscores.
+    const tabKey = keyOverride !== undefined ? keyOverride : (typeof activeTab === 'string' && activeTab.startsWith('employee') ? activeTab.replace(/-/g, '_') : activeTab);
     switch (tabKey) {
       case 'referral_dashboard':
       case 'referral-dashboard':
@@ -179,8 +178,6 @@ export const AdminLayout = () => {
         return <CategoryManagement initialSubcategoriesOnly={false} />;
       case 'subcategories':
         return <CategoryManagement initialSubcategoriesOnly={true} />;
-      case 'brands':
-        return <BrandManagement />;
       case 'products':
         return <ProductManagement />;
       case 'bulk_uploads':
@@ -399,6 +396,10 @@ export const AdminLayout = () => {
       case 'employees/activity':
         return <EmployeeActivityPage onNavigate={(tab) => setActiveTab(tab)} />;
       default:
+        // A hyphenated URL such as /admin/add-product: retry with the underscore key before falling back to the dashboard.
+        if (typeof tabKey === 'string' && tabKey.includes('-') && keyOverride === undefined) {
+          return renderActiveTabContent(tabKey.replace(/-/g, '_'));
+        }
         return <AdminDashboard onNavigate={(tab) => setActiveTab(tab)} />;
     }
   };

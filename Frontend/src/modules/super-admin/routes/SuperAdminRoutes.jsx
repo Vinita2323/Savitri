@@ -17,8 +17,6 @@ const SuperAdminReports = lazy(() => import('../pages/SuperAdminReports').then(m
 const SuperAdminInventory = lazy(() => import('../pages/SuperAdminInventory'));
 const SuperAdminStores = lazy(() => import('../pages/SuperAdminStores'));
 const SuperAdminDeliveryPartners = lazy(() => import('../pages/SuperAdminDeliveryPartners'));
-const SuperAdminBrands = lazy(() => import('../pages/SuperAdminBrands'));
-const CreateBrandPage = lazy(() => import('../pages/CreateBrandPage'));
 
 // Quotation Management Module Pages
 import { QuotationProvider } from '../../admin/quotations/context/QuotationContext';
@@ -180,9 +178,8 @@ const SuperAdminRoutesContent = () => {
           <Route path="/seller-settlements" element={<SuperAdminSellerSettlements />} />
           <Route path="/stores" element={<SuperAdminStores />} />
           <Route path="/brands/:brandSlug/stores" element={<SuperAdminStores />} />
-          <Route path="/brands" element={<SuperAdminBrands />} />
-          <Route path="/brands/create" element={<CreateBrandPage />} />
-          <Route path="/brands/edit/:id" element={<CreateBrandPage />} />
+          <Route path="/brands" element={<Navigate to="/super-admin/dashboard" replace />} />
+          <Route path="/brands/*" element={<Navigate to="/super-admin/dashboard" replace />} />
           <Route path="/inventory" element={<SuperAdminInventory />} />
           <Route path="/bulk-uploads" element={<BulkUploadsPage />} />
           <Route path="/catalog-control" element={<CatalogControlPage />} />

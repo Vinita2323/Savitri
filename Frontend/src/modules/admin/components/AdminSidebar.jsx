@@ -4,7 +4,6 @@ import { useAdmin } from '../context/useAdmin';
 import { 
   LayoutDashboard, 
   FolderTree, 
-  Tag, 
   Package, 
   UserCheck, 
   Store, 
@@ -53,6 +52,9 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import { authService } from '../../../services/authService';
+
+// Tab ids use underscores, URLs use hyphens (add_product vs /admin/add-product).
+const sameTab = (a, b) => String(a ?? '').replace(/-/g, '_') === String(b ?? '').replace(/-/g, '_');
 
 export const AdminSidebar = () => {
   const navigate = useNavigate();
@@ -149,7 +151,6 @@ export const AdminSidebar = () => {
             { id: 'subcategories', label: 'Sub Categories' }
           ]
         },
-        { id: 'brands', label: 'Brand', icon: Tag },
         {
           id: 'products',
           label: 'Product',
@@ -473,8 +474,8 @@ export const AdminSidebar = () => {
               {sec.items.map((item) => {
                 const Icon = item.icon;
                 const isItemActive =
-                  activeTab === item.id ||
-                  (item.submenu && item.submenu.some((sub) => sub.id === activeTab)) ||
+                  sameTab(activeTab, item.id) ||
+                  (item.submenu && item.submenu.some((sub) => sameTab(sub.id, activeTab))) ||
                   (item.id === 'quotation_management' && typeof activeTab === 'string' && activeTab.startsWith('quotations')) ||
                   (item.id === 'delivery_challans_menu' && typeof activeTab === 'string' && (activeTab.startsWith('delivery_challans') || activeTab.startsWith('delivery-challans'))) ||
                   (item.id === 'employee_management' && typeof activeTab === 'string' && (activeTab.startsWith('employee') || activeTab.startsWith('employees')));
@@ -509,7 +510,7 @@ export const AdminSidebar = () => {
                       {sidebarOpen && isExpanded && (
                         <div className="pl-6 space-y-1 border-l-2 border-[#F7941D]/50 ml-4 my-1">
                           {item.submenu.map((sub, sIdx) => {
-                            const isSubActive = activeTab === sub.id && (item.id !== 'products' || sIdx === 0 || sub.id !== 'products');
+                            const isSubActive = sameTab(activeTab, sub.id) && (item.id !== 'products' || sIdx === 0 || sub.id !== 'products');
                             return (
                               <button
                                 key={sIdx}
