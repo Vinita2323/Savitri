@@ -142,7 +142,7 @@ const VerifyOtp = () => {
             >
               <ArrowLeft size={18} />
             </button>
-            <img src="/LogoSavitri.png" alt="Shippnex" className="h-20 max-w-[180px] object-contain my-1" />
+            <img src="/LogoSavitri.png" alt="Savitri" className="h-20 max-w-[180px] object-contain my-1" />
             <div className="w-10"></div> {/* Spacer */}
           </div>
 
@@ -220,7 +220,7 @@ const VerifyOtp = () => {
         </div>
 
         <p className="text-[11px] text-center text-slate-400 font-normal mt-6">
-          Having trouble? Contact Shippnex Support.
+          Having trouble? Contact Savitri Support.
         </p>
 
       </div>

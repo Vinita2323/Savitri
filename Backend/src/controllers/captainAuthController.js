@@ -199,7 +199,7 @@ export const registerCaptain = async (req, res, next) => {
     const smsResult = await sendOtpSMS({
       phone,
       otp,
-      appName: 'ShippNex',
+      appName: 'Savitri',
       role: 'captain',
     });
 
@@ -278,7 +278,7 @@ export const sendOtp = async (req, res, next) => {
     const smsResult = await sendOtpSMS({
       phone: cleanPhone,
       otp,
-      appName: 'ShippNex',
+      appName: 'Savitri',
       role: 'captain',
     });
 

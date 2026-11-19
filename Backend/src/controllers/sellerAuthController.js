@@ -102,7 +102,7 @@ export const sendOtp = async (req, res, next) => {
     const smsResult = await sendOtpSMS({
       phone: cleanPhone,
       otp,
-      appName: 'ShippNex',
+      appName: 'Savitri',
       role: 'seller',
     });
 
@@ -453,7 +453,7 @@ export const registerSeller = async (req, res, next) => {
     const smsResult = await sendOtpSMS({
       phone: cleanPhone,
       otp,
-      appName: 'ShippNex',
+      appName: 'Savitri',
       role: 'seller',
     });
 

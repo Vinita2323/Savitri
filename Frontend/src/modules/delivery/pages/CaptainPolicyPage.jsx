@@ -50,7 +50,7 @@ const CaptainPolicyPage = () => {
             </button>
             <div>
               <span className="text-[9px] uppercase tracking-wider font-extrabold text-emerald-400 block leading-tight">
-                ShippNex Partner
+                Savitri Partner
               </span>
               <h1 className="text-xs sm:text-sm font-bold text-white m-0 leading-tight">
                 {pageTitle}

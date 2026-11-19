@@ -161,19 +161,19 @@ const UserDesktopHeader = () => {
     <>
       <header className="hidden md:block sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs transition-all">
         {/* Row 1: Main Bar (Brand, Location, Search, Quick Actions) */}
-        <div className="w-full px-4 md:px-6 py-3.5 flex items-center justify-between gap-6">
+        <div className="w-full px-4 md:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-3 xl:gap-6">
           
           {/* Brand & Location */}
-          <div className="flex items-center gap-5 shrink-0">
+          <div className="flex items-center gap-3 xl:gap-5 shrink-0">
             <Link to="/" className="flex items-center gap-2.5 group">
               <div className="w-11 h-11 rounded-xl bg-orange-50 p-1.5 flex items-center justify-center border border-orange-100 group-hover:border-orange-300 transition-colors shadow-2xs">
-                <img src="/LogoSavitri.png" alt="ShippNex" className="w-full h-full object-contain" />
+                <img src="/LogoSavitri.png" alt="Savitri" className="w-full h-full object-contain" />
               </div>
-              <div className="flex flex-col">
+              <div className="hidden lg:flex flex-col">
                 <span className="text-xl font-black tracking-tight text-slate-900 leading-none">
-                  Shipp<span className="text-[#F7941D]">Nex</span>
+                  Savitri
                 </span>
-                <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mt-0.5">Express Hyperlocal</span>
+                <span className="hidden xl:block text-[10px] font-bold text-slate-400 tracking-wider uppercase mt-0.5">Express Hyperlocal</span>
               </div>
             </Link>
 
@@ -186,7 +186,7 @@ const UserDesktopHeader = () => {
               <div className="w-7 h-7 rounded-lg bg-[#79B433]/10 flex items-center justify-center text-[#F7941D] shrink-0">
                 <MapPin size={15} />
               </div>
-              <div className="min-w-0 max-w-[180px]">
+              <div className="min-w-0 max-w-[100px] xl:max-w-[180px]">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">
                   {addressType}
                 </div>
@@ -199,7 +199,7 @@ const UserDesktopHeader = () => {
           </div>
 
           {/* Desktop Search Bar */}
-          <form onSubmit={handleSearchSubmit} className="flex-1 max-w-2xl relative">
+          <form onSubmit={handleSearchSubmit} className="flex-1 min-w-[170px] max-w-[960px] relative">
             <div className={`relative flex items-center bg-slate-100/90 hover:bg-slate-100 focus-within:bg-white focus-within:ring-2 ${
               isListening 
                 ? 'ring-2 ring-red-500 border-red-500 bg-red-50/20' 
@@ -283,7 +283,7 @@ const UserDesktopHeader = () => {
             {/* Cart Button */}
             <button
               onClick={() => navigate('/cart')}
-              className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer border-none active:scale-98"
+              className="flex items-center gap-2.5 px-3 lg:px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer border-none active:scale-98"
               title="Shopping Cart"
             >
               <div className="relative">
@@ -294,7 +294,7 @@ const UserDesktopHeader = () => {
                   </span>
                 )}
               </div>
-              <span className="hidden sm:inline font-extrabold text-sm">
+              <span className="hidden lg:inline font-extrabold text-sm">
                 {cartTotal > 0 ? `₹${cartTotal.toFixed(0)}` : 'Cart'}
               </span>
             </button>
@@ -309,7 +309,7 @@ const UserDesktopHeader = () => {
                   <div className="w-8 h-8 rounded-full bg-orange-100 text-[#F7941D] font-bold text-xs flex items-center justify-center border border-orange-200">
                     {user.name ? user.name.charAt(0).toUpperCase() : <User size={16} />}
                   </div>
-                  <span className="text-xs font-bold text-slate-700 max-w-[90px] truncate">{user.name?.split(' ')[0] || 'Account'}</span>
+                  <span className="hidden lg:inline text-xs font-bold text-slate-700 max-w-[90px] truncate">{user.name?.split(' ')[0] || 'Account'}</span>
                   <ChevronDown size={14} className="text-slate-400" />
                 </button>
 
@@ -366,7 +366,7 @@ const UserDesktopHeader = () => {
         </div>
 
         {/* Row 2: Menu Items in the Middle */}
-        <div className="w-full px-4 md:px-6 py-2.5 border-t border-slate-200/70 bg-slate-50/70 flex items-center justify-center">
+        <div className="w-full px-4 md:px-6 lg:px-8 py-2.5 border-t border-slate-200/70 bg-slate-50/70 flex items-center justify-center">
           <nav className="flex items-center gap-2 sm:gap-3 overflow-x-auto hide-scrollbar">
             {navLinks.map((item) => {
               const isActive = location.pathname === item.path;

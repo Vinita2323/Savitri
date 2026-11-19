@@ -82,7 +82,7 @@ export const AdminLogin = () => {
       <div className="w-full max-w-md bg-[#0F1C06] border border-[#355A1C] rounded-3xl p-6 sm:p-8 shadow-2xl relative z-10 space-y-6">
         <div className="text-center space-y-3">
           <div className="inline-flex items-center justify-center p-3 bg-white rounded-2xl shadow-md mb-2">
-            <img src="/LogoSavitri.png" alt="ShippNex Logo" className="h-10 object-contain" />
+            <img src="/LogoSavitri.png" alt="Savitri Logo" className="h-10 object-contain" />
           </div>
           <div className="flex items-center justify-center gap-2">
             <ShieldCheck size={20} className="text-[#F7941D]" />

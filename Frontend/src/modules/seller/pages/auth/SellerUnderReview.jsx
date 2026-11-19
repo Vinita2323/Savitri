@@ -11,7 +11,7 @@ const SellerUnderReview = () => {
         
         {/* Logo */}
         <div className="flex justify-center">
-          <img src="/LogoSavitri.png" alt="ShippNex Logo" className="h-14 w-auto object-contain" />
+          <img src="/LogoSavitri.png" alt="Savitri Logo" className="h-14 w-auto object-contain" />
         </div>
 
         {/* Status Icon */}
@@ -49,7 +49,7 @@ const SellerUnderReview = () => {
           </button>
 
           <a 
-            href="mailto:shippnexin26@gmail.com"
+            href="mailto:sreplwm@gmail.com"
             className="w-full flex justify-center items-center gap-2 text-xs text-[#ff7526] font-semibold hover:underline no-underline"
           >
             <Mail size={14} />

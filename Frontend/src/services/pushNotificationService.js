@@ -187,7 +187,7 @@ export function setupForegroundNotificationHandler(customHandler) {
     onMessage(messaging, (payload) => {
       console.log('📬 [FCM] Foreground message received:', payload);
 
-      const title = payload.notification?.title || payload.data?.title || 'ShippNex Notification';
+      const title = payload.notification?.title || payload.data?.title || 'Savitri Notification';
       const body = payload.notification?.body || payload.data?.body || '';
       const icon = payload.notification?.icon || payload.data?.icon || '/LogoSavitri.png';
 

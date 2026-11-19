@@ -189,7 +189,7 @@ const AllSellers = () => {
             Loading best seller stores...
           </div>
         ) : filteredSellers.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-[repeat(auto-fill,minmax(290px,1fr))] gap-4 md:gap-6">
             {filteredSellers.map((seller) => (
               <div 
                 key={seller._id || seller.businessName}
@@ -197,7 +197,7 @@ const AllSellers = () => {
                 className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_4px_12px_rgba(0,0,0,0.03)] overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer group flex flex-col"
               >
                 {/* Store Banner */}
-                <div className="h-28 md:h-36 w-full bg-slate-100 relative overflow-hidden shrink-0">
+                <div className="h-28 md:h-40 w-full bg-slate-100 relative overflow-hidden shrink-0">
                   <img 
                     src={seller.banner || 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=800&auto=format&fit=crop&q=80'} 
                     alt={seller.businessName} 

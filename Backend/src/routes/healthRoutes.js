@@ -5,7 +5,7 @@ const router = express.Router();
 router.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
-    message: 'Shippnex Backend API is running smoothly',
+    message: 'Savitri Backend API is running smoothly',
     timestamp: new Date().toISOString(),
   });
 });

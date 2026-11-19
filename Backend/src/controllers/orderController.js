@@ -301,7 +301,7 @@ const findOrCreateProduct = async (productId, productData = {}) => {
     stock: 100,
     category: productData.category || 'Grocery',
     mainImage: productData.image || productData.mainImage || '',
-    seller: productData.seller || 'ShippNex Official Store',
+    seller: productData.seller || 'Savitri Official Store',
   });
 
   return created;
@@ -346,7 +346,7 @@ const pickOrderedVariant = (product, item = {}) => {
   };
 };
 
-// WALLET = ShippNex in-app balance (instant debit). UPI/CARD/NETBANKING go through Razorpay.
+// WALLET = Savitri in-app balance (instant debit). UPI/CARD/NETBANKING go through Razorpay.
 const ONLINE_PAYMENT_METHODS = ['UPI', 'CARD', 'NETBANKING', 'ONLINE'];
 const isWalletPaymentMethod = (method) => String(method || '').toUpperCase() === 'WALLET';
 
@@ -410,7 +410,7 @@ const createSellerOrderNotifications = async ({ order, orderItems, shippingAddre
 
   const sellerGroups = {};
   for (const item of orderItems) {
-    const sellerName = item.seller || 'ShippNex Official Store';
+    const sellerName = item.seller || 'Savitri Official Store';
     if (!sellerGroups[sellerName]) sellerGroups[sellerName] = [];
     sellerGroups[sellerName].push(item);
   }
@@ -742,7 +742,7 @@ export const placeOrder = async (req, res, next) => {
         image: cleanImage(
           chosen.matched?.image || product.mainImage || product.image || item.image || (product.variants?.[0]?.image) || ''
         ) || chosen.matched?.image || product.mainImage || product.image || item.image || '',
-        seller: product.seller || item.seller || 'ShippNex Official Store',
+        seller: product.seller || item.seller || 'Savitri Official Store',
         variantSku: chosen.variantSku,
         variantId: chosen.variantId,
         sku: chosen.variantSku || String(product.sku || '').trim(),
@@ -861,7 +861,7 @@ export const placeOrder = async (req, res, next) => {
       if (available < grandTotal) {
         return res.status(400).json({
           success: false,
-          message: `Insufficient ShippNex Wallet balance. Available ₹${available.toFixed(2)}, required ₹${grandTotal.toFixed(2)}.`,
+          message: `Insufficient Savitri Wallet balance. Available ₹${available.toFixed(2)}, required ₹${grandTotal.toFixed(2)}.`,
           walletBalance: available,
         });
       }
@@ -1004,7 +1004,7 @@ export const placeOrder = async (req, res, next) => {
     // -------------------------------------------------------------
     const sellerGroups = {};
     for (const item of orderItems) {
-      const sellerName = item.seller || 'ShippNex Official Store';
+      const sellerName = item.seller || 'Savitri Official Store';
       if (!sellerGroups[sellerName]) {
         sellerGroups[sellerName] = [];
       }
@@ -1211,7 +1211,7 @@ export const placeOrder = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: walletPayment ? 'Order placed successfully using ShippNex Wallet!' : 'Order placed successfully!',
+      message: walletPayment ? 'Order placed successfully using Savitri Wallet!' : 'Order placed successfully!',
       order,
       walletBalance: walletBalanceAfter,
       user: userDoc

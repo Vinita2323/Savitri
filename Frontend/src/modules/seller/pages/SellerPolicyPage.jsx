@@ -52,7 +52,7 @@ const SellerPolicyPage = () => {
             <div>
               <div className="flex items-center gap-2">
                 <Store size={16} className="text-[#ff7526]" />
-                <span className="text-[11px] uppercase tracking-wider font-extrabold text-[#ff7526]">ShippNex Merchant Portal</span>
+                <span className="text-[11px] uppercase tracking-wider font-extrabold text-[#ff7526]">Savitri Merchant Portal</span>
               </div>
               <h1 className="text-lg sm:text-xl font-bold text-white m-0">{pageTitle}</h1>
             </div>
@@ -136,7 +136,7 @@ const SellerPolicyPage = () => {
               </div>
               <div>
                 <h4 className="text-xs font-bold text-white m-0">Questions on Vendor Agreements or Billing?</h4>
-                <p className="text-[11px] text-slate-400 m-0 mt-0.5">Contact our Merchant Relationship Team at seller-support@shippnex.com</p>
+                <p className="text-[11px] text-slate-400 m-0 mt-0.5">Contact our Merchant Relationship Team at sreplwm@gmail.com</p>
               </div>
             </div>
             <button

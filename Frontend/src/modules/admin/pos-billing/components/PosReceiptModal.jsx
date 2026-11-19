@@ -285,7 +285,7 @@ export const PosReceiptModal = () => {
               <div className="text-center pt-1 text-[10px] text-gray-500 space-y-1">
                 <p className="font-semibold text-gray-700">*** Thank You for Shopping! ***</p>
                 <p>Goods once sold can be returned within 7 days in original condition.</p>
-                <p className="font-mono text-[9px] text-gray-400">Powered by ShippNex POS</p>
+                <p className="font-mono text-[9px] text-gray-400">Powered by Savitri POS</p>
               </div>
             </div>
           ) : (

@@ -7,7 +7,7 @@ const HelpSupport = () => {
   const navigate = useNavigate();
   const [settings, setSettings] = useState({
     customerPhone: '+91 63774 60692',
-    customerEmail: 'shippnexin26@gmail.com',
+    customerEmail: 'sreplwm@gmail.com',
     customerHours: '24/7 Priority Support',
     bannerTitle: "We're here to help",
     bannerSubtitle: 'Have an issue with your order or want to share feedback? Connect with us directly.',
@@ -58,7 +58,7 @@ const HelpSupport = () => {
   const handleEmailSupport = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const email = String(settings.customerEmail || 'shippnexin26@gmail.com').trim();
+    const email = String(settings.customerEmail || 'sreplwm@gmail.com').trim();
     try {
       window.location.href = `mailto:${email}`;
     } catch {
@@ -144,7 +144,7 @@ const HelpSupport = () => {
           
           {/* Email Support */}
           <a 
-            href={`mailto:${settings.customerEmail || 'shippnexin26@gmail.com'}`}
+            href={`mailto:${settings.customerEmail || 'sreplwm@gmail.com'}`}
             onClick={handleEmailSupport}
             className="flex items-center justify-between bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs cursor-pointer hover:border-rose-300 hover:bg-rose-50/20 transition-all text-left no-underline group"
           >
@@ -154,7 +154,7 @@ const HelpSupport = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-[13.5px] font-bold text-slate-900 leading-tight">Email Support</span>
-                <span className="text-[12px] font-semibold text-rose-600 mt-0.5">{settings.customerEmail || 'shippnexin26@gmail.com'}</span>
+                <span className="text-[12px] font-semibold text-rose-600 mt-0.5">{settings.customerEmail || 'sreplwm@gmail.com'}</span>
               </div>
             </div>
             <ChevronRight size={16} className="text-slate-400 group-hover:text-rose-500 transition-colors" />

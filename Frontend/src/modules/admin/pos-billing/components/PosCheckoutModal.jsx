@@ -287,7 +287,7 @@ export const PosCheckoutModal = () => {
             <div className="space-y-2 bg-blue-50/60 p-3 rounded-xl border border-blue-200 text-xs">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-blue-900">Scan Store UPI QR Code</span>
-                <span className="text-[11px] font-mono text-blue-700">shippnex@icici</span>
+                <span className="text-[11px] font-mono text-blue-700">savitri@icici</span>
               </div>
               <div>
                 <label className="text-gray-700 font-medium block mb-1">

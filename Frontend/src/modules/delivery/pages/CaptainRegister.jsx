@@ -735,7 +735,7 @@ const CaptainRegister = () => {
             <span>Back to Login</span>
           </button>
           <div className="flex items-center gap-2 min-w-0">
-            <img src="/LogoSavitri.png" alt="ShippNex" className="h-9 object-contain" />
+            <img src="/LogoSavitri.png" alt="Savitri" className="h-9 object-contain" />
             <span className="text-sm font-bold text-[#1A2E0A] truncate hidden sm:inline">Captain Registration</span>
           </div>
         </div>
@@ -746,7 +746,7 @@ const CaptainRegister = () => {
         
         {/* Header Branding */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/LogoSavitri.png" alt="ShippNex Logo" className="h-16 object-contain mb-3" />
+          <img src="/LogoSavitri.png" alt="Savitri Logo" className="h-16 object-contain mb-3" />
           <h1 className="text-2xl font-bold text-[#1A2E0A]">Captain Registration</h1>
           <p className="text-xs text-slate-500 text-center mt-1">
             Fill in your details and document verification to register as a Captain.
@@ -763,7 +763,7 @@ const CaptainRegister = () => {
               <h2 className="text-2xl font-bold text-[#1A2E0A]">Registration Successful!</h2>
               <p className="text-base font-semibold text-emerald-700">Your Account is Currently Under Review</p>
               <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed pt-1">
-                Your captain registration application and documents have been submitted and your mobile number is verified. Once the Shippnex admin team approves your account, you will be able to log in using your registered mobile number and password.
+                Your captain registration application and documents have been submitted and your mobile number is verified. Once the Savitri admin team approves your account, you will be able to log in using your registered mobile number and password.
               </p>
             </div>
 

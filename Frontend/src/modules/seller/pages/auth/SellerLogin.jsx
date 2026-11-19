@@ -10,9 +10,34 @@ import {
   writeLoginDraft,
 } from '../../../../utils/loginFormDraft';
 
+// A seller who is already signed in (valid, unexpired token on this device) must never see the login form again:
+// reopening the app on /seller/login should land straight on the dashboard.
+const hasValidSellerSession = () => {
+  try {
+    const token = localStorage.getItem('savitri_seller_token');
+    if (!token || token === 'null' || token === 'undefined') return false;
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    if (payload && payload.exp && payload.exp * 1000 <= Date.now()) {
+      localStorage.removeItem('savitri_seller_token'); // really expired: ask for a fresh login
+      localStorage.removeItem('savitri_seller_data');
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const SellerLogin = () => {
   const navigate = useNavigate();
   const { syncAuthFromStorage } = useAuth();
+  const [resumeSession] = useState(() => hasValidSellerSession());
+  useEffect(() => {
+    if (resumeSession) {
+      syncAuthFromStorage('seller');
+      navigate('/seller/dashboard', { replace: true });
+    }
+  }, [resumeSession]);
   const savedDraft = readLoginDraft(SELLER_LOGIN_DRAFT_KEY) || {};
   const [mobileNumber, setMobileNumber] = useState(savedDraft.mobileNumber || '');
   const [password, setPassword] = useState(savedDraft.password || '');
@@ -208,6 +233,8 @@ const SellerLogin = () => {
     }
   };
 
+  if (resumeSession) return null; // redirecting to the dashboard
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
       
@@ -217,7 +244,7 @@ const SellerLogin = () => {
         {/* Card Header with Logo, Title, and Subtitle */}
         <div className="text-center space-y-2">
           <div className="flex justify-center">
-            <img src="/LogoSavitri.png" alt="ShippNex Logo" className="h-14 w-auto object-contain" />
+            <img src="/LogoSavitri.png" alt="Savitri Logo" className="h-14 w-auto object-contain" />
           </div>
           <h2 className="text-2xl font-semibold text-slate-900 tracking-tight pt-1">
             {authMode === 'login' ? 'Seller Portal Login' : 'Set / Reset Password'}
@@ -480,10 +507,10 @@ const SellerLogin = () => {
           </div>
         )}
 
-        {/* New to ShippNex Register Callout */}
+        {/* New to Savitri Register Callout */}
         <div className="pt-4 border-t border-slate-100 space-y-3">
           <div className="relative flex justify-center text-xs">
-            <span className="bg-white px-2 text-slate-400 font-normal">New to ShippNex?</span>
+            <span className="bg-white px-2 text-slate-400 font-normal">New to Savitri?</span>
           </div>
 
           <Link

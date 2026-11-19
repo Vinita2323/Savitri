@@ -36,7 +36,7 @@ const productSchema = new mongoose.Schema(
     },
     seller: {
       type: mongoose.Schema.Types.Mixed,
-      default: 'ShippNex Official Store',
+      default: 'Savitri Official Store',
     },
     sellerId: {
       type: mongoose.Schema.Types.ObjectId,

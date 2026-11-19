@@ -76,9 +76,7 @@ const SellerReferral = () => {
     fetchReferralData();
   }, []);
 
-  const BASE_DOMAIN = (typeof window !== 'undefined' && window.location.origin.includes('shippnex.in'))
-    ? window.location.origin
-    : 'https://shippnex.in';
+  const BASE_DOMAIN = typeof window !== 'undefined' ? window.location.origin : '';
 
   const fullReferralLink = `${BASE_DOMAIN}/seller/register?ref=${codeData.referralCode || ''}`;
 
@@ -111,11 +109,11 @@ const SellerReferral = () => {
   };
 
   const handleNativeShare = async () => {
-    const shareText = `Join Shippnex as a Seller using my referral code ${codeData.referralCode} and start expanding your store business! Sign up here: ${fullReferralLink}`;
+    const shareText = `Join Savitri as a Seller using my referral code ${codeData.referralCode} and start expanding your store business! Sign up here: ${fullReferralLink}`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join Shippnex as a Seller',
+          title: 'Join Savitri as a Seller',
           text: shareText,
           url: fullReferralLink,
         });
@@ -131,7 +129,7 @@ const SellerReferral = () => {
 
   const handleWhatsAppShare = () => {
     const text = encodeURIComponent(
-      `Hello! Grow your local business on Shippnex. Register using my invite link:\n\n${fullReferralLink}\n\nReferral Code: *${codeData.referralCode}*`
+      `Hello! Grow your local business on Savitri. Register using my invite link:\n\n${fullReferralLink}\n\nReferral Code: *${codeData.referralCode}*`
     );
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };
@@ -243,7 +241,7 @@ const SellerReferral = () => {
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Refer & Earn</h1>
           </div>
           <p className="text-xs font-normal text-slate-500 mt-1">
-            Invite fellow sellers to Shippnex and earn reward bonuses straight into your wallet balance.
+            Invite fellow sellers to Savitri and earn reward bonuses straight into your wallet balance.
           </p>
         </div>
         <button
@@ -277,7 +275,7 @@ const SellerReferral = () => {
               Earn ₹{codeData.rewardAmount || 200} for Every New Seller!
             </h2>
             <p className="text-xs text-white/90 max-w-xl leading-relaxed">
-              Share your personal invite code or link with business owners. You receive ₹{codeData.rewardAmount || 200} bonus into your Shippnex wallet ({getTriggerDescription(codeData.rewardTrigger)}).
+              Share your personal invite code or link with business owners. You receive ₹{codeData.rewardAmount || 200} bonus into your Savitri wallet ({getTriggerDescription(codeData.rewardTrigger)}).
             </p>
           </div>
 

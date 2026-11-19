@@ -79,9 +79,7 @@ const CaptainReferral = () => {
     fetchReferralData();
   }, []);
 
-  const BASE_DOMAIN = (typeof window !== 'undefined' && window.location.origin.includes('shippnex.in'))
-    ? window.location.origin
-    : 'https://shippnex.in';
+  const BASE_DOMAIN = typeof window !== 'undefined' ? window.location.origin : '';
 
   const fullReferralLink = `${BASE_DOMAIN}/captain/register?ref=${codeData.referralCode || ''}`;
 
@@ -114,11 +112,11 @@ const CaptainReferral = () => {
   };
 
   const handleNativeShare = async () => {
-    const shareText = `Join Shippnex as a Captain & earn extra daily income delivering orders! Register using my referral code ${codeData.referralCode}: ${fullReferralLink}`;
+    const shareText = `Join Savitri as a Captain & earn extra daily income delivering orders! Register using my referral code ${codeData.referralCode}: ${fullReferralLink}`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join Shippnex as a Captain',
+          title: 'Join Savitri as a Captain',
           text: shareText,
           url: fullReferralLink,
         });
@@ -134,7 +132,7 @@ const CaptainReferral = () => {
 
   const handleWhatsAppShare = () => {
     const text = encodeURIComponent(
-      `Hey! Start earning as a Delivery Captain on Shippnex. Fast onboarding & reliable daily payouts! Register using my link:\n\n${fullReferralLink}\n\nReferral Code: *${codeData.referralCode}*`
+      `Hey! Start earning as a Delivery Captain on Savitri. Fast onboarding & reliable daily payouts! Register using my link:\n\n${fullReferralLink}\n\nReferral Code: *${codeData.referralCode}*`
     );
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };
@@ -243,7 +241,7 @@ const CaptainReferral = () => {
               Earn ₹{codeData.rewardAmount || 100} Cash
             </h2>
             <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-              Invite your friends to drive for Shippnex. You get ₹{codeData.rewardAmount || 100} bonus deposited into your Captain Wallet ({getTriggerText(codeData.rewardTrigger)}).
+              Invite your friends to drive for Savitri. You get ₹{codeData.rewardAmount || 100} bonus deposited into your Captain Wallet ({getTriggerText(codeData.rewardTrigger)}).
             </p>
           </div>
 

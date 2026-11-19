@@ -96,7 +96,7 @@ export const getPosStores = async (req, res) => {
     if (formatted.length === 0) {
       formatted.push({
         id: 'store_central',
-        storeName: 'ShippNex Central Fulfillment Hub',
+        storeName: 'Savitri Central Fulfillment Hub',
         phone: '9876543210',
         city: 'Indore',
         address: 'Plot 42, Logistics Park, Ring Road',
@@ -538,7 +538,7 @@ export const createPosDeliveryOrder = async (req, res) => {
         originalPrice: it.mrp || it.salePrice,
         quantity: it.quantity,
         image: it.image || '',
-        seller: store?.storeName || 'ShippNex Official Store',
+        seller: store?.storeName || 'Savitri Official Store',
         sku: it.sku || '',
       })),
       shippingAddress: {

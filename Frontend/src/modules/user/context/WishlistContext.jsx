@@ -23,7 +23,7 @@ const normalizeWishlistProducts = (prods = []) => {
         image: p.image || p.mainImage || '',
         price: p.salePrice !== undefined ? p.salePrice : (p.price || 0),
         originalPrice: p.mrp !== undefined ? p.mrp : (p.originalPrice || p.price || 0),
-        brand: p.brand || p.seller || 'ShippNex Select',
+        brand: p.brand || p.seller || 'Savitri Select',
       };
     }
     return p;

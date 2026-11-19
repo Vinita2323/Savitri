@@ -89,7 +89,7 @@ export async function sendPushNotification(tokens, payload) {
 
     const message = {
       notification: {
-        title: payload.title || 'ShippNex Notification',
+        title: payload.title || 'Savitri Notification',
         body: payload.body || '',
       },
       data: payload.data ? Object.fromEntries(

@@ -154,7 +154,7 @@ export const initiateRegistrationFeeOrder = async (req, res, next) => {
         await sendOtpSMS({
           phone: cleanPhone,
           otp,
-          appName: 'ShippNex',
+          appName: 'Savitri',
           role: 'seller',
         });
 
@@ -296,7 +296,7 @@ export const initiateRegistrationFeeOrder = async (req, res, next) => {
       await sendOtpSMS({
         phone: cleanPhone,
         otp,
-        appName: 'ShippNex',
+        appName: 'Savitri',
         role: 'seller',
       });
 
@@ -465,7 +465,7 @@ export const verifyRegistrationFeePayment = async (req, res, next) => {
     await sendOtpSMS({
       phone: seller.phone,
       otp,
-      appName: 'ShippNex',
+      appName: 'Savitri',
       role: 'seller',
     });
 

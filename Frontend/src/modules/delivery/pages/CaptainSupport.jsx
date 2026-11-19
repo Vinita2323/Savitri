@@ -20,7 +20,7 @@ const CaptainSupport = () => {
   const [faqs, setFaqs] = useState([]);
   const [supportSettings, setSupportSettings] = useState({
     captainPhone: '+91 63774 60692',
-    captainEmail: 'shippnexin26@gmail.com',
+    captainEmail: 'sreplwm@gmail.com',
     captainHours: '24/7 Active Dispatch Line',
   });
   const [loading, setLoading] = useState(true);
@@ -117,7 +117,7 @@ const CaptainSupport = () => {
 
           {/* Email Support */}
           <a 
-            href={`mailto:${supportSettings.captainEmail || 'shippnexin26@gmail.com'}`}
+            href={`mailto:${supportSettings.captainEmail || 'sreplwm@gmail.com'}`}
             className="flex items-center justify-between bg-white border border-slate-200/80 rounded-2xl p-3.5 shadow-2xs hover:border-blue-300 hover:bg-blue-50/20 transition-all no-underline group cursor-pointer"
           >
             <div className="flex items-center gap-3">
@@ -126,7 +126,7 @@ const CaptainSupport = () => {
               </div>
               <div>
                 <span className="text-[13.5px] font-black text-slate-900 block leading-tight">Email Support</span>
-                <span className="text-[12px] font-bold text-blue-600 block mt-0.5">{supportSettings.captainEmail || 'shippnexin26@gmail.com'}</span>
+                <span className="text-[12px] font-bold text-blue-600 block mt-0.5">{supportSettings.captainEmail || 'sreplwm@gmail.com'}</span>
               </div>
             </div>
             <span className="text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg">Email</span>

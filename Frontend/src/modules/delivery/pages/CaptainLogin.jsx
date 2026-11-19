@@ -230,7 +230,7 @@ const CaptainLogin = () => {
         
         {/* Left Side Branding */}
         <div className="hidden md:flex flex-col justify-center space-y-6">
-          <img src="/LogoSavitri.png" alt="ShippNex Logo" className="h-20 w-auto object-contain self-start" />
+          <img src="/LogoSavitri.png" alt="Savitri Logo" className="h-20 w-auto object-contain self-start" />
           <h1 className="text-4xl lg:text-6xl font-extrabold text-[#1A2E0A] tracking-tight leading-tight">
             Captain <br />
             <span className="text-[#F7941D]">Command Center.</span>
@@ -258,7 +258,7 @@ const CaptainLogin = () => {
             
             {/* Mobile Logo */}
             <div className="md:hidden flex justify-center mb-6">
-               <img src="/LogoSavitri.png" alt="ShippNex Logo" className="h-16 w-auto object-contain" />
+               <img src="/LogoSavitri.png" alt="Savitri Logo" className="h-16 w-auto object-contain" />
             </div>
 
             <div className="mb-6 text-center md:text-left">

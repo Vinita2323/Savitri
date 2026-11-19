@@ -7,11 +7,11 @@ let lastFaqCacheTime = 0;
 const FAQ_CACHE_TTL = 5 * 1000;
 
 const DEFAULT_FAQS = [
-  { category: 'General', question: 'How do I place an order on ShippNex?', answer: 'To place an order, browse products, add them to your cart, select your delivery address, and complete payment.' },
+  { category: 'General', question: 'How do I place an order on Savitri?', answer: 'To place an order, browse products, add them to your cart, select your delivery address, and complete payment.' },
   { category: 'Customer', question: 'How can I track my shipment live?', answer: 'Go to your Orders section or enter your tracking ID on the Track Order page for real-time GPS tracking updates.' },
   { category: 'Seller', question: 'What is the settlement payout cycle for sellers?', answer: 'Payouts are automatically generated every Monday directly into your registered bank account.' },
   { category: 'Delivery Captain', question: 'How do I accept delivery requests?', answer: 'Toggle your status to Available in the Captain app to receive nearby instant delivery alerts.' },
-  { category: 'General', question: 'What payment options are supported?', answer: 'ShippNex supports credit/debit cards, UPI, net banking, wallet balances, and Cash on Delivery.' }
+  { category: 'General', question: 'What payment options are supported?', answer: 'Savitri supports credit/debit cards, UPI, net banking, wallet balances, and Cash on Delivery.' }
 ];
 
 const seedDefaultFaqsIfEmpty = async () => {

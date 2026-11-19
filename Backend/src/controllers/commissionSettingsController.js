@@ -284,7 +284,7 @@ export const getCommissionReports = async (req, res, next) => {
 
     // Process E-Commerce Orders
     for (const ord of rawOrders) {
-      const firstItemSeller = ord.items?.[0]?.seller || 'ShippNex Official Store';
+      const firstItemSeller = ord.items?.[0]?.seller || 'Savitri Official Store';
       const orderAmount = Number(ord.grandTotal || ord.itemsTotal || 0);
 
       // Snapshot values or dynamic fallback if older document

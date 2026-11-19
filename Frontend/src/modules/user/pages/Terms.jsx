@@ -50,7 +50,7 @@ const Terms = () => {
           </button>
           <div>
             <span className="text-[9px] uppercase tracking-wider font-extrabold text-orange-600 block leading-tight">
-              ShippNex Customer
+              Savitri Customer
             </span>
             <h2 className="text-[14px] font-extrabold m-0 text-slate-900 tracking-tight leading-tight">
               {pageTitle}
@@ -82,7 +82,7 @@ const Terms = () => {
         </div>
         <div className="flex items-center gap-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-xs">
           <ShieldCheck size={16} className="text-emerald-600" />
-          Official ShippNex Policy
+          Official Savitri Policy
         </div>
       </div>
 

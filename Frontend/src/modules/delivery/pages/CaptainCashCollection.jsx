@@ -192,7 +192,7 @@ const CaptainCashCollection = () => {
           </div>
 
           <p className="text-xs text-emerald-200/80 text-center max-w-xs mx-auto">
-            Manage physical Cash on Delivery collected from customers & submit settlements to ShippNex.
+            Manage physical Cash on Delivery collected from customers & submit settlements to Savitri.
           </p>
         </div>
       </div>
@@ -230,7 +230,7 @@ const CaptainCashCollection = () => {
               className="flex-1 py-3 px-4 bg-[#79B433] hover:bg-[#e04b00] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black text-xs rounded-2xl shadow-md cursor-pointer transition-all flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined text-base">account_balance</span>
-              Settle Cash with ShippNex
+              Settle Cash with Savitri
             </button>
             <button
               onClick={() => navigate('/captain/wallet')}
@@ -365,7 +365,7 @@ const CaptainCashCollection = () => {
                   </div>
                   <p className="text-xs font-bold text-slate-600">No Settlement Requests</p>
                   <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-                    Click "Settle Cash with ShippNex" above to deposit and clear your collected COD cash balance.
+                    Click "Settle Cash with Savitri" above to deposit and clear your collected COD cash balance.
                   </p>
                 </div>
               ) : (
@@ -422,7 +422,7 @@ const CaptainCashCollection = () => {
                   <span className="material-symbols-outlined text-emerald-600 text-lg">account_balance</span>
                   Settle Cash Balance
                 </h3>
-                <p className="text-[10px] text-slate-400">Deposit collected COD cash to ShippNex</p>
+                <p className="text-[10px] text-slate-400">Deposit collected COD cash to Savitri</p>
               </div>
               <button
                 onClick={() => setShowSettleModal(false)}
@@ -494,7 +494,7 @@ const CaptainCashCollection = () => {
                   >
                     <option value="UPI">UPI (Google Pay / PhonePe / Paytm)</option>
                     <option value="BANK_TRANSFER">Bank Transfer (NEFT / IMPS / RTGS)</option>
-                    <option value="CASH_DEPOSIT">Cash Deposit at ShippNex Hub / Office</option>
+                    <option value="CASH_DEPOSIT">Cash Deposit at Savitri Hub / Office</option>
                     <option value="OFFICE_PAYMENT">Office Direct Handover</option>
                   </select>
                 </div>

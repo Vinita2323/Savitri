@@ -3,7 +3,7 @@
 export const PAYMENT_BRANDS = [
   { slug: 'auriva-bites', name: 'Auriva Bites', city: 'Indore' },
   { slug: 'quick-commerce', name: 'Quick Commerce', city: 'Bhopal' },
-  { slug: 'shippnex', name: 'Shippnex', city: 'Indore' },
+  { slug: 'shippnex', name: 'Savitri', city: 'Indore' },
   { slug: 'medcred', name: 'MedCred', city: 'Ujjain' },
 ];
 

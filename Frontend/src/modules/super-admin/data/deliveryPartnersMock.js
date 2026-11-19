@@ -6,7 +6,7 @@
 export const DELIVERY_PARTNER_BRANDS = [
   { slug: 'auriva-bites', name: 'Auriva Bites', code: 'AB-DEL' },
   { slug: 'quick-commerce', name: 'Quick Commerce', code: 'QC-FLT' },
-  { slug: 'shippnex', name: 'Shippnex', code: 'SX-LOG' },
+  { slug: 'shippnex', name: 'Savitri', code: 'SX-LOG' },
   { slug: 'medcred', name: 'MedCred', code: 'MC-MED' },
 ];
 
@@ -500,10 +500,10 @@ export const DELIVERY_PARTNERS_MOCK = [
     email: 'manoj.soni.sx@example.com',
     emergencyContact: '+91 98270 22101 (Wife)',
     brandSlug: 'shippnex',
-    brandName: 'Shippnex',
+    brandName: 'Savitri',
     city: 'Indore',
     serviceArea: 'Sanwer Road, Pithampur & Rau',
-    hub: 'Shippnex Central Logistics Hub',
+    hub: 'Savitri Central Logistics Hub',
     vehicleType: 'Delivery Van (Tata Ace)',
     vehicleModel: 'Tata Ace Gold CNG Plus',
     vehicleNumber: 'MP-09-GF-4418',
@@ -543,7 +543,7 @@ export const DELIVERY_PARTNERS_MOCK = [
       {
         orderId: 'LOG-TRP-2026-114',
         orderDate: '2026-10-21 10:15',
-        pickupInfo: 'Shippnex Hub, Sanwer Road Sec C',
+        pickupInfo: 'Savitri Hub, Sanwer Road Sec C',
         dropoffInfo: 'Wholesale Depot, Pithampur Sector 1',
         status: 'Delivered',
         collectionType: 'Prepaid (Corporate)',
@@ -569,7 +569,7 @@ export const DELIVERY_PARTNERS_MOCK = [
     email: 'anil.tiwari.sx@example.com',
     emergencyContact: '+91 97520 66302 (Brother)',
     brandSlug: 'shippnex',
-    brandName: 'Shippnex',
+    brandName: 'Savitri',
     city: 'Bhopal',
     serviceArea: 'Govindpura, Mandideep & BHEL',
     hub: 'Bhopal Industrial Freight Hub',
@@ -628,7 +628,7 @@ export const DELIVERY_PARTNERS_MOCK = [
     email: 'pradeep.yadav.sx@example.com',
     emergencyContact: '+91 93000 77303 (Father)',
     brandSlug: 'shippnex',
-    brandName: 'Shippnex',
+    brandName: 'Savitri',
     city: 'Jabalpur',
     serviceArea: 'Adhartal Transport Nagar',
     hub: 'Jabalpur Logistics Center',

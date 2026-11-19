@@ -6,7 +6,7 @@
 export const PAYOUT_BRANDS = [
   { slug: 'auriva-bites', name: 'Auriva Bites' },
   { slug: 'quick-commerce', name: 'Quick Commerce' },
-  { slug: 'shippnex', name: 'Shippnex' },
+  { slug: 'shippnex', name: 'Savitri' },
   { slug: 'medcred', name: 'MedCred' },
 ];
 
@@ -42,7 +42,7 @@ export const BRAND_SELLERS = [
   seller({ id: 'SEL-218', brandSlug: 'quick-commerce', name: 'Demo Seller QC Three', store: 'City Rush Store', phone: '+91 84XXX XX218', email: 'demo.qc.three@example.com', orders: 154, totalPaid: 33800, pendingAmount: 4100, failedAmount: 900, lastPayoutDate: '2026-10-09', registeredAt: '2025-06-07', verification: 'Verified', accountStatus: 'Active' }),
   seller({ id: 'SEL-226', brandSlug: 'quick-commerce', name: 'Demo Seller QC Four', store: 'Express Pantry', phone: '+91 83XXX XX226', email: 'demo.qc.four@example.com', orders: 121, totalPaid: 27400, pendingAmount: 2500, failedAmount: 0, lastPayoutDate: '2026-10-06', registeredAt: '2025-08-19', verification: 'Pending', accountStatus: 'Active' }),
 
-  seller({ id: 'SEL-305', brandSlug: 'shippnex', name: 'Demo Seller SX One', store: 'Shippnex Hub', phone: '+91 82XXX XX305', email: 'demo.sx.one@example.com', orders: 96, totalPaid: 22000, pendingAmount: 3000, failedAmount: 800, lastPayoutDate: '2026-10-12', registeredAt: '2025-02-14', verification: 'Verified', accountStatus: 'Active' }),
+  seller({ id: 'SEL-305', brandSlug: 'shippnex', name: 'Demo Seller SX One', store: 'Savitri Hub', phone: '+91 82XXX XX305', email: 'demo.sx.one@example.com', orders: 96, totalPaid: 22000, pendingAmount: 3000, failedAmount: 800, lastPayoutDate: '2026-10-12', registeredAt: '2025-02-14', verification: 'Verified', accountStatus: 'Active' }),
   seller({ id: 'SEL-312', brandSlug: 'shippnex', name: 'Demo Seller SX Two', store: 'Parcel Point', phone: '+91 81XXX XX312', email: 'demo.sx.two@example.com', orders: 74, totalPaid: 18600, pendingAmount: 0, failedAmount: 0, lastPayoutDate: '2026-10-08', registeredAt: '2025-05-09', verification: 'Verified', accountStatus: 'Active' }),
   seller({ id: 'SEL-320', brandSlug: 'shippnex', name: 'Demo Seller SX Three', store: 'Lane Dispatch', phone: '+91 80XXX XX320', email: 'demo.sx.three@example.com', orders: 61, totalPaid: 14200, pendingAmount: 1800, failedAmount: 500, lastPayoutDate: '2026-10-04', registeredAt: '2025-07-27', verification: 'Verified', accountStatus: 'Active' }),
 

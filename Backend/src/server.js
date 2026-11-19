@@ -223,7 +223,7 @@ registerRoutes('');
 
 // Base route
 app.get('/', (req, res) => {
-  res.send('Shippnex API Server is Running');
+  res.send('Savitri API Server is Running');
 });
 
 // Error handling middleware

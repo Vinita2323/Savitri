@@ -228,7 +228,7 @@ export const createProduct = async (req, res) => {
       unitValue: String(unitValue || '1'),
       unitType: String(unitType || 'kg'),
       unit: formattedUnit,
-      seller: seller || 'ShippNex Official Store',
+      seller: seller || 'Savitri Official Store',
       sellerId: sellerId && mongoose.Types.ObjectId.isValid(sellerId) ? sellerId : undefined,
       description: description || '',
       mrp: Number.isFinite(parsedMrp) ? parsedMrp : 0,

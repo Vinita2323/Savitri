@@ -401,7 +401,7 @@ export const ReturnManagement = () => {
                   const pImg = ret.productImage || ret.product?.mainImage || '';
                   const cName = ret.customer?.name || ret.user?.name || ret.pickupAddress?.fullName || 'Customer';
                   const cPhone = ret.customer?.phone || ret.user?.phone || ret.pickupAddress?.phone || 'N/A';
-                  const sName = ret.seller?.storeName || ret.seller?.businessName || 'ShippNex Store';
+                  const sName = ret.seller?.storeName || ret.seller?.businessName || 'Savitri Store';
                   const capName = ret.captain?.name || null;
                   const dateStr = ret.createdAt ? new Date(ret.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
 

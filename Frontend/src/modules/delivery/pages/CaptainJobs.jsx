@@ -741,7 +741,7 @@ const CaptainJobs = () => {
                         <div className="min-w-0 flex-1">
                           <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Deliver To (Seller / Store)</span>
                           <p className="font-bold text-slate-800 text-[11px] m-0 leading-tight">
-                            {ret.sellerName || 'ShippNex Warehouse'}
+                            {ret.sellerName || 'Savitri Warehouse'}
                             {ret.sellerAddress
                               ? ` — ${[
                                   ret.sellerAddress?.storeAddress || ret.sellerAddress?.addressLine1,

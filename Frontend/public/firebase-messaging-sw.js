@@ -22,7 +22,7 @@ try {
   messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background push message:', payload);
     
-    const notificationTitle = payload.notification?.title || payload.data?.title || 'ShippNex Notification';
+    const notificationTitle = payload.notification?.title || payload.data?.title || 'Savitri Notification';
     const notificationOptions = {
       body: payload.notification?.body || payload.data?.body || '',
       icon: payload.notification?.icon || payload.data?.icon || '/LogoSavitri.png',

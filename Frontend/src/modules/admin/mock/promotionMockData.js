@@ -1,4 +1,4 @@
-// Promotion Module Initial Mock Data Store for ShippNex Admin CMS
+// Promotion Module Initial Mock Data Store for Savitri Admin CMS
 
 export const initialPromotionStats = {
   activeCampaigns: 14,

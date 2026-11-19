@@ -186,7 +186,7 @@ const BestSelling = () => {
       </div>
 
       {/* Product List Grid */}
-      <div className="flex-1 overflow-y-auto px-4 py-2 md:p-0 [&::-webkit-scrollbar]:hidden pb-8 md:overflow-visible">
+      <div className="flex-1 overflow-y-auto px-4 py-2 md:p-0 [&::-webkit-scrollbar]:hidden pb-[calc(5.5rem+var(--safe-bottom))] md:overflow-visible">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-5">
           {productsList.map((product) => {
             const wishlisted = isWishlisted(product.id);

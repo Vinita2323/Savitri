@@ -418,12 +418,12 @@ export const AdminDashboard = ({ onNavigate }) => {
       </div>
 
 
-      {/* New Orders & Top Sellers Tables (Styled according to ShippNex Theme) */}
+      {/* New Orders & Top Sellers Tables (Styled according to Savitri Theme) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* View New Orders */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between">
           <div>
-            {/* Header Banner matching ShippNex Dark Teal Theme */}
+            {/* Header Banner matching Savitri Dark Teal Theme */}
             <div className="bg-[#1A2E0A] text-white px-6 py-4 flex items-center justify-between">
               <h3 className="text-base font-bold tracking-tight text-white flex items-center gap-2">
                 <ShoppingCart size={18} className="text-[#F7941D]" />
@@ -548,7 +548,7 @@ export const AdminDashboard = ({ onNavigate }) => {
         {/* View Top Seller */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between">
           <div>
-            {/* Header Banner matching ShippNex Dark Teal Theme */}
+            {/* Header Banner matching Savitri Dark Teal Theme */}
             <div className="bg-[#1A2E0A] text-white px-6 py-4 flex items-center justify-between">
               <h3 className="text-base font-bold tracking-tight text-white flex items-center gap-2">
                 <Store size={18} className="text-[#F7941D]" />
@@ -602,7 +602,7 @@ export const AdminDashboard = ({ onNavigate }) => {
                       paginatedSellers.map((seller) => {
                         const sellerId = seller._id ? String(seller._id) : '—';
                         const ownerName = seller.ownerName || seller.businessName || 'Merchant';
-                        const businessName = seller.businessName || 'ShippNex Store';
+                        const businessName = seller.businessName || 'Savitri Store';
                         const earningsFormatted = `₹ ${Number(seller.totalEarnings || seller.walletBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
                         return (

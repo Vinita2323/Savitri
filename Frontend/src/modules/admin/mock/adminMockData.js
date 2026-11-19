@@ -1,4 +1,4 @@
-// Super Admin Mock Data Store for ShippNex
+// Super Admin Mock Data Store for Savitri
 
 export const mockStats = {
   totalUsers: { value: '287', change: '+12.5%', isPositive: true },
@@ -153,7 +153,7 @@ export const mockDeliveries = [
 
 export const mockPayments = [
   { id: 'TXN-90901', orderId: 'ORD-99201', amount: '₹1,480.00', fee: '₹29.60', net: '₹1,450.40', method: 'Stripe Direct Credit Card', status: 'Success', date: '2026-07-27 14:31' },
-  { id: 'TXN-90902', orderId: 'ORD-99202', amount: '₹640.50', fee: '₹12.81', net: '₹627.69', method: 'ShippNex Business Wallet', status: 'Success', date: '2026-07-27 15:11' },
+  { id: 'TXN-90902', orderId: 'ORD-99202', amount: '₹640.50', fee: '₹12.81', net: '₹627.69', method: 'Savitri Business Wallet', status: 'Success', date: '2026-07-27 15:11' },
   { id: 'TXN-90903', orderId: 'ORD-99205', amount: '₹2,150.00', fee: '₹0.00', net: '-₹2,150.00', method: 'Automatic Refund', status: 'Refunded', date: '2026-07-27 09:20' },
 ];
 
@@ -177,9 +177,9 @@ export const mockRoles = [
 ];
 
 export const mockFaqs = [
-  { id: 1, category: 'General (Visible to all)', question: 'How do I place an order on ShippNex?', answer: 'To place an order, browse products, add them to your cart, select your delivery address, and complete payment.' },
+  { id: 1, category: 'General (Visible to all)', question: 'How do I place an order on Savitri?', answer: 'To place an order, browse products, add them to your cart, select your delivery address, and complete payment.' },
   { id: 2, category: 'Customer', question: 'How can I track my shipment live?', answer: 'Go to your Orders section or enter your tracking ID on the Track Order page for real-time GPS tracking updates.' },
   { id: 3, category: 'Seller', question: 'What is the settlement payout cycle for sellers?', answer: 'Payouts are automatically generated every Monday directly into your registered bank account.' },
   { id: 4, category: 'Delivery Captain', question: 'How do I accept delivery requests?', answer: 'Toggle your status to Available in the Captain app to receive nearby instant delivery alerts.' },
-  { id: 5, category: 'General (Visible to all)', question: 'What payment options are supported?', answer: 'ShippNex supports credit/debit cards, UPI, net banking, wallet balances, and Cash on Delivery.' }
+  { id: 5, category: 'General (Visible to all)', question: 'What payment options are supported?', answer: 'Savitri supports credit/debit cards, UPI, net banking, wallet balances, and Cash on Delivery.' }
 ];

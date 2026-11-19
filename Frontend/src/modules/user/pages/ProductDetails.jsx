@@ -71,14 +71,14 @@ const DescriptionText = ({ text, expanded, onToggle }) => {
 
   return (
     <div>
-      <p className="text-[12px] text-slate-600 leading-relaxed m-0 font-normal break-words [overflow-wrap:anywhere]">
+      <p className="text-[12px] md:text-[15px] text-slate-600 leading-relaxed md:leading-7 m-0 font-normal break-words [overflow-wrap:anywhere]">
         {expanded || !isLong ? fullText : previewDescription(fullText)}
       </p>
       {isLong && (
         <button
           type="button"
           onClick={onToggle}
-          className="mt-1.5 p-0 border-none bg-transparent text-[#F7941D] text-[12px] font-bold cursor-pointer"
+          className="mt-1.5 md:mt-2 p-0 border-none bg-transparent text-[#F7941D] text-[12px] md:text-sm font-bold cursor-pointer"
         >
           {expanded ? 'Read less' : 'Read more'}
         </button>
@@ -251,9 +251,9 @@ const ProductDetails = () => {
   };
 
   const similarProducts = [
-    { id: 2, name: 'Refined Sunflower Oil', brand: 'ShippNex Select', price: 699, originalPrice: 1118, discount: 38, image: oilGheeImg, rating: 4.6 },
-    { id: 3, name: 'Premium Toor Dal 5kg', brand: 'ShippNex Select', price: 1499, originalPrice: 2398, discount: 38, image: masalaImg, rating: 4.8 },
-    { id: 4, name: 'Organic Fine Sugar', brand: 'ShippNex Select', price: 1299, originalPrice: 2078, discount: 38, image: sugarImg, rating: 4.7 },
+    { id: 2, name: 'Refined Sunflower Oil', brand: 'Savitri Select', price: 699, originalPrice: 1118, discount: 38, image: oilGheeImg, rating: 4.6 },
+    { id: 3, name: 'Premium Toor Dal 5kg', brand: 'Savitri Select', price: 1499, originalPrice: 2398, discount: 38, image: masalaImg, rating: 4.8 },
+    { id: 4, name: 'Organic Fine Sugar', brand: 'Savitri Select', price: 1299, originalPrice: 2078, discount: 38, image: sugarImg, rating: 4.7 },
   ];
 
   const handleWishlistClick = () => {
@@ -265,7 +265,7 @@ const ProductDetails = () => {
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: product?.name || 'ShippNex Product',
+        title: product?.name || 'Savitri Product',
         url: window.location.href,
       }).catch(() => {});
     } else {
@@ -470,15 +470,24 @@ const ProductDetails = () => {
     : displayStock <= 0;
 
   return (
-    <div className="min-h-[100dvh] md:min-h-screen bg-white font-sans text-slate-800 relative w-full max-w-[480px] md:max-w-7xl mx-auto shadow-[0_0_25px_rgba(0,0,0,0.05)] md:shadow-none flex flex-col pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:pb-12 md:px-6 md:pt-4 overflow-x-hidden">
+    <div className="min-h-[100dvh] md:min-h-screen bg-white font-sans text-slate-800 relative w-full max-w-[480px] md:max-w-[1360px] mx-auto shadow-[0_0_25px_rgba(0,0,0,0.05)] md:shadow-none flex flex-col pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:pb-16 md:px-6 lg:px-8 md:pt-6 overflow-x-hidden md:overflow-x-clip">
       
+      {/* Desktop breadcrumb */}
+      <nav aria-label="Breadcrumb" data-testid="pd-breadcrumb" className="hidden md:flex items-center gap-2 text-sm text-slate-500 mb-5 min-w-0">
+        <button onClick={() => navigate('/')} className="bg-transparent border-none p-0 cursor-pointer text-slate-500 hover:text-[#689A2B] font-medium text-sm">Home</button>
+        <ChevronRight size={14} className="text-slate-300 shrink-0" />
+        <button onClick={() => navigate(product?.category ? `/categories?category=${encodeURIComponent(product.category)}` : '/categories')} className="bg-transparent border-none p-0 cursor-pointer text-slate-500 hover:text-[#689A2B] font-medium text-sm shrink-0">{product.category || 'Categories'}</button>
+        <ChevronRight size={14} className="text-slate-300 shrink-0" />
+        <span className="text-slate-800 font-semibold truncate">{product.name}</span>
+      </nav>
+
       {/* Desktop 2-Column Split Container */}
-      <div className="md:grid md:grid-cols-12 md:gap-10 md:items-start w-full min-w-0 max-w-full">
+      <div className="md:grid md:grid-cols-1 lg:grid-cols-12 lg:grid-rows-[auto_1fr] md:gap-y-6 lg:gap-x-14 lg:gap-y-8 md:items-start w-full min-w-0 max-w-full">
         {/* Full-Cover Hero Product Image Canvas (Left Column) */}
-        <div className="w-full relative overflow-hidden bg-slate-100 border-b md:border border-slate-100 md:col-span-6 lg:col-span-5 md:rounded-3xl md:sticky md:top-24">
+        <div className="w-full relative overflow-hidden bg-slate-100 border-b md:border border-slate-100 lg:col-span-6 lg:col-start-1 lg:row-start-1 md:rounded-3xl md:bg-white md:shadow-[0_8px_30px_rgba(15,23,42,0.06)] lg:self-start">
         
         {/* Floating Top Header Controls */}
-        <div className="absolute top-4 left-0 right-0 z-30 px-4 flex items-center justify-between pointer-events-none">
+        <div className="absolute top-4 left-0 right-0 z-30 px-4 md:px-5 md:top-5 flex items-center justify-between pointer-events-none">
           <button 
             onClick={() => navigate(-1)}
             className="pointer-events-auto w-9 h-9 rounded-full bg-slate-900/40 hover:bg-slate-900/60 backdrop-blur-md text-white flex items-center justify-center border-none cursor-pointer shadow-md transition-all active:scale-95"
@@ -505,22 +514,22 @@ const ProductDetails = () => {
         </div>
 
         {/* Floating Express Delivery Badge */}
-        <div className="absolute top-16 left-4 z-20 bg-white/90 backdrop-blur-md border border-emerald-200/80 text-emerald-700 font-medium text-[11px] px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+        <div className="absolute top-16 md:top-[68px] left-4 md:left-5 z-20 bg-white/90 backdrop-blur-md border border-emerald-200/80 text-emerald-700 font-medium text-[11px] px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
           <Clock size={12} className="text-emerald-600" /> 10-MIN EXPRESS DELIVERY
         </div>
 
         {/* Full Edge-to-Edge Image Container */}
-        <div className="w-full h-[320px] sm:h-[360px] md:h-[420px] lg:h-[480px] relative overflow-hidden bg-slate-100">
+        <div className="w-full h-[320px] sm:h-[360px] md:h-[460px] lg:h-[540px] xl:h-[580px] relative overflow-hidden bg-slate-100 md:bg-gradient-to-b md:from-slate-50 md:to-white">
           <img 
             src={getImageUrl(activeImage || product.mainImage || product.image || (Array.isArray(product.galleryImages) && product.galleryImages[0]), product.name)} 
             alt={product.name} 
-            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105" 
+            className="w-full h-full object-cover md:object-contain md:p-6 transition-transform duration-300 hover:scale-105" 
             onError={(e) => handleImageError(e, product.name)}
           />
         </div>
 
         {/* Thumbnail Selector Row */}
-        <div className="flex justify-center items-center gap-2 py-2.5 px-4 bg-white border-t border-slate-100">
+        <div className="flex justify-center md:justify-start items-center gap-2 md:gap-3 py-2.5 md:py-4 px-4 md:px-5 bg-white border-t border-slate-100">
           {[
             product.mainImage || product.image, 
             ...(product.galleryImages || [])
@@ -530,7 +539,7 @@ const ProductDetails = () => {
               <button 
                 key={idx}
                 onClick={() => setActiveImage(imgUrl)}
-                className={`w-12 h-12 rounded-lg bg-slate-50 border cursor-pointer p-0.5 overflow-hidden flex items-center justify-center transition-all ${
+                className={`w-12 h-12 md:w-[68px] md:h-[68px] rounded-lg md:rounded-xl bg-slate-50 border cursor-pointer p-0.5 overflow-hidden flex items-center justify-center transition-all ${
                   isSelected 
                     ? 'border-[#F7941D] ring-2 ring-[#F7941D]/20 shadow-xs scale-105' 
                     : 'border-slate-200 opacity-70 hover:opacity-100'
@@ -549,42 +558,42 @@ const ProductDetails = () => {
       </div>
 
       {/* 3. Product Info Content (Right Column) */}
-      <div className="px-4 py-4 md:px-0 md:py-0 flex flex-col gap-3 md:gap-4 md:col-span-6 lg:col-span-7 min-w-0 w-full max-w-full overflow-hidden">
+      <div className="px-4 pt-4 md:px-0 md:pt-0 flex flex-col gap-3 md:gap-5 lg:col-span-6 lg:col-start-7 lg:row-start-1 lg:row-span-2 min-w-0 w-full max-w-full md:overflow-visible overflow-hidden">
 
         {/* Title & Rating Header */}
         <div className="flex items-start justify-between gap-3 min-w-0 w-full">
           <div className="space-y-1 min-w-0 flex-1">
-            <h1 className="text-[18px] font-semibold text-slate-800 m-0 leading-snug break-words [overflow-wrap:break-word] [text-wrap:pretty]">
+            <h1 className="text-[18px] md:text-[30px] lg:text-[34px] font-semibold md:font-bold text-slate-800 md:text-slate-900 m-0 leading-snug md:leading-tight break-words [overflow-wrap:break-word] [text-wrap:pretty]">
               {product.name}
             </h1>
-            <p className="text-[11px] font-medium text-slate-500 m-0 truncate">
+            <p className="text-[11px] md:text-sm md:mt-2 font-medium text-slate-500 m-0 truncate">
               by:- <span className="font-bold text-slate-700">{product.seller || 'Fashion Hub'}</span>
             </p>
           </div>
 
-          <div className="flex items-center gap-1 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-md shrink-0">
-            <span className="text-[11px] font-bold text-amber-800">
+          <div className="flex items-center gap-1 bg-amber-50 border border-amber-200/80 px-2 md:px-3 py-0.5 md:py-1.5 rounded-md md:rounded-lg shrink-0">
+            <span className="text-[11px] md:text-sm font-bold text-amber-800">
               {reviewsData?.averageRating ? reviewsData.averageRating.toFixed(1) : (product.ratingAverage ? Number(product.ratingAverage).toFixed(1) : '4.8')}
             </span>
-            <Star size={11} className="text-amber-500 fill-amber-500" />
-            <span className="text-[10px] text-amber-600 font-medium">
+            <Star size={11} className="text-amber-500 fill-amber-500 md:w-4 md:h-4" />
+            <span className="text-[10px] md:text-xs text-amber-600 font-medium">
               ({reviewsData?.totalRatings !== undefined ? reviewsData.totalRatings : (product.ratingCount || 0)})
             </span>
           </div>
         </div>
 
         {/* Pricing Block */}
-        <div className="flex flex-col gap-1 bg-slate-50/80 rounded-xl p-3 border border-slate-100">
-          <div className="flex items-baseline gap-2">
-            <span className="text-[20px] font-bold text-slate-800 leading-none">
+        <div className="flex flex-col gap-1 md:gap-1.5 bg-slate-50/80 md:bg-gradient-to-r md:from-emerald-50/70 md:to-slate-50 rounded-xl md:rounded-2xl p-3 md:p-5 border border-slate-100">
+          <div className="flex items-baseline gap-2 md:gap-3 flex-wrap">
+            <span className="text-[20px] md:text-[38px] font-bold md:font-extrabold text-slate-800 md:text-slate-900 leading-none">
               ₹{currentPrice}
             </span>
             {hasDiscount && (
               <>
-                <span className="text-[13px] font-normal text-slate-400 line-through">
+                <span className="text-[13px] md:text-xl font-normal text-slate-400 line-through">
                   ₹{originalPrice}
                 </span>
-                <span className="bg-[#79B433] text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-md tracking-wider">
+                <span className="bg-[#79B433] text-white text-[10px] md:text-sm font-bold uppercase px-2 md:px-3 py-0.5 md:py-1 rounded-md tracking-wider">
                   {discountCalc}% OFF
                 </span>
               </>
@@ -592,22 +601,22 @@ const ProductDetails = () => {
           </div>
 
           {hasDiscount && (
-            <span className="text-[11px] font-medium text-emerald-600">
+            <span className="text-[11px] md:text-[15px] font-medium md:font-semibold text-emerald-600">
               Save ₹{savingsAmount} on this pack
             </span>
           )}
-          <span className="text-[10px] text-slate-400">Inclusive of all taxes</span>
+          <span className="text-[10px] md:text-[13px] text-slate-400">Inclusive of all taxes</span>
         </div>
 
         {/* Dynamic Product Variant Attribute Selectors */}
         {product.hasVariants && Array.isArray(product.variantOptions) && product.variantOptions.length > 0 && (
-          <div className="flex flex-col gap-3 p-3.5 bg-slate-50/90 rounded-2xl border border-slate-200/80 my-1">
+          <div className="flex flex-col gap-3 md:gap-4 p-3.5 md:p-5 bg-slate-50/90 rounded-2xl border border-slate-200/80 my-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-xs md:text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#79B433]"></span>
                 Available Options:
               </span>
-              {matchedVariant && (
+              {matchedVariant && matchedVariant.title && (
                 <span className="text-[11px] font-mono font-semibold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
                   {matchedVariant.title}
                 </span>
@@ -619,10 +628,10 @@ const ProductDetails = () => {
               const currentVal = String(selectedAttributes[optKey] ?? '').trim();
               return (
               <div key={`${optKey || 'opt'}-${oIdx}`} className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center justify-between text-xs md:text-sm md:mb-1">
                   <span className="font-semibold text-slate-700">{opt.name}:</span>
                   <span
-                    className={`font-mono text-[11px] font-bold ${
+                    className={`font-mono text-[11px] md:text-sm font-bold ${
                       currentVal ? 'text-[#F7941D]' : 'text-slate-400'
                     }`}
                   >
@@ -640,7 +649,7 @@ const ProductDetails = () => {
                         type="button"
                         aria-pressed={isSelected}
                         onClick={() => handleSelectAttribute(opt.name, val)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer active:scale-95 ${
+                        className={`px-3 md:px-5 py-1.5 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all border cursor-pointer active:scale-95 ${
                           isSelected
                             ? 'bg-[#79B433] text-white border-[#F7941D] shadow-sm ring-2 ring-[#F7941D]/25'
                             : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-100/70'
@@ -656,7 +665,7 @@ const ProductDetails = () => {
             })}
 
             {/* Stock Availability indicator for selected variant */}
-            <div className="pt-1.5 border-t border-slate-200/60 flex items-center justify-between text-xs">
+            <div className="pt-1.5 md:pt-3 border-t border-slate-200/60 flex items-center justify-between text-xs md:text-sm">
               <span className="text-slate-500 font-medium">Availability:</span>
               {isOutOfStock ? (
                 <span className="font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
@@ -673,19 +682,19 @@ const ProductDetails = () => {
         )}
 
         {/* Desktop Inlined Action Box */}
-        <div className="hidden md:flex flex-col gap-3.5 p-4 bg-slate-50 border border-slate-200/80 rounded-2xl my-2">
+        <div className="hidden md:flex flex-col gap-4 p-5 bg-white border border-slate-200 shadow-[0_6px_24px_rgba(15,23,42,0.05)] rounded-2xl my-1">
           <div className="flex items-center gap-4">
             <div className="flex items-center bg-white rounded-xl border border-slate-200 p-1">
               <button 
                 onClick={() => changeQuantity(quantity - 1)}
-                className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium flex items-center justify-center cursor-pointer border-none active:scale-95 transition-transform"
+                className="w-10 h-10 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium flex items-center justify-center cursor-pointer border-none active:scale-95 transition-transform"
               >
                 <Minus size={15} />
               </button>
-              <span className="w-10 text-center text-sm font-bold text-slate-900">{quantity}</span>
+              <span className="w-12 text-center text-base font-bold text-slate-900">{quantity}</span>
               <button 
                 onClick={() => changeQuantity(quantity + 1)}
-                className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium flex items-center justify-center cursor-pointer border-none active:scale-95 transition-transform"
+                className="w-10 h-10 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium flex items-center justify-center cursor-pointer border-none active:scale-95 transition-transform"
               >
                 <Plus size={15} />
               </button>
@@ -695,7 +704,7 @@ const ProductDetails = () => {
               {isOutOfStock ? (
                 <button 
                   disabled
-                  className="flex-1 h-12 bg-slate-200 text-slate-400 rounded-xl text-sm font-bold cursor-not-allowed border-none flex items-center justify-center gap-2"
+                  className="flex-1 h-14 bg-slate-200 text-slate-400 rounded-xl text-base font-bold cursor-not-allowed border-none flex items-center justify-center gap-2"
                 >
                   <span>Out of Stock</span>
                 </button>
@@ -704,7 +713,7 @@ const ProductDetails = () => {
                   {product && !isInCart(product.id || product._id, lineSelection) ? (
                     <button 
                       onClick={handleAddToCart}
-                      className="flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold cursor-pointer border-none flex items-center justify-center gap-2 whitespace-nowrap active:scale-98 transition-all shadow-md"
+                      className="flex-1 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-base font-bold cursor-pointer border-none flex items-center justify-center gap-2 whitespace-nowrap active:scale-98 transition-all shadow-md"
                     >
                       <ShoppingCart size={18} className="shrink-0" />
                       <span>Add to Cart</span>
@@ -718,7 +727,7 @@ const ProductDetails = () => {
                           setTimeout(() => setToastMessage(''), 2000);
                         }
                       }}
-                      className="flex-1 h-12 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold cursor-pointer border-none flex items-center justify-center gap-2 whitespace-nowrap active:scale-98 transition-all shadow-md"
+                      className="flex-1 h-14 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-base font-bold cursor-pointer border-none flex items-center justify-center gap-2 whitespace-nowrap active:scale-98 transition-all shadow-md"
                     >
                       <Trash2 size={16} className="shrink-0" />
                       <span>Remove from Cart</span>
@@ -727,7 +736,7 @@ const ProductDetails = () => {
 
                   <button
                     onClick={handleBuyNow}
-                    className="flex-1 h-12 bg-[#79B433] hover:bg-[#689A2B] text-white rounded-xl text-sm font-bold cursor-pointer border-none flex items-center justify-center gap-2 whitespace-nowrap active:scale-98 transition-all shadow-md"
+                    className="flex-1 h-14 bg-[#79B433] hover:bg-[#689A2B] text-white rounded-xl text-base font-bold cursor-pointer border-none flex items-center justify-center gap-2 whitespace-nowrap active:scale-98 transition-all shadow-md"
                   >
                     <span>Buy Now</span>
                   </button>
@@ -736,10 +745,10 @@ const ProductDetails = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 pt-1">
-            <span className="flex items-center gap-1"><Check size={14} className="text-emerald-600" /> Free Returns</span>
-            <span className="flex items-center gap-1"><Check size={14} className="text-emerald-600" /> 10-Min Fast Delivery</span>
-            <span className="flex items-center gap-1"><Check size={14} className="text-emerald-600" /> 100% Genuine</span>
+          <div className="grid grid-cols-3 gap-3 text-[13px] font-semibold text-slate-600 pt-1">
+            <span className="flex items-center justify-center gap-1.5 bg-emerald-50/70 border border-emerald-100 rounded-xl py-2.5"><Check size={15} className="text-emerald-600" /> Free Returns</span>
+            <span className="flex items-center justify-center gap-1.5 bg-emerald-50/70 border border-emerald-100 rounded-xl py-2.5"><Check size={15} className="text-emerald-600" /> 10-Min Fast Delivery</span>
+            <span className="flex items-center justify-center gap-1.5 bg-emerald-50/70 border border-emerald-100 rounded-xl py-2.5"><Check size={15} className="text-emerald-600" /> 100% Genuine</span>
           </div>
         </div>
 
@@ -748,7 +757,7 @@ const ProductDetails = () => {
 
         {/* Product Overview & Description */}
         <div className="w-full min-w-0 overflow-hidden">
-          <h3 className="text-[13px] font-semibold text-slate-800 mb-1.5">Product Description</h3>
+          <h3 className="text-[13px] md:text-lg font-semibold md:font-bold text-slate-800 md:text-slate-900 mb-1.5 md:mb-3">Product Description</h3>
           {product.description ? (
             <DescriptionText
               text={product.description}
@@ -756,7 +765,7 @@ const ProductDetails = () => {
               onToggle={() => setDescriptionExpanded((open) => !open)}
             />
           ) : (
-            <div className="flex flex-col gap-1.5 text-[12px] text-slate-600 font-normal">
+            <div className="flex flex-col gap-1.5 md:gap-2 text-[12px] md:text-[15px] text-slate-600 font-normal">
               <p className="m-0">🌾 Freshly milled and processed under hygienic standards.</p>
               <p className="m-0">🧼 100% natural, free from harmful additives and preservatives.</p>
               <p className="m-0">📦 Sealed in high-grade moisture-proof packaging for maximum freshness.</p>
@@ -767,17 +776,17 @@ const ProductDetails = () => {
         {/* Expandable Accordions */}
         <div className="flex flex-col border-t border-slate-100 mt-1">
           
-          <div className="border-b border-slate-100 py-2.5">
+          <div className="border-b border-slate-100 py-2.5 md:py-4">
             <div 
               className="flex justify-between items-center cursor-pointer"
               onClick={() => toggleAccordion('product')}
             >
-              <span className="text-[13px] font-medium text-slate-700">Product Specifications</span>
+              <span className="text-[13px] md:text-base font-medium md:font-semibold text-slate-700">Product Specifications</span>
               {activeAccordion === 'product' ? <ChevronDown size={15} className="text-slate-400" /> : <ChevronRight size={15} className="text-slate-400" />}
             </div>
             {activeAccordion === 'product' && (
-              <div className="pt-2 text-[12px] text-slate-600 grid grid-cols-2 gap-2 font-normal">
-                <div><span className="text-slate-400">Brand:</span> <strong>{product.brand || product.seller || 'ShippNex'}</strong></div>
+              <div className="pt-2 md:pt-3 text-[12px] md:text-[15px] text-slate-600 grid grid-cols-2 gap-2 md:gap-3 font-normal">
+                <div><span className="text-slate-400">Brand:</span> <strong>{product.brand || product.seller || 'Savitri'}</strong></div>
                 <div><span className="text-slate-400">Category:</span> <strong>{product.category || 'Grocery'}</strong></div>
                 <div><span className="text-slate-400">Sub-Category:</span> <strong>{product.subCategory || 'Staples'}</strong></div>
                 <div>
@@ -790,31 +799,31 @@ const ProductDetails = () => {
             )}
           </div>
 
-          <div className="border-b border-slate-100 py-2.5">
+          <div className="border-b border-slate-100 py-2.5 md:py-4">
             <div 
               className="flex justify-between items-center cursor-pointer"
               onClick={() => toggleAccordion('delivery')}
             >
-              <span className="text-[13px] font-medium text-slate-700">Delivery Information</span>
+              <span className="text-[13px] md:text-base font-medium md:font-semibold text-slate-700">Delivery Information</span>
               {activeAccordion === 'delivery' ? <ChevronDown size={15} className="text-slate-400" /> : <ChevronRight size={15} className="text-slate-400" />}
             </div>
             {activeAccordion === 'delivery' && (
-              <div className="pt-2 text-[12px] text-slate-600 space-y-1 font-normal">
+              <div className="pt-2 md:pt-3 text-[12px] md:text-[15px] text-slate-600 space-y-1 md:space-y-2 font-normal">
                 <p className="m-0">⚡ Express delivery within 10-15 minutes.</p>
                 <p className="m-0">🚚 Standard free delivery for orders above ₹499.</p>
               </div>
             )}
           </div>
 
-          <div className="border-b border-slate-100 py-2.5">
+          <div className="border-b border-slate-100 py-2.5 md:py-4">
             <div 
               className="flex justify-between items-center cursor-pointer"
               onClick={() => toggleAccordion('policy')}
             >
-              <span className="text-[13px] font-medium text-slate-700 flex items-center gap-1.5">
+              <span className="text-[13px] md:text-base font-medium md:font-semibold text-slate-700 flex items-center gap-1.5">
                 Return & Refund Policy
                 {product.isReturnable === false && (
-                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                  <span className="text-[10px] md:text-xs font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
                     Non-Returnable
                   </span>
                 )}
@@ -822,9 +831,9 @@ const ProductDetails = () => {
               {activeAccordion === 'policy' ? <ChevronDown size={15} className="text-slate-400" /> : <ChevronRight size={15} className="text-slate-400" />}
             </div>
             {activeAccordion === 'policy' && (
-              <div className="pt-2 text-[12px] text-slate-600 space-y-1 font-normal">
+              <div className="pt-2 md:pt-3 text-[12px] md:text-[15px] text-slate-600 space-y-1 md:space-y-2 font-normal">
                 {product.isReturnable === false ? (
-                  <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-200 text-amber-800 text-[11px]">
+                  <div className="p-2.5 md:p-4 bg-amber-50 rounded-lg border border-amber-200 text-amber-800 text-[11px] md:text-sm">
                     🚫 <strong>Non-Returnable Item:</strong> This product cannot be returned or replaced once delivered due to hygiene, freshness, or perishable nature.
                   </div>
                 ) : (
@@ -838,24 +847,27 @@ const ProductDetails = () => {
 
         </div>
 
-        {/* Ratings & Customer Reviews Section */}
-        <div className="pt-2 border-t border-slate-100 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
+      </div>
+
+      {/* Ratings & Customer Reviews Section (right column, second row on desktop) */}
+      <div className="px-4 pt-3 md:px-0 md:pt-0 lg:col-span-12 lg:col-start-1 lg:row-start-3 min-w-0 w-full overflow-hidden md:overflow-visible">
+        <div className="pt-2 md:pt-6 border-t border-slate-100 flex flex-col gap-3 md:gap-5 lg:grid lg:grid-cols-[380px_minmax(0,1fr)] lg:gap-x-10 lg:items-start">
+          <div className="flex items-center justify-between lg:col-span-2">
             <div>
-              <h3 className="text-[13px] font-bold text-slate-900 m-0">Ratings & Reviews</h3>
-              <p className="text-[11px] text-slate-400 m-0">Verified customer feedback</p>
+              <h3 className="text-[13px] md:text-lg font-bold text-slate-900 m-0">Ratings & Reviews</h3>
+              <p className="text-[11px] md:text-sm text-slate-400 m-0">Verified customer feedback</p>
             </div>
             {reviewsData && reviewsData.totalRatings > 0 && (
-              <span className="text-xs font-bold text-[#F7941D] bg-orange-50 px-2.5 py-1 rounded-full border border-orange-200/60">
+              <span className="text-xs md:text-sm font-bold text-[#F7941D] bg-orange-50 px-2.5 md:px-3.5 py-1 md:py-1.5 rounded-full border border-orange-200/60">
                 {reviewsData.totalRatings} {reviewsData.totalRatings === 1 ? 'Review' : 'Reviews'}
               </span>
             )}
           </div>
 
           {/* Overall Rating & Breakdown Score Card */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-4">
-            <div className="flex flex-col items-center justify-center pr-3 border-r border-slate-200/70 shrink-0 min-w-[75px]">
-              <span className="text-2xl font-black text-slate-900 leading-none">
+          <div className="p-3.5 md:p-6 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-4 md:gap-8 lg:col-start-1">
+            <div className="flex flex-col items-center justify-center pr-3 md:pr-8 border-r border-slate-200/70 shrink-0 min-w-[75px] md:min-w-[110px]">
+              <span className="text-2xl md:text-5xl font-black text-slate-900 leading-none">
                 {reviewsData?.averageRating ? reviewsData.averageRating.toFixed(1) : (product.ratingAverage ? Number(product.ratingAverage).toFixed(1) : '4.8')}
               </span>
               <div className="flex items-center gap-0.5 my-1">
@@ -871,22 +883,22 @@ const ProductDetails = () => {
                   />
                 ))}
               </div>
-              <span className="text-[10px] text-slate-400 font-medium">
+              <span className="text-[10px] md:text-xs text-slate-400 font-medium">
                 {reviewsData?.totalRatings !== undefined ? reviewsData.totalRatings : (product.ratingCount || 0)} Ratings
               </span>
             </div>
 
             {/* Distribution Progress Bars */}
-            <div className="flex-1 space-y-1">
+            <div className="flex-1 space-y-1 md:space-y-2">
               {[5, 4, 3, 2, 1].map((stars) => {
                 const count = reviewsData?.breakdown?.[stars] || 0;
                 const total = reviewsData?.totalRatings || 0;
                 const pct = total > 0 ? Math.round((count / total) * 100) : 0;
 
                 return (
-                  <div key={stars} className="flex items-center gap-2 text-[10px]">
+                  <div key={stars} className="flex items-center gap-2 md:gap-3 text-[10px] md:text-[13px]">
                     <span className="font-bold text-slate-600 w-3 text-right">{stars}★</span>
-                    <div className="flex-1 h-1.5 rounded-full bg-slate-200/80 overflow-hidden">
+                    <div className="flex-1 h-1.5 md:h-2 rounded-full bg-slate-200/80 overflow-hidden">
                       <div
                         className="h-full rounded-full bg-amber-400 transition-all duration-500"
                         style={{ width: `${pct}%` }}
@@ -901,15 +913,15 @@ const ProductDetails = () => {
 
           {/* Customer Reviews List */}
           {reviewsData && reviewsData.reviews && reviewsData.reviews.length > 0 ? (
-            <div className="space-y-2.5 mt-1">
+            <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 md:gap-4 mt-1 lg:mt-0 lg:col-start-2 lg:row-start-2">
               {reviewsData.reviews.slice(0, 5).map((rev, rIdx) => (
-                <div key={rIdx} className="p-3 rounded-xl bg-white border border-slate-100 shadow-2xs space-y-1.5">
+                <div key={rIdx} className="p-3 md:p-5 rounded-xl bg-white border border-slate-100 shadow-2xs space-y-1.5 md:space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-6 h-6 shrink-0 rounded-full bg-orange-100 text-[#F7941D] font-bold text-[10px] flex items-center justify-center">
                         {(rev.user?.name || 'U').charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-xs font-bold text-slate-800 truncate">{rev.user?.name || 'Verified Customer'}</span>
+                      <span className="text-xs md:text-sm font-bold text-slate-800 truncate">{rev.user?.name || 'Verified Customer'}</span>
                     </div>
 
                     <span className="text-[10px] text-slate-400 font-medium shrink-0 whitespace-nowrap">{rev.date}</span>
@@ -933,7 +945,7 @@ const ProductDetails = () => {
                   </div>
 
                   {rev.review && (
-                    <p className="text-xs text-slate-600 m-0 leading-relaxed font-normal break-words [overflow-wrap:break-word] [text-wrap:pretty]">{rev.review}</p>
+                    <p className="text-xs md:text-sm text-slate-600 m-0 leading-relaxed font-normal break-words [overflow-wrap:break-word] [text-wrap:pretty]">{rev.review}</p>
                   )}
 
                   {rev.feedbackTags && rev.feedbackTags.length > 0 && (
@@ -963,97 +975,97 @@ const ProductDetails = () => {
               ))}
             </div>
           ) : (
-            <div className="py-4 px-3 text-center bg-slate-50/70 rounded-xl border border-dashed border-slate-200">
-              <p className="text-xs text-slate-500 m-0">No customer reviews yet. Be the first to review after purchasing!</p>
+            <div className="py-4 md:py-8 px-3 text-center bg-slate-50/70 rounded-xl border border-dashed border-slate-200 lg:col-start-2 lg:row-start-2 lg:self-stretch lg:flex lg:items-center lg:justify-center">
+              <p className="text-xs md:text-sm text-slate-500 m-0">No customer reviews yet. Be the first to review after purchasing!</p>
             </div>
           )}
         </div>
 
-        {/* Similar Items Carousel */}
-        <div className="pt-1 w-full min-w-0 overflow-hidden">
-          <div className="flex justify-between items-center mb-2.5">
-            <h3 className="text-[13px] font-semibold text-slate-800 m-0">Similar Products</h3>
-            <button 
-              onClick={() => navigate(product?.category ? `/categories?category=${encodeURIComponent(product.category)}` : '/categories')} 
-              className="text-[#F7941D] text-[12px] font-medium bg-transparent border-none cursor-pointer"
-            >
-              View all
-            </button>
-          </div>
+      </div>
 
-          <div className="flex gap-3 overflow-x-auto md:grid md:grid-cols-4 lg:grid-cols-5 md:gap-4 pb-2 w-full hide-scrollbar">
-            {similarProducts.map((item) => {
-              const qty = getItemQuantity(item.id || item._id);
-              return (
-                <div 
-                  key={item.id}
-                  onClick={() => navigate(`/product/${item.id}`)}
-                  className="min-w-[135px] w-[135px] md:min-w-0 md:w-full bg-white rounded-xl border border-slate-100 p-2.5 flex flex-col justify-between cursor-pointer shrink-0 md:shrink hover:shadow-md transition-shadow"
-                >
-                  <div className="bg-slate-50 rounded-lg h-[90px] w-full flex items-center justify-center p-2 mb-2">
-                    <img 
-                      src={getImageUrl(item.image, item.name)} 
-                      alt={item.name} 
-                      className="max-h-full max-w-full object-contain mix-blend-multiply" 
-                      onError={(e) => handleImageError(e, item.name)}
-                    />
-                  </div>
-                  <div>
-                    <h4 className="text-[11px] font-medium text-slate-800 m-0 truncate">{item.name}</h4>
-                    <p className="text-[10px] text-slate-400 m-0 mb-1 truncate">{item.brand}</p>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-[12px] font-bold text-slate-800">₹{item.price}</span>
-                      {qty === 0 ? (
+      {/* Similar Items Carousel (left column, beside the reviews on desktop) */}
+      <div className="px-4 pt-3 pb-4 md:px-0 md:pb-0 w-full min-w-0 overflow-hidden md:overflow-visible md:border-t md:border-slate-100 md:pt-6 lg:border-t-0 lg:pt-0 lg:self-start lg:col-span-6 lg:col-start-1 lg:row-start-2">
+        <div className="flex justify-between items-center mb-2.5 md:mb-5">
+          <h3 className="text-[13px] md:text-xl font-semibold md:font-bold text-slate-800 md:text-slate-900 m-0">Similar Products</h3>
+          <button 
+            onClick={() => navigate(product?.category ? `/categories?category=${encodeURIComponent(product.category)}` : '/categories')} 
+            className="text-[#F7941D] text-[12px] md:text-sm font-medium md:font-semibold bg-transparent border-none cursor-pointer"
+          >
+            View all
+          </button>
+        </div>
+
+        <div className="flex gap-3 overflow-x-auto md:grid md:grid-cols-4 lg:grid-cols-3 md:gap-5 pb-2 w-full hide-scrollbar">
+          {similarProducts.map((item) => {
+            const qty = getItemQuantity(item.id || item._id);
+            return (
+              <div 
+                key={item.id}
+                onClick={() => navigate(`/product/${item.id}`)}
+                className="min-w-[135px] w-[135px] md:min-w-0 md:w-full bg-white rounded-xl border border-slate-100 p-2.5 flex flex-col justify-between cursor-pointer shrink-0 md:shrink hover:shadow-md transition-shadow"
+              >
+                <div className="bg-slate-50 rounded-lg h-[90px] md:h-[150px] w-full flex items-center justify-center p-2 mb-2">
+                  <img 
+                    src={getImageUrl(item.image, item.name)} 
+                    alt={item.name} 
+                    className="max-h-full max-w-full object-contain mix-blend-multiply" 
+                    onError={(e) => handleImageError(e, item.name)}
+                  />
+                </div>
+                <div>
+                  <h4 className="text-[11px] md:text-sm font-medium md:font-semibold text-slate-800 m-0 truncate">{item.name}</h4>
+                  <p className="text-[10px] md:text-xs text-slate-400 m-0 mb-1 truncate">{item.brand}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-[12px] md:text-base font-bold text-slate-800">₹{item.price}</span>
+                    {qty === 0 ? (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToCart(item);
+                          setToastMessage('Item added to cart! 🛒');
+                          setTimeout(() => setToastMessage(''), 2000);
+                        }}
+                        className="w-6 h-6 md:w-8 md:h-8 rounded-md bg-emerald-600 text-white flex items-center justify-center border-none cursor-pointer shadow-2xs active:scale-90 transition-transform shrink-0"
+                        aria-label="Add to cart"
+                      >
+                        <Plus size={13} strokeWidth={3} />
+                      </button>
+                    ) : (
+                      <div 
+                        onClick={(e) => e.stopPropagation()} 
+                        className="bg-emerald-600 text-white rounded-md p-0.5 flex items-center justify-between shadow-2xs border-none shrink-0"
+                      >
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            addToCart(item);
-                            setToastMessage('Item added to cart! 🛒');
-                            setTimeout(() => setToastMessage(''), 2000);
+                            updateQuantity(item.id || item._id, -1);
                           }}
-                          className="w-6 h-6 rounded-md bg-emerald-600 text-white flex items-center justify-center border-none cursor-pointer shadow-2xs active:scale-90 transition-transform shrink-0"
-                          aria-label="Add to cart"
+                          className="w-5 h-5 rounded bg-emerald-700/80 hover:bg-emerald-700 text-white font-bold flex items-center justify-center cursor-pointer border-none active:scale-90 transition-transform"
+                          aria-label="Decrease quantity"
                         >
-                          <Plus size={13} strokeWidth={3} />
+                          <Minus size={10} strokeWidth={3} />
                         </button>
-                      ) : (
-                        <div 
-                          onClick={(e) => e.stopPropagation()} 
-                          className="bg-emerald-600 text-white rounded-md p-0.5 flex items-center justify-between shadow-2xs border-none shrink-0"
+                        <span className="px-1 text-[10px] font-black text-white min-w-[12px] text-center">
+                          {qty}
+                        </span>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateQuantity(item.id || item._id, 1);
+                          }}
+                          className="w-5 h-5 rounded bg-emerald-700/80 hover:bg-emerald-700 text-white font-bold flex items-center justify-center cursor-pointer border-none active:scale-90 transition-transform"
+                          aria-label="Increase quantity"
                         >
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateQuantity(item.id || item._id, -1);
-                            }}
-                            className="w-5 h-5 rounded bg-emerald-700/80 hover:bg-emerald-700 text-white font-bold flex items-center justify-center cursor-pointer border-none active:scale-90 transition-transform"
-                            aria-label="Decrease quantity"
-                          >
-                            <Minus size={10} strokeWidth={3} />
-                          </button>
-                          <span className="px-1 text-[10px] font-black text-white min-w-[12px] text-center">
-                            {qty}
-                          </span>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateQuantity(item.id || item._id, 1);
-                            }}
-                            className="w-5 h-5 rounded bg-emerald-700/80 hover:bg-emerald-700 text-white font-bold flex items-center justify-center cursor-pointer border-none active:scale-90 transition-transform"
-                            aria-label="Increase quantity"
-                          >
-                            <Plus size={10} strokeWidth={3} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                          <Plus size={10} strokeWidth={3} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
-
       </div>
       </div>
 

@@ -3264,7 +3264,7 @@ export const CaptainManagement = () => {
 
             {/* Modal Footer */}
             <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-              <span className="text-[11px] text-slate-400 font-medium">Shippnex Captain Command Center</span>
+              <span className="text-[11px] text-slate-400 font-medium">Savitri Captain Command Center</span>
               <button 
                 onClick={() => setSelectedCaptain(null)}
                 className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl border-none cursor-pointer transition-colors shadow-sm"
@@ -4192,7 +4192,7 @@ export const CategoryManagement = ({ initialSubcategoriesOnly = false }) => {
               </div>
             </div>
 
-            {/* Export Button - ShippNex Dark Teal */}
+            {/* Export Button - Savitri Dark Teal */}
             <button 
               onClick={handleExportCSV}
               className="px-4 py-2 bg-[#1A2E0A] hover:bg-[#003837] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 border-none cursor-pointer shadow-xs transition-all active:scale-95"
@@ -4669,7 +4669,7 @@ export const ProductManagement = () => {
       id: ap._id,
       sku: ap.sku || `SKU-${ap._id.slice(-4).toUpperCase()}`,
       name: ap.name,
-      seller: ap.seller || 'ShippNex Official Store',
+      seller: ap.seller || 'Savitri Official Store',
       category: ap.category || 'Groceries & Grains',
       subCategory: ap.subCategory,
       brand: ap.brand,
@@ -5127,7 +5127,7 @@ export const OrderManagement = () => {
           const custEmail = o.shippingAddress?.email || o.user?.email || '';
           const itemsList = Array.isArray(o.items) ? o.items : [];
           const totalQty = itemsList.reduce((acc, it) => acc + (Number(it.quantity) || 1), 0);
-          const firstSeller = itemsList[0]?.seller?.businessName || itemsList[0]?.seller || 'ShippNex Store';
+          const firstSeller = itemsList[0]?.seller?.businessName || itemsList[0]?.seller || 'Savitri Store';
           
           return {
             id: o.orderId || o._id,
@@ -8095,15 +8095,21 @@ export const FaqManagement = () => {
   const [savingSupport, setSavingSupport] = useState(false);
   const [supportForm, setSupportForm] = useState({
     customerPhone: '+91 63774 60692',
-    customerEmail: 'shippnexin26@gmail.com',
+    customerEmail: 'sreplwm@gmail.com',
     customerHours: '24/7 Priority Support',
     sellerPhone: '+91 63774 60692',
-    sellerEmail: 'shippnexin26@gmail.com',
+    sellerEmail: 'sreplwm@gmail.com',
     sellerHours: 'Mon - Sat (9 AM - 8 PM)',
     captainPhone: '+91 63774 60692',
-    captainEmail: 'shippnexin26@gmail.com',
+    captainEmail: 'sreplwm@gmail.com',
     captainHours: '24/7 Active Dispatch Line',
     whatsappNumber: '+91 63774 60692',
+    footerBrandName: 'Savitri',
+    footerTagline: 'Fresh groceries, staples and daily essentials from stores near you, delivered fast to your doorstep.',
+    footerPhone: '+91 81029 14300',
+    footerEmail: 'sreplwm@gmail.com',
+    footerAddress: '',
+    footerHours: '',
   });
 
   // Table controls (search, filter, pagination)
@@ -8132,15 +8138,21 @@ export const FaqManagement = () => {
       if (settings) {
         setSupportForm({
           customerPhone: settings.customerPhone || '+91 63774 60692',
-          customerEmail: settings.customerEmail || 'shippnexin26@gmail.com',
+          customerEmail: settings.customerEmail || 'sreplwm@gmail.com',
           customerHours: settings.customerHours || '24/7 Priority Support',
           sellerPhone: settings.sellerPhone || '+91 63774 60692',
-          sellerEmail: settings.sellerEmail || 'shippnexin26@gmail.com',
+          sellerEmail: settings.sellerEmail || 'sreplwm@gmail.com',
           sellerHours: settings.sellerHours || 'Mon - Sat (9 AM - 8 PM)',
           captainPhone: settings.captainPhone || '+91 63774 60692',
-          captainEmail: settings.captainEmail || 'shippnexin26@gmail.com',
+          captainEmail: settings.captainEmail || 'sreplwm@gmail.com',
           captainHours: settings.captainHours || '24/7 Active Dispatch Line',
           whatsappNumber: settings.whatsappNumber || '+91 63774 60692',
+          footerBrandName: settings.footerBrandName || 'Savitri',
+          footerTagline: settings.footerTagline ?? '',
+          footerPhone: settings.footerPhone ?? '',
+          footerEmail: settings.footerEmail ?? '',
+          footerAddress: settings.footerAddress ?? '',
+          footerHours: settings.footerHours ?? '',
         });
       }
     } catch (err) {
@@ -8161,7 +8173,7 @@ export const FaqManagement = () => {
       alert('✅ Support contacts & helpline details updated successfully across Customer, Seller, and Captain apps!');
     } catch (err) {
       console.error('Error saving support settings:', err);
-      alert('Error updating support settings. Please try again.');
+      alert(err?.message || 'Error updating support settings. Please try again.');
     } finally {
       setSavingSupport(false);
     }
@@ -8448,7 +8460,7 @@ export const FaqManagement = () => {
                     value={supportForm.customerEmail}
                     onChange={(e) => setSupportForm({ ...supportForm, customerEmail: e.target.value })}
                     className="w-full bg-white border-2 border-slate-300 rounded-lg px-3 py-2 text-[14px] text-slate-900 font-bold focus:outline-none focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 transition-all shadow-2xs"
-                    placeholder="shippnexin26@gmail.com"
+                    placeholder="sreplwm@gmail.com"
                     required
                   />
                 </div>
@@ -8499,7 +8511,7 @@ export const FaqManagement = () => {
                     value={supportForm.sellerEmail}
                     onChange={(e) => setSupportForm({ ...supportForm, sellerEmail: e.target.value })}
                     className="w-full bg-white border-2 border-slate-300 rounded-lg px-3 py-2 text-[14px] text-slate-900 font-bold focus:outline-none focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 transition-all shadow-2xs"
-                    placeholder="shippnexin26@gmail.com"
+                    placeholder="sreplwm@gmail.com"
                     required
                   />
                 </div>
@@ -8550,7 +8562,7 @@ export const FaqManagement = () => {
                     value={supportForm.captainEmail}
                     onChange={(e) => setSupportForm({ ...supportForm, captainEmail: e.target.value })}
                     className="w-full bg-white border-2 border-slate-300 rounded-lg px-3 py-2 text-[14px] text-slate-900 font-bold focus:outline-none focus:border-[#F7941D] focus:ring-2 focus:ring-[#F7941D]/20 transition-all shadow-2xs"
-                    placeholder="shippnexin26@gmail.com"
+                    placeholder="sreplwm@gmail.com"
                     required
                   />
                 </div>
@@ -8567,9 +8579,46 @@ export const FaqManagement = () => {
               </div>
             </div>
 
+            {/* 4. Customer website footer */}
+            <div data-testid="footer-settings" className="bg-slate-50/90 p-4 rounded-xl border-2 border-slate-200 hover:border-[#1A2E0A]/40 transition-all space-y-3 shadow-2xs">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                <div>
+                  <span className="text-[14px] font-black text-[#1A2E0A] block leading-tight">Customer Website Footer</span>
+                  <span className="text-[11px] text-slate-500 font-semibold">Shown at the bottom of the customer website (tablet &amp; desktop)</span>
+                </div>
+                <span className="text-[11px] font-black px-2 py-0.5 rounded-md bg-[#1A2E0A] text-white">🌐 Footer</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[13px] font-black text-[#1A2E0A] mb-1">Brand Name</label>
+                  <input type="text" maxLength={60} value={supportForm.footerBrandName} onChange={(e) => setSupportForm({ ...supportForm, footerBrandName: e.target.value })} className="w-full bg-white border-2 border-slate-300 rounded-lg px-3 py-2 text-[14px] text-slate-900 font-bold focus:outline-none focus:border-[#F7941D]" placeholder="Savitri" required />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-black text-[#1A2E0A] mb-1">Footer Phone Number</label>
+                  <input type="text" maxLength={30} value={supportForm.footerPhone} onChange={(e) => setSupportForm({ ...supportForm, footerPhone: e.target.value })} className="w-full bg-white border-2 border-slate-300 rounded-lg px-3 py-2 text-[14px] text-slate-900 font-bold focus:outline-none focus:border-[#F7941D]" placeholder="+91 81029 14300" />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-black text-[#1A2E0A] mb-1">Footer Email</label>
+                  <input type="email" maxLength={120} value={supportForm.footerEmail} onChange={(e) => setSupportForm({ ...supportForm, footerEmail: e.target.value })} className="w-full bg-white border-2 border-slate-300 rounded-lg px-3 py-2 text-[14px] text-slate-900 font-bold focus:outline-none focus:border-[#F7941D]" placeholder="sreplwm@gmail.com" />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-black text-[#1A2E0A] mb-1">Working Hours / Note (optional)</label>
+                  <input type="text" maxLength={80} value={supportForm.footerHours} onChange={(e) => setSupportForm({ ...supportForm, footerHours: e.target.value })} className="w-full bg-white border-2 border-slate-300 rounded-lg px-3 py-2 text-[13.5px] text-slate-900 font-semibold focus:outline-none focus:border-[#F7941D]" placeholder="Mon - Sat (9 AM - 8 PM)" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[13px] font-black text-[#1A2E0A] mb-1">Address (shown in the footer; leave empty to hide)</label>
+                  <textarea rows={2} maxLength={300} value={supportForm.footerAddress} onChange={(e) => setSupportForm({ ...supportForm, footerAddress: e.target.value })} className="w-full bg-white border-2 border-slate-300 rounded-lg px-3 py-2 text-[13.5px] text-slate-900 font-semibold focus:outline-none focus:border-[#F7941D] resize-y" placeholder="Shop / office address, City, State, PIN" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[13px] font-black text-[#1A2E0A] mb-1">Short Description</label>
+                  <textarea rows={2} maxLength={240} value={supportForm.footerTagline} onChange={(e) => setSupportForm({ ...supportForm, footerTagline: e.target.value })} className="w-full bg-white border-2 border-slate-300 rounded-lg px-3 py-2 text-[13.5px] text-slate-900 font-semibold focus:outline-none focus:border-[#F7941D] resize-y" placeholder="Fresh groceries, staples and daily essentials..." />
+                </div>
+              </div>
+            </div>
+
             <div className="flex items-center justify-end pt-2 border-t border-slate-100">
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={savingSupport}
                 className="px-6 py-2.5 bg-[#79B433] hover:bg-[#689A2B] active:scale-98 text-white text-[14px] font-black rounded-xl transition-all border-none cursor-pointer shadow-md flex items-center gap-2 disabled:opacity-60"
               >
@@ -9373,7 +9422,7 @@ export const AdminProfile = () => {
         return {
           firstName: parsed.firstName || nameParts[0] || 'Administrator',
           lastName: parsed.lastName || nameParts.slice(1).join(' ') || '',
-          email: parsed.email || 'admin@shippnex.com',
+          email: parsed.email || 'savitriadmin@savitri.com',
           mobile: parsed.mobile || parsed.phone || '',
           role: parsed.role === 'super_admin' ? 'Super Admin' : (parsed.role === 'admin' ? 'Root Administrator' : (parsed.role || 'Admin')),
           createdAt: parsed.createdAt ? new Date(parsed.createdAt).toLocaleString() : new Date().toLocaleString(),
@@ -9385,7 +9434,7 @@ export const AdminProfile = () => {
     return {
       firstName: 'Administrator',
       lastName: '',
-      email: 'admin@shippnex.com',
+      email: 'savitriadmin@savitri.com',
       mobile: '',
       role: 'Root Administrator',
       createdAt: new Date().toLocaleString(),
@@ -9599,7 +9648,7 @@ export const AdminProfile = () => {
                   required
                   value={profile.email}
                   onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                  placeholder="admin@shippnex.com"
+                  placeholder="savitriadmin@savitri.com"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#F7941D] focus:bg-white transition-colors"
                 />
               </div>
@@ -11156,7 +11205,7 @@ export const AddProductPage = () => {
     name: editingProductData.name || '',
     category: editingProductData.category || 'Groceries & Grains',
     subCategory: editingProductData.subCategory || 'Grains & Pulses',
-    brand: editingProductData.brand || 'ShippNex Select',
+    brand: editingProductData.brand || 'Savitri Select',
     unit: editingProductData.variation || editingProductData.unit || '1kg',
     unitValue: editingProductData.unitValue || '1',
     unitType: editingProductData.unitType || 'kg',
@@ -11168,7 +11217,7 @@ export const AddProductPage = () => {
     stock: editingProductData.stock !== undefined ? editingProductData.stock : '',
     minStockLimit: editingProductData.minStockLimit || '10',
     sku: editingProductData.sku || editingProductData.id || '',
-    seller: editingProductData.seller || 'ShippNex Official Store',
+    seller: editingProductData.seller || 'Savitri Official Store',
     status: editingProductData.status || 'Published',
     isFeatured: editingProductData.isFeatured || false,
     isReturnable: editingProductData.isReturnable !== undefined ? editingProductData.isReturnable : true,
@@ -11184,7 +11233,7 @@ export const AddProductPage = () => {
     name: '',
     category: 'Groceries & Grains',
     subCategory: 'Grains & Pulses',
-    brand: 'ShippNex Select',
+    brand: 'Savitri Select',
     unit: '1kg',
     unitValue: '1',
     unitType: 'kg',
@@ -11196,7 +11245,7 @@ export const AddProductPage = () => {
     stock: '',
     minStockLimit: '10',
     sku: '',
-    seller: 'ShippNex Official Store',
+    seller: 'Savitri Official Store',
     status: 'Published',
     isFeatured: false,
     isReturnable: true,
@@ -11485,7 +11534,7 @@ export const AddProductPage = () => {
         _id: res?.product?._id || editingProductData?._id,
         id: res?.product?._id || editingProductData?.id || generatedSku,
         name: formData.name || 'New Product',
-        seller: formData.seller || 'ShippNex Official Store',
+        seller: formData.seller || 'Savitri Official Store',
         category: formData.category,
         subCategory: formData.subCategory,
         image: formData.mainImage || 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&q=80',
@@ -11641,7 +11690,7 @@ export const AddProductPage = () => {
                 onChange={(e) => handleInputChange('seller', e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#F7941D]"
               >
-                <option value="ShippNex Official Store">ShippNex Official Warehouse</option>
+                <option value="Savitri Official Store">Savitri Official Warehouse</option>
                 <option value="Keshari Vagitl Shope">Keshari Vagitl Shope</option>
                 <option value="Fresh Farm Supermarket">Fresh Farm Supermarket</option>
               </select>

@@ -6,7 +6,7 @@ export const DEMO_UPDATED_LABEL = '21 Oct 2026, 09:40 IST';
 export const REPORT_BRANDS = [
   { slug: 'auriva-bites', name: 'Auriva Bites', city: 'Indore', commissionRate: 0.08 },
   { slug: 'quick-commerce', name: 'Quick Commerce', city: 'Bhopal', commissionRate: 0.10 },
-  { slug: 'shippnex', name: 'Shippnex', city: 'Indore', commissionRate: 0.12 },
+  { slug: 'shippnex', name: 'Savitri', city: 'Indore', commissionRate: 0.12 },
   { slug: 'medcred', name: 'MedCred', city: 'Ujjain', commissionRate: 0.06 },
 ];
 

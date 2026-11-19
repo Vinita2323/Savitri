@@ -93,8 +93,8 @@ const Profile = () => {
 
   const handleShareApp = async () => {
     const shareData = {
-      title: 'ShippNex - Shopping & Express Delivery',
-      text: 'Download the ShippNex app for fast grocery & product delivery, shopping, and logistics on Google Play Store!',
+      title: 'Savitri - Shopping & Express Delivery',
+      text: 'Download the Savitri app for fast grocery & product delivery, shopping, and logistics on Google Play Store!',
       url: APP_PLAYSTORE_URL,
     };
 
@@ -225,7 +225,7 @@ const Profile = () => {
                 </span>
                 <ChevronRight size={12} className="opacity-80 ml-0.5" />
               </button>
-              <span className="text-white/90 text-xs font-medium bg-black/15 px-2.5 py-0.5 rounded-full">ShippNex Member</span>
+              <span className="text-white/90 text-xs font-medium bg-black/15 px-2.5 py-0.5 rounded-full">Savitri Member</span>
               {userProfile?.phone && (
                 <span className="text-white/80 text-xs font-medium">• {userProfile.phone}</span>
               )}
@@ -684,7 +684,7 @@ const Profile = () => {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-bold text-[#1e1b4b] m-0 group-hover:text-indigo-600 transition-colors">Share ShippNex App</h4>
+                        <h4 className="text-sm font-bold text-[#1e1b4b] m-0 group-hover:text-indigo-600 transition-colors">Share Savitri App</h4>
                         <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-0.2 rounded-full border border-indigo-100">Play Store</span>
                       </div>
                       <p className="text-[11px] text-slate-400 m-0 font-medium">Invite friends to download user app</p>
@@ -999,7 +999,7 @@ const Profile = () => {
                   <Package size={28} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-900 m-0">Share ShippNex App</h3>
+                  <h3 className="text-lg font-black text-slate-900 m-0">Share Savitri App</h3>
                   <p className="text-xs text-slate-500 m-0 mt-0.5">Express Shopping, Grocery & Logistics</p>
                 </div>
               </div>
@@ -1026,7 +1026,7 @@ const Profile = () => {
               <div className="grid grid-cols-2 gap-3 pt-1">
                 {/* WhatsApp Share */}
                 <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Hey! Download the ShippNex App for the fastest grocery delivery, shopping & logistics on Google Play Store:\n${APP_PLAYSTORE_URL}`)}`}
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Hey! Download the Savitri App for the fastest grocery delivery, shopping & logistics on Google Play Store:\n${APP_PLAYSTORE_URL}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 p-3 rounded-xl bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#128C7E] font-bold text-xs no-underline transition-colors border border-[#25D366]/20"
@@ -1037,7 +1037,7 @@ const Profile = () => {
 
                 {/* Telegram Share */}
                 <a
-                  href={`https://t.me/share/url?url=${encodeURIComponent(APP_PLAYSTORE_URL)}&text=${encodeURIComponent('Download ShippNex User App on Google Play Store!')}`}
+                  href={`https://t.me/share/url?url=${encodeURIComponent(APP_PLAYSTORE_URL)}&text=${encodeURIComponent('Download Savitri User App on Google Play Store!')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 p-3 rounded-xl bg-[#0088cc]/10 hover:bg-[#0088cc]/20 text-[#0088cc] font-bold text-xs no-underline transition-colors border border-[#0088cc]/20"

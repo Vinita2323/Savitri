@@ -149,8 +149,17 @@ const Categories = () => {
     }
   }, [urlCategory, urlSubCategory]);
 
+  // phones scroll the product panel; tablets/desktops scroll the page — reset whichever one is in use
+  const scrollListToTop = () => {
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+    window.scrollTo(0, 0);
+    // on tablets/desktops the <body> itself is the scrolling element (see index.css), so reset it too
+    if (document.body) document.body.scrollTop = 0;
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+  };
+
   const setActiveCategory = (catName) => {
-    if (mainRef.current) mainRef.current.scrollTop = 0; // a newly chosen category starts at the top
+    scrollListToTop(); // a newly chosen category starts at the top
     setActiveCategoryState(catName);
     sessionStorage.setItem('savitri_active_cat', catName);
     
@@ -169,7 +178,7 @@ const Categories = () => {
   };
 
   const setActiveSubCategory = (subCatName) => {
-    if (mainRef.current) mainRef.current.scrollTop = 0;
+    scrollListToTop();
     setActiveSubCategoryState(subCatName);
     const newParams = new URLSearchParams(searchParams);
     if (subCatName) {
@@ -383,7 +392,7 @@ const Categories = () => {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search products or categories..." 
-            className="bg-transparent border-none outline-none text-[12px] w-full text-slate-800 font-medium placeholder:text-slate-400"
+            className="bg-transparent border-none outline-none text-[13px] w-full text-slate-800 font-medium placeholder:text-slate-400"
           />
           {searchInput && (
             <button 
@@ -399,11 +408,11 @@ const Categories = () => {
       <div className="flex-1 flex flex-row overflow-hidden md:overflow-visible md:gap-6 min-h-0">
         
         {/* Left Sidebar */}
-        <aside ref={asideRef} onScroll={saveScroll} className="w-[80px] sm:w-[88px] md:w-64 bg-white border-r md:border md:rounded-2xl border-slate-100 overflow-y-auto shrink-0 [&::-webkit-scrollbar]:hidden md:p-2.5 md:shadow-xs">
+        <aside ref={asideRef} onScroll={saveScroll} className="w-[80px] sm:w-[88px] md:w-72 bg-white border-r md:border md:rounded-2xl border-slate-100 overflow-y-auto shrink-0 [&::-webkit-scrollbar]:hidden md:p-2.5 md:shadow-xs">
           
           <div className="hidden md:flex items-center justify-between pb-2.5 mb-2 border-b border-slate-100 px-2">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">Categories</h3>
-            <span className="text-[11px] font-bold text-[#F7941D] bg-orange-50 px-2 py-0.5 rounded-full">
+            <h3 className="text-xs md:text-[13px] font-black text-slate-400 uppercase tracking-wider">Categories</h3>
+            <span className="text-[11px] md:text-xs font-bold text-[#F7941D] bg-orange-50 px-2 py-0.5 rounded-full">
               {sidebarCategories.length + 1}
             </span>
           </div>
@@ -426,12 +435,12 @@ const Categories = () => {
               <Layers size={18} />
             </div>
             <div className="flex flex-col text-center md:text-left truncate">
-              <span className={`text-[10px] md:text-xs leading-tight truncate ${
+              <span className={`text-[11px] md:text-[15px] leading-tight truncate ${
                 activeCategory === 'All' ? 'text-[#F7941D] font-black' : 'text-slate-800 font-bold'
               }`}>
                 All Products
               </span>
-              <span className="hidden md:block text-[10px] text-slate-400 font-medium">
+              <span className="hidden md:block text-[10px] md:text-xs text-slate-400 font-medium">
                 {totalProductCount > 0 ? `${totalProductCount} items` : 'Explore catalog'}
               </span>
             </div>
@@ -467,7 +476,7 @@ const Categories = () => {
                     }}
                   />
                 </div>
-                <span className={`text-[9.5px] md:text-xs text-center md:text-left font-bold leading-tight line-clamp-2 md:truncate ${
+                <span className={`text-[10.5px] md:text-[15px] text-center md:text-left font-bold leading-tight line-clamp-2 md:truncate ${
                   isActive ? 'text-[#F7941D] font-extrabold' : 'text-slate-700'
                 }`}>
                   {cat.name}
@@ -486,7 +495,7 @@ const Categories = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 bg-white md:bg-transparent p-3 md:p-0 rounded-2xl border border-slate-100 md:border-none shadow-2xs md:shadow-none">
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-[16px] md:text-[22px] font-black text-slate-900 uppercase tracking-tight m-0">
+                <h1 className="text-[17px] md:text-[26px] font-black text-slate-900 uppercase tracking-tight m-0">
                   {activeCategory === 'All' ? 'All Products' : activeCategory}
                 </h1>
                 {activeSubCategory && (
@@ -495,7 +504,7 @@ const Categories = () => {
                   </span>
                 )}
               </div>
-              <p className="text-[11px] font-bold text-slate-400 m-0 uppercase tracking-wider mt-0.5">
+              <p className="text-[11px] md:text-[13px] font-bold text-slate-400 m-0 uppercase tracking-wider mt-0.5">
                 {filteredProducts.length} {filteredProducts.length === 1 ? 'ITEM' : 'ITEMS'} AVAILABLE
               </p>
             </div>
@@ -508,7 +517,7 @@ const Categories = () => {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Filter by name, brand, seller..."
-                className="bg-transparent border-none outline-none text-xs w-full text-slate-800 font-medium placeholder:text-slate-400"
+                className="bg-transparent border-none outline-none text-[13px] md:text-sm w-full text-slate-800 font-medium placeholder:text-slate-400"
               />
               {searchInput && (
                 <button 
@@ -526,7 +535,7 @@ const Categories = () => {
             <div className="flex gap-2.5 overflow-x-auto pb-3 mb-3 shrink-0 [&::-webkit-scrollbar]:hidden">
               <button 
                 onClick={() => setActiveSubCategory(null)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-full text-[13px] md:text-sm font-bold transition-all border cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   activeSubCategory === null 
                     ? 'bg-[#79B433] text-white border-[#F7941D] shadow-sm' 
                     : 'bg-white text-slate-600 border-slate-200 hover:border-orange-300 hover:bg-orange-50/50'
@@ -541,7 +550,7 @@ const Categories = () => {
                   <button 
                     key={sub._id || sub.name}
                     onClick={() => setActiveSubCategory(isSubActive ? null : sub.name)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                    className={`px-3.5 py-1.5 rounded-full text-[13px] md:text-sm font-bold transition-all border cursor-pointer shrink-0 flex items-center gap-1.5 ${
                       isSubActive 
                         ? 'bg-[#79B433] text-white border-[#F7941D] shadow-sm' 
                         : 'bg-white text-slate-600 border-slate-200 hover:border-orange-300 hover:bg-orange-50/50'
@@ -580,7 +589,7 @@ const Categories = () => {
               <h3 className="text-lg font-black text-slate-900 m-0 mb-1.5">
                 {debouncedSearchTerm ? 'No matching items found' : `No products in "${activeCategory}" yet`}
               </h3>
-              <p className="text-xs text-slate-500 max-w-sm m-0 mb-5 leading-relaxed font-medium">
+              <p className="text-sm text-slate-500 max-w-sm m-0 mb-5 leading-relaxed font-medium">
                 {debouncedSearchTerm 
                   ? `We couldn't find any products matching "${debouncedSearchTerm}". Try a different keyword.` 
                   : (userLat && userLng 
@@ -592,14 +601,14 @@ const Categories = () => {
                 {debouncedSearchTerm ? (
                   <button 
                     onClick={() => setSearchInput('')}
-                    className="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs cursor-pointer border-none hover:bg-slate-800 transition-all shadow-sm"
+                    className="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-sm cursor-pointer border-none hover:bg-slate-800 transition-all shadow-sm"
                   >
                     Clear Search
                   </button>
                 ) : activeCategory !== 'All' ? (
                   <button 
                     onClick={() => setActiveCategory('All')}
-                    className="px-5 py-2.5 rounded-xl bg-[#79B433] text-white font-bold text-xs cursor-pointer border-none hover:bg-[#e04b00] transition-all shadow-sm"
+                    className="px-5 py-2.5 rounded-xl bg-[#79B433] text-white font-bold text-sm cursor-pointer border-none hover:bg-[#e04b00] transition-all shadow-sm"
                   >
                     Browse All Products
                   </button>
@@ -607,7 +616,7 @@ const Categories = () => {
                 
                 <button 
                   onClick={() => navigate('/')}
-                  className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs cursor-pointer border-none hover:bg-slate-200 transition-all"
+                  className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-sm cursor-pointer border-none hover:bg-slate-200 transition-all"
                 >
                   Go to Home
                 </button>
@@ -664,31 +673,31 @@ const Categories = () => {
                     {/* Details Section */}
                     <div className="p-2 sm:p-2.5 md:p-3 bg-white flex flex-col justify-between flex-1 gap-1.5">
                       <div>
-                        <h4 className="text-[11.5px] sm:text-xs md:text-sm font-bold text-slate-900 m-0 mb-0.5 leading-tight line-clamp-2">
+                        <h4 className="text-[12.5px] sm:text-[13px] md:text-base font-bold text-slate-900 m-0 mb-0.5 leading-tight line-clamp-2">
                           {item.name}
                         </h4>
-                        <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 m-0 truncate">
+                        <p className="text-[11px] sm:text-xs md:text-[13px] font-semibold text-slate-400 m-0 truncate">
                           {item.unit || `${item.unitValue || 1} ${item.unitType || 'unit'}`}
                         </p>
-                        <p className="text-[10px] sm:text-[10.5px] font-medium text-slate-500 m-0 mt-0.5 truncate">
-                          by <span className="font-bold text-slate-700">{typeof item.seller === 'string' ? item.seller : 'ShippNex Store'}</span>
+                        <p className="text-[11px] sm:text-xs md:text-[13px] font-medium text-slate-500 m-0 mt-0.5 truncate">
+                          by <span className="font-bold text-slate-700">{typeof item.seller === 'string' ? item.seller : 'Savitri Store'}</span>
                         </p>
                       </div>
 
                       {/* Price Row */}
                       <div className="flex items-baseline justify-between gap-1 pt-1 border-t border-slate-50">
                         <div className="flex items-baseline gap-1 truncate">
-                          <span className="text-xs sm:text-sm md:text-base font-black text-slate-950">
+                          <span className="text-[13px] sm:text-base md:text-lg font-black text-slate-950">
                             ₹{item.salePrice || item.price}
                           </span>
                           {item.mrp && item.mrp > (item.salePrice || item.price) && (
-                            <span className="text-[10px] sm:text-[11px] text-slate-400 line-through">
+                            <span className="text-[11px] sm:text-xs md:text-[13px] text-slate-400 line-through">
                               ₹{item.mrp}
                             </span>
                           )}
                         </div>
                         {itemDiscount > 0 && (
-                          <span className="text-[9px] sm:text-[10px] font-black text-[#F7941D] whitespace-nowrap shrink-0 bg-orange-50 px-1 py-0.5 rounded">
+                          <span className="text-[10px] sm:text-[11px] md:text-xs font-black text-[#F7941D] whitespace-nowrap shrink-0 bg-orange-50 px-1 py-0.5 rounded">
                             -{itemDiscount}%
                           </span>
                         )}
@@ -708,7 +717,7 @@ const Categories = () => {
                                 setTimeout(() => setToastMessage(''), 2000);
                               }
                             }}
-                            className={`w-full py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1 border-none cursor-pointer transition-all ${
+                            className={`w-full py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-extrabold text-xs sm:text-[13px] md:text-sm flex items-center justify-center gap-1 border-none cursor-pointer transition-all ${
                               isOutOfStock 
                                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
                                 : 'bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white shadow-2xs'
@@ -725,7 +734,7 @@ const Categories = () => {
                               setToastMessage('Item removed from cart');
                               setTimeout(() => setToastMessage(''), 2000);
                             }}
-                            className="w-full py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-98 text-white font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1 border-none cursor-pointer shadow-2xs transition-all"
+                            className="w-full py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-98 text-white font-extrabold text-xs sm:text-[13px] md:text-sm flex items-center justify-center gap-1 border-none cursor-pointer shadow-2xs transition-all"
                             aria-label="Remove from cart"
                           >
                             <Trash2 size={12} strokeWidth={2.5} /> REMOVE

@@ -164,7 +164,7 @@ router.post('/test', protect(), async (req, res) => {
     }
 
     const response = await sendPushNotification(uniqueTokens, {
-      title: '🔔 ShippNex Test Notification',
+      title: '🔔 Savitri Test Notification',
       body: `Hello ${entity.name || 'Partner'}, FCM push notifications are working perfectly!`,
       data: {
         type: 'test',

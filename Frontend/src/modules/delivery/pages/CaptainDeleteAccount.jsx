@@ -137,7 +137,7 @@ const CaptainDeleteAccount = () => {
             <h2 className="text-sm font-black m-0 tracking-tight">Warning: This action cannot be undone</h2>
           </div>
           <p className="text-xs text-slate-600 leading-relaxed font-medium m-0">
-            Deleting your ShippNex Captain account will permanently remove your driver profile, vehicle documents, and verified partner status from our dispatch system.
+            Deleting your Savitri Captain account will permanently remove your driver profile, vehicle documents, and verified partner status from our dispatch system.
           </p>
 
           <div className="space-y-2 pt-1">

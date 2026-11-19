@@ -60,7 +60,7 @@ export const PromotionDashboard = () => {
             <span className="text-xs text-slate-400 font-mono">v2.4 Live Sync</span>
           </div>
           <h2 className="text-2xl font-black text-white tracking-tight">Promotion Control Center</h2>
-          <p className="text-xs text-slate-400 mt-1 max-w-xl">Configure, test, and broadcast visual promo elements across the ShippNex User App homepage in real time.</p>
+          <p className="text-xs text-slate-400 mt-1 max-w-xl">Configure, test, and broadcast visual promo elements across the Savitri User App homepage in real time.</p>
         </div>
         <div className="flex items-center gap-3">
           <button onClick={() => alert('Publishing Live Homepage CMS Changes...')} className="px-4 py-2.5 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl shadow-lg border-none cursor-pointer flex items-center gap-2 transition-all active:scale-95">
@@ -1457,7 +1457,7 @@ export const PromoFlashSale = () => {
           );
           if (approved) {
             payload.sellerId = approved._id || approved.id;
-            payload.seller = approved.businessName || approved.ownerName || 'ShippNex Seller';
+            payload.seller = approved.businessName || approved.ownerName || 'Savitri Seller';
           }
         } catch (_) {
           /* non-blocking */

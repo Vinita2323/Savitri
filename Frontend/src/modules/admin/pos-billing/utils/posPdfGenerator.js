@@ -268,7 +268,7 @@ export function buildPosA4Pdf(sale) {
   doc.setFontSize(7.5);
   doc.setTextColor(148, 163, 184);
   doc.text('This is a computer-generated tax invoice and requires no physical signature.', margin, footerY + 4);
-  doc.text('Powered by ShippNex Quick POS Billing System', pageWidth - margin, footerY + 4, { align: 'right' });
+  doc.text('Powered by Savitri Quick POS Billing System', pageWidth - margin, footerY + 4, { align: 'right' });
 
   return doc;
 }
@@ -447,7 +447,7 @@ export function buildPosThermalPdf(sale) {
   y += 3;
   doc.text('*** THANK YOU FOR SHOPPING ***', pageWidth / 2, y, { align: 'center' });
   y += 3.5;
-  doc.text('Powered by ShippNex POS', pageWidth / 2, y, { align: 'center' });
+  doc.text('Powered by Savitri POS', pageWidth / 2, y, { align: 'center' });
 
   return doc;
 }

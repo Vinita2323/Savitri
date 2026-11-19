@@ -104,7 +104,7 @@ const getStoredCustomers = () => {
 const FALLBACK_STORES = [
   {
     id: 'store_central',
-    storeName: 'ShippNex Central Fulfillment Hub',
+    storeName: 'Savitri Central Fulfillment Hub',
     phone: '0731-4099881',
     city: 'Indore',
     address: 'Plot 42, Logistics Park, Ring Road',

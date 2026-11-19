@@ -88,7 +88,7 @@ const Login = () => {
               <ArrowLeft size={18} />
             </button>
 
-            <img src="/LogoSavitri.png" alt="Shippnex" className="h-20 max-w-[180px] object-contain my-1" />
+            <img src="/LogoSavitri.png" alt="Savitri" className="h-20 max-w-[180px] object-contain my-1" />
             
             {/* Right side spacer for perfect center alignment */}
             <div className="w-10 flex justify-end shrink-0">
@@ -147,7 +147,7 @@ const Login = () => {
 
         {/* Footer info */}
         <p className="text-[11px] text-center text-slate-400 font-normal mt-6 leading-relaxed">
-          By continuing, you agree to Shippnex's{' '}
+          By continuing, you agree to Savitri's{' '}
           <Link to="/privacy" className="text-[#E6A800] hover:underline font-semibold">
             Privacy Policy
           </Link>

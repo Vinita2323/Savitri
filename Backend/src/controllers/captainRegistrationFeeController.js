@@ -179,7 +179,7 @@ export const initiateRegistrationFeeOrder = async (req, res, next) => {
         sendOtpSMS({
           phone: cleanPhone,
           otp,
-          appName: 'ShippNex',
+          appName: 'Savitri',
           role: 'captain',
         }).catch((smsErr) =>
           console.warn('[CaptainRegFee] OTP SMS failed (already paid path):', smsErr.message)
@@ -317,7 +317,7 @@ export const initiateRegistrationFeeOrder = async (req, res, next) => {
       sendOtpSMS({
         phone: cleanPhone,
         otp,
-        appName: 'ShippNex',
+        appName: 'Savitri',
         role: 'captain',
       }).catch((smsErr) =>
         console.warn('[CaptainRegFee] OTP SMS failed (fee waived):', smsErr.message)
@@ -489,7 +489,7 @@ export const verifyRegistrationFeePayment = async (req, res, next) => {
     await sendOtpSMS({
       phone: captain.phone,
       otp,
-      appName: 'ShippNex',
+      appName: 'Savitri',
       role: 'captain',
     });
 

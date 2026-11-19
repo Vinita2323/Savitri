@@ -12,7 +12,7 @@ const DEFAULT_POLICIES = [
     sections: [
       {
         heading: '1. Account & Registration',
-        body: 'By browsing or placing orders on ShippNex, you agree to these Terms and are responsible for keeping your login credentials secure.'
+        body: 'By browsing or placing orders on Savitri, you agree to these Terms and are responsible for keeping your login credentials secure.'
       },
       {
         heading: '2. Pricing & Payments',
@@ -28,7 +28,7 @@ const DEFAULT_POLICIES = [
       },
       {
         heading: '5. Platform Support & Safety',
-        body: 'ShippNex facilitates verified merchant transactions and express delivery with dedicated customer care support.'
+        body: 'Savitri facilitates verified merchant transactions and express delivery with dedicated customer care support.'
       }
     ]
   },
@@ -68,7 +68,7 @@ const DEFAULT_POLICIES = [
     sections: [
       {
         heading: '1. Merchant Onboarding & Verification',
-        body: 'All sellers registering on ShippNex must provide valid business details, GSTIN (where applicable), bank account details, and proof of identity. Approval is granted upon verification by the ShippNex administration.'
+        body: 'All sellers registering on Savitri must provide valid business details, GSTIN (where applicable), bank account details, and proof of identity. Approval is granted upon verification by the Savitri administration.'
       },
       {
         heading: '2. Product Listings & Quality Standards',
@@ -76,15 +76,15 @@ const DEFAULT_POLICIES = [
       },
       {
         heading: '3. Order Fulfillment & Packaging SLA',
-        body: 'Merchants must accept and package incoming orders within the specified Service Level Agreement (SLA) time window. Orders must be securely packed and handed over to the assigned ShippNex delivery captain upon OTP/handover verification.'
+        body: 'Merchants must accept and package incoming orders within the specified Service Level Agreement (SLA) time window. Orders must be securely packed and handed over to the assigned Savitri delivery captain upon OTP/handover verification.'
       },
       {
         heading: '4. Commissions, Payouts & Settlement',
-        body: 'ShippNex deducts the agreed platform commission percentage on completed orders. Net seller payouts are settled directly to the registered bank account according to the scheduled payout cycle after deducting returns and cancellations.'
+        body: 'Savitri deducts the agreed platform commission percentage on completed orders. Net seller payouts are settled directly to the registered bank account according to the scheduled payout cycle after deducting returns and cancellations.'
       },
       {
         heading: '5. Account Suspension & Termination',
-        body: 'ShippNex reserves the right to suspend or permanently terminate seller accounts that repeatedly violate quality guidelines, indulge in fraudulent orders, or fail to honor customer return requests.'
+        body: 'Savitri reserves the right to suspend or permanently terminate seller accounts that repeatedly violate quality guidelines, indulge in fraudulent orders, or fail to honor customer return requests.'
       }
     ]
   },
@@ -128,7 +128,7 @@ const DEFAULT_POLICIES = [
       },
       {
         heading: '3. Cash Collection (COD)',
-        body: 'Collect the exact cash amount for COD orders and deposit cash collections to ShippNex as per daily settlement rules.'
+        body: 'Collect the exact cash amount for COD orders and deposit cash collections to Savitri as per daily settlement rules.'
       },
       {
         heading: '4. Earnings & Payouts',

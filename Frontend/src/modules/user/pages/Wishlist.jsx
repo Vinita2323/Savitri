@@ -71,7 +71,7 @@ const Wishlist = () => {
                   {/* Details Section */}
                   <div className="p-2.5 pb-3 bg-white flex flex-col">
                     <h4 className="text-[12px] font-bold text-slate-800 m-0 mb-0.5 leading-tight">{item.name}</h4>
-                    <p className="text-[10px] font-medium text-slate-400 m-0 mb-2">{item.brand || 'ShippNex Select'}</p>
+                    <p className="text-[10px] font-medium text-slate-400 m-0 mb-2">{item.brand || 'Savitri Select'}</p>
                     
                     <div className="flex items-center gap-1.5 mb-1">
                       <span className="text-[14px] font-extrabold text-slate-900">₹{itemPrice}</span>

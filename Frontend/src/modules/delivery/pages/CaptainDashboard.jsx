@@ -1478,7 +1478,7 @@ const CaptainDashboard = () => {
                                   <div className="flex-1 min-w-0">
                                     <span className="text-[8px] font-bold text-orange-700 uppercase tracking-wider block">Deliver To (Seller)</span>
                                     <p className="font-semibold text-slate-800 text-xs leading-tight line-clamp-1">
-                                      {ret.sellerName || 'ShippNex Store'} ({ret.sellerAddress?.city || 'Warehouse'})
+                                      {ret.sellerName || 'Savitri Store'} ({ret.sellerAddress?.city || 'Warehouse'})
                                     </p>
                                   </div>
                                 </div>

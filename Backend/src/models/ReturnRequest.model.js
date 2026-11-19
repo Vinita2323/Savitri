@@ -109,7 +109,7 @@ const returnRequestSchema = new mongoose.Schema(
     },
     sellerName: {
       type: String,
-      default: 'ShippNex Store',
+      default: 'Savitri Store',
     },
     sellerAddress: {
       storeName: String,

@@ -835,13 +835,13 @@ const SellerRegister = () => {
       <div className="sticky top-0 z-40 bg-slate-50/95 backdrop-blur-sm border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-3">
         <div className="sm:mx-auto sm:w-full sm:max-w-xl text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-1">
-            <img src="/LogoSavitri.png" alt="ShippNex" className="h-9 object-contain mx-auto" />
+            <img src="/LogoSavitri.png" alt="Savitri" className="h-9 object-contain mx-auto" />
           </Link>
           <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
             Seller Registration <span className="font-bold text-slate-500 text-lg">/ विक्रेता पंजीकरण</span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            Start selling on ShippNex Marketplace <span className="text-slate-400">/ शिपनेक्स मार्केटप्लेस पर बेचना शुरू करें</span>
+            Start selling on Savitri Marketplace <span className="text-slate-400">/ शिपनेक्स मार्केटप्लेस पर बेचना शुरू करें</span>
           </p>
         </div>
       </div>

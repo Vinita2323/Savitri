@@ -12,7 +12,7 @@ const orderItemSchema = new mongoose.Schema({
   originalPrice: { type: Number },
   quantity: { type: Number, required: true, min: 1 },
   image: { type: String },
-  seller: { type: String, default: 'ShippNex Official Store' },
+  seller: { type: String, default: 'Savitri Official Store' },
   variantSku: { type: String, default: '' },
   variantId: { type: String, default: '' },
   sku: { type: String, default: '' },

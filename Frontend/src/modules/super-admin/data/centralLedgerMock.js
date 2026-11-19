@@ -41,7 +41,7 @@ export const LEDGER_SUMMARY = [
   },
 ];
 
-export const LEDGER_BRANDS = ['Auriva Bites', 'Quick Commerce', 'Shippnex', 'MedCred'];
+export const LEDGER_BRANDS = ['Auriva Bites', 'Quick Commerce', 'Savitri', 'MedCred'];
 
 export const LEDGER_CATEGORIES = [
   'Customer Payment',
@@ -125,7 +125,7 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
     id: 'txn_004',
     transactionId: 'TXN-2026-004',
     createdAt: '2026-10-20T09:40:00+05:30',
-    brand: 'Shippnex',
+    brand: 'Savitri',
     category: 'Captain Settlement',
     partyName: 'Captain #CAP-031',
     partyId: 'CAP-031',
@@ -211,7 +211,7 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
     id: 'txn_008',
     transactionId: 'TXN-2026-008',
     createdAt: '2026-10-12T10:05:00+05:30',
-    brand: 'Shippnex',
+    brand: 'Savitri',
     category: 'Subscription Payment',
     partyName: 'Seller #SEL-305',
     partyId: 'SEL-305',
@@ -296,7 +296,7 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
     id: 'txn_012',
     transactionId: 'TXN-2026-012',
     createdAt: '2026-07-11T17:55:00+05:30',
-    brand: 'Shippnex',
+    brand: 'Savitri',
     category: 'Refund',
     partyName: 'Customer #CUS-044',
     partyId: 'CUS-044',
@@ -382,7 +382,7 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
     id: 'txn_016',
     transactionId: 'TXN-2026-016',
     createdAt: '2026-05-07T14:33:00+05:30',
-    brand: 'Shippnex',
+    brand: 'Savitri',
     category: 'Customer Payment',
     partyName: 'Customer #CUS-301',
     partyId: 'CUS-301',
@@ -467,7 +467,7 @@ export const CENTRAL_LEDGER_TRANSACTIONS = [
     id: 'txn_020',
     transactionId: 'TXN-2026-020',
     createdAt: '2026-01-05T18:40:00+05:30',
-    brand: 'Shippnex',
+    brand: 'Savitri',
     category: 'COD Collection',
     partyName: 'Captain #CAP-052',
     partyId: 'CAP-052',

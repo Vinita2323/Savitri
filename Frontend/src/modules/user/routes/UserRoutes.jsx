@@ -5,6 +5,7 @@ import PageSkeleton from '../../../components/PageSkeleton';
 import Home from '../pages/Home';
 import BottomNav from '../components/BottomNav';
 import UserDesktopHeader from '../components/UserDesktopHeader';
+import UserFooter from '../components/UserFooter';
 
 const Categories = lazy(() => import('../pages/Categories'));
 const Cart = lazy(() => import('../pages/Cart'));
@@ -94,6 +95,9 @@ const UserRoutes = () => {
         </Routes>
       </Suspense>
       
+      {/* Website footer (tablet / desktop). Hidden on sign-in and on the checkout / payment steps. */}
+      {!isLogin && !isVerifyOtp && !isCheckout && !isPayment && <UserFooter />}
+
       {/* Shared Navigation */}
       {!hideBottomNav && <BottomNav />}
     </>

@@ -9,7 +9,7 @@ const supportSettingSchema = new mongoose.Schema(
     },
     customerEmail: {
       type: String,
-      default: 'shippnexin26@gmail.com',
+      default: 'sreplwm@gmail.com',
       trim: true,
     },
     customerHours: {
@@ -24,7 +24,7 @@ const supportSettingSchema = new mongoose.Schema(
     },
     sellerEmail: {
       type: String,
-      default: 'shippnexin26@gmail.com',
+      default: 'sreplwm@gmail.com',
       trim: true,
     },
     sellerHours: {
@@ -39,7 +39,7 @@ const supportSettingSchema = new mongoose.Schema(
     },
     captainEmail: {
       type: String,
-      default: 'shippnexin26@gmail.com',
+      default: 'sreplwm@gmail.com',
       trim: true,
     },
     captainHours: {
@@ -52,6 +52,13 @@ const supportSettingSchema = new mongoose.Schema(
       default: '+91 63774 60692',
       trim: true,
     },
+    // Customer website footer (managed by admin)
+    footerBrandName: { type: String, default: 'Savitri', trim: true, maxlength: 60 },
+    footerTagline: { type: String, default: 'Fresh groceries, staples and daily essentials from stores near you, delivered fast to your doorstep.', trim: true, maxlength: 240 },
+    footerPhone: { type: String, default: '+91 81029 14300', trim: true, maxlength: 30 },
+    footerEmail: { type: String, default: 'sreplwm@gmail.com', trim: true, maxlength: 120 },
+    footerAddress: { type: String, default: '', trim: true, maxlength: 300 },
+    footerHours: { type: String, default: '', trim: true, maxlength: 80 },
     bannerTitle: {
       type: String,
       default: "We're here to help",

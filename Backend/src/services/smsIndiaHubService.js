@@ -15,7 +15,7 @@ dotenv.config();
 const DEFAULT_SENDER_ID = 'BGADEC';
 const DEFAULT_TEMPLATE_ID = '1007282516644508833';
 const DEFAULT_API_URL = 'https://cloud.smsindiahub.in/vendorsms/pushsms.aspx';
-const DEFAULT_APP_NAME = 'ShippNex';
+const DEFAULT_APP_NAME = 'Savitri';
 
 /**
  * Normalizes Indian mobile number to clean 10 digits
@@ -46,7 +46,7 @@ export const formatOtpMessage = (appName, otp) => {
  * @param {Object} params
  * @param {string} params.phone - Recipient phone number
  * @param {string} params.otp - 6-digit numeric OTP
- * @param {string} [params.appName] - Brand / role identifier (e.g. 'ShippNex', 'ShippNex Seller', 'ShippNex Captain')
+ * @param {string} [params.appName] - Brand / role identifier (e.g. 'Savitri', 'Savitri Seller', 'Savitri Captain')
  * @param {string} [params.role] - Context role for logging ('user' | 'seller' | 'captain')
  * @returns {Promise<{ success: boolean, message: string, messageId?: string, isMock?: boolean }>}
  */
@@ -121,7 +121,7 @@ export const sendOtpSMS = async ({ phone, otp, appName = DEFAULT_APP_NAME, role 
     const response = await fetch(targetUrl, {
       method: 'GET',
       headers: {
-        'User-Agent': 'ShippNex-SMSIndiaHub/1.0',
+        'User-Agent': 'Savitri-SMSIndiaHub/1.0',
         'Accept': 'application/json, text/plain, */*',
       },
       signal: controller.signal,

@@ -461,7 +461,7 @@ const Home = () => {
         <header className="flex justify-between items-center px-4 pt-1.5 pb-2.5">
           <div className="flex items-center flex-1">
             <div className="bg-white rounded-xl p-1 shadow-sm flex items-center justify-center w-11 h-11 shrink-0">
-              <img src="/LogoSavitri.png" alt="ShippNex Logo" className="w-full h-full object-contain" />
+              <img src="/LogoSavitri.png" alt="Savitri Logo" className="w-full h-full object-contain" />
             </div>
             
             <div className="flex flex-col ml-3 text-white cursor-pointer overflow-hidden" onClick={() => navigate('/location')}>
@@ -556,12 +556,12 @@ const Home = () => {
         </div>
       </div>
 
-      <div className="px-3.5 md:px-5">
+      <div className="px-3.5 md:px-6 lg:px-8 md:w-full">
         {searchQuery ? (
           <div className="pb-4">
             <h3 className="text-[16px] md:text-xl font-bold mb-4 text-[#F7941D]">Search Results for "{searchQuery}"</h3>
             {searchResults.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-5">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-5">
                 {searchResults.map(product => (
                     <div key={product.id} className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] flex flex-col">
                       <img 
@@ -570,7 +570,7 @@ const Home = () => {
                         alt={product.name} 
                         loading="lazy" 
                         decoding="async" 
-                        className="w-full h-[110px] object-cover bg-slate-50 cursor-pointer"
+                        className="w-full h-[110px] md:h-[180px] object-cover bg-slate-50 cursor-pointer"
                         onError={(e) => handleImageError(e, product.name)} 
                       />
                       <div className="flex flex-col p-3 pt-2">
@@ -616,7 +616,7 @@ const Home = () => {
         {banners.length > 0 ? (
           <div className="mb-5 md:mb-8">
             <div
-              className="rounded-2xl md:rounded-3xl relative overflow-hidden shadow-md cursor-pointer w-full h-[140px] md:h-[300px] lg:h-[360px] bg-slate-100 touch-pan-y"
+              className="rounded-2xl md:rounded-3xl relative overflow-hidden shadow-md cursor-pointer w-full h-[140px] md:h-[300px] lg:h-[360px] 2xl:h-[420px] bg-slate-100 touch-pan-y"
               style={{ transition: 'opacity 0.3s ease, transform 0.3s ease', opacity: bannerVisible ? 1 : 0, transform: bannerVisible ? 'translateY(0)' : 'translateY(6px)' }}
               onClick={() => {
                 if (bannerTouchRef.current.didSwipe) {
@@ -654,7 +654,7 @@ const Home = () => {
           </div>
         ) : (
           <div 
-            className="rounded-2xl md:rounded-3xl relative overflow-hidden mb-5 md:mb-8 shadow-md cursor-pointer w-full h-[140px] md:h-[300px] lg:h-[360px] bg-slate-100"
+            className="rounded-2xl md:rounded-3xl relative overflow-hidden mb-5 md:mb-8 shadow-md cursor-pointer w-full h-[140px] md:h-[300px] lg:h-[360px] 2xl:h-[420px] bg-slate-100"
             onClick={() => navigate('/categories')}
           >
             <img 
@@ -671,10 +671,10 @@ const Home = () => {
 
         {/* Dynamic Categories Grid */}
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-[16px] md:text-xl font-bold m-0 text-[#F7941D]">Categories</h3>
-          <button onClick={() => navigate('/categories')} className="bg-transparent border-none text-blue-600 text-[12px] md:text-sm font-semibold cursor-pointer hover:underline">See All</button>
+          <h3 className="text-[16px] md:text-2xl font-bold m-0 text-[#F7941D]">Categories</h3>
+          <button onClick={() => navigate('/categories')} className="bg-transparent border-none text-blue-600 text-[12px] md:text-[15px] font-semibold cursor-pointer hover:underline">See All</button>
         </div>
-        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-y-4 gap-x-3 md:gap-6 mb-8 md:mb-10">
+        <div className="grid grid-cols-4 md:grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-y-4 gap-x-3 md:gap-6 mb-8 md:mb-10">
           {categories.length > 0 ? (
             categories.slice(0, 8).map((cat) => {
               const fallbackImg = getCategoryFallbackImage(cat.name);
@@ -685,17 +685,17 @@ const Home = () => {
                   onClick={() => navigate(`/categories?category=${encodeURIComponent(cat.name)}`)}
                   className="flex flex-col items-center cursor-pointer group"
                 >
-                  <div className="bg-white border border-slate-100 rounded-xl w-14 h-14 flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.03)] mb-2 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_6px_16px_rgba(0,0,0,0.06)] overflow-hidden p-1.5">
+                  <div className="bg-white border border-slate-100 rounded-xl w-14 h-14 md:w-[76px] md:h-[76px] flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.03)] mb-2 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_6px_16px_rgba(0,0,0,0.06)] overflow-hidden p-1.5">
                     <img 
                       src={imgSrc} 
                       alt={cat.name} 
                       loading="lazy"
                       decoding="async"
-                      className="w-10 h-10 object-contain" 
+                      className="w-10 h-10 md:w-12 md:h-12 object-contain" 
                       onError={(e) => handleImageError(e, cat.name)}
                     />
                   </div>
-                  <span className="text-[11px] font-semibold text-slate-700 text-center leading-tight">
+                  <span className="text-[11px] md:text-[13px] font-semibold text-slate-700 text-center leading-tight">
                     {cat.name}
                   </span>
                 </div>
@@ -704,20 +704,20 @@ const Home = () => {
           ) : (
             <>
               <div className="flex flex-col items-center cursor-pointer group">
-                <div className="bg-white border border-slate-100 rounded-xl w-14 h-14 flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.03)] mb-2 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_6px_16px_rgba(0,0,0,0.06)]"><img src={grainsImg} alt="Grains & Flours" loading="lazy" decoding="async" className="w-10 h-10 object-contain" /></div>
-                <span className="text-[11px] font-semibold text-slate-700 text-center leading-tight">Grains &<br/>Flours</span>
+                <div className="bg-white border border-slate-100 rounded-xl w-14 h-14 md:w-[76px] md:h-[76px] flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.03)] mb-2 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_6px_16px_rgba(0,0,0,0.06)]"><img src={grainsImg} alt="Grains & Flours" loading="lazy" decoding="async" className="w-10 h-10 md:w-12 md:h-12 object-contain" /></div>
+                <span className="text-[11px] md:text-[13px] font-semibold text-slate-700 text-center leading-tight">Grains &<br/>Flours</span>
               </div>
               <div className="flex flex-col items-center cursor-pointer group">
-                <div className="bg-white border border-slate-100 rounded-xl w-14 h-14 flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.03)] mb-2 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_6px_16px_rgba(0,0,0,0.06)]"><img src={oilGheeImg} alt="Oil & Ghee" loading="lazy" decoding="async" className="w-10 h-10 object-contain" /></div>
-                <span className="text-[11px] font-semibold text-slate-700 text-center leading-tight">Oil & Ghee</span>
+                <div className="bg-white border border-slate-100 rounded-xl w-14 h-14 md:w-[76px] md:h-[76px] flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.03)] mb-2 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_6px_16px_rgba(0,0,0,0.06)]"><img src={oilGheeImg} alt="Oil & Ghee" loading="lazy" decoding="async" className="w-10 h-10 md:w-12 md:h-12 object-contain" /></div>
+                <span className="text-[11px] md:text-[13px] font-semibold text-slate-700 text-center leading-tight">Oil & Ghee</span>
               </div>
               <div className="flex flex-col items-center cursor-pointer group">
-                <div className="bg-white border border-slate-100 rounded-xl w-14 h-14 flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.03)] mb-2 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_6px_16px_rgba(0,0,0,0.06)]"><img src={masalaImg} alt="Spices & Masala" loading="lazy" decoding="async" className="w-10 h-10 object-contain" /></div>
-                <span className="text-[11px] font-semibold text-slate-700 text-center leading-tight">Spices &<br/>Masala</span>
+                <div className="bg-white border border-slate-100 rounded-xl w-14 h-14 md:w-[76px] md:h-[76px] flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.03)] mb-2 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_6px_16px_rgba(0,0,0,0.06)]"><img src={masalaImg} alt="Spices & Masala" loading="lazy" decoding="async" className="w-10 h-10 md:w-12 md:h-12 object-contain" /></div>
+                <span className="text-[11px] md:text-[13px] font-semibold text-slate-700 text-center leading-tight">Spices &<br/>Masala</span>
               </div>
               <div className="flex flex-col items-center cursor-pointer group">
-                <div className="bg-white border border-slate-100 rounded-xl w-14 h-14 flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.03)] mb-2 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_6px_16px_rgba(0,0,0,0.06)]"><img src={sugarImg} alt="Sugar & Sweeteners" loading="lazy" decoding="async" className="w-10 h-10 object-contain" /></div>
-                <span className="text-[11px] font-semibold text-slate-700 text-center leading-tight">Sugar &<br/>Sweeteners</span>
+                <div className="bg-white border border-slate-100 rounded-xl w-14 h-14 md:w-[76px] md:h-[76px] flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.03)] mb-2 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_6px_16px_rgba(0,0,0,0.06)]"><img src={sugarImg} alt="Sugar & Sweeteners" loading="lazy" decoding="async" className="w-10 h-10 md:w-12 md:h-12 object-contain" /></div>
+                <span className="text-[11px] md:text-[13px] font-semibold text-slate-700 text-center leading-tight">Sugar &<br/>Sweeteners</span>
               </div>
             </>
           )}
@@ -726,21 +726,21 @@ const Home = () => {
         {/* Flash Deals */}
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
-            <h3 className="text-[16px] md:text-xl font-bold m-0 text-[#F7941D]">Flash Deals</h3>
+            <h3 className="text-[16px] md:text-2xl font-bold m-0 text-[#F7941D]">Flash Deals</h3>
             <div className="flex items-center gap-1 font-bold text-blue-900" aria-label="Flash deal ends in">
               <span className="bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded text-[12px]">{pad2(flashTimeLeft.hours)}</span>:
               <span className="bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded text-[12px]">{pad2(flashTimeLeft.minutes)}</span>:
               <span className="bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded text-[12px]">{pad2(flashTimeLeft.seconds)}</span>
             </div>
           </div>
-          <button onClick={() => navigate('/flash-sale')} className="bg-transparent border-none text-blue-600 text-[12px] md:text-sm font-semibold cursor-pointer hover:underline">See All</button>
+          <button onClick={() => navigate('/flash-sale')} className="bg-transparent border-none text-blue-600 text-[12px] md:text-[15px] font-semibold cursor-pointer hover:underline">See All</button>
         </div>
 
-        <div className="flex overflow-x-auto md:grid md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-5 pb-4 hide-scrollbar [&::-webkit-scrollbar]:hidden mb-4">
+        <div className="flex overflow-x-auto md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-5 pb-4 hide-scrollbar [&::-webkit-scrollbar]:hidden mb-4">
           {flashDeals.length > 0 ? (
             flashDeals.map((prod) => (
               <div key={prod.id} className="min-w-[155px] max-w-[155px] md:min-w-0 md:max-w-none bg-white border border-slate-100 rounded-xl md:rounded-2xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:shadow-md transition-shadow flex flex-col justify-between">
-                <div className="h-[125px] w-full overflow-hidden bg-slate-50 relative cursor-pointer" onClick={() => navigate(`/product/${prod.id}`)}>
+                <div className="h-[125px] md:h-[180px] w-full overflow-hidden bg-slate-50 relative cursor-pointer" onClick={() => navigate(`/product/${prod.id}`)}>
                   <img 
                     src={getImageUrl(prod.image, prod.name)} 
                     alt={prod.name} 
@@ -750,22 +750,22 @@ const Home = () => {
                     onError={(e) => handleImageError(e, prod.name)}
                   />
                 </div>
-                <div className="flex flex-col p-2.5 flex-1 justify-between gap-2">
+                <div className="flex flex-col p-2.5 md:p-4 flex-1 justify-between gap-2 md:gap-3">
                   <div>
-                    <h4 className="text-[13px] font-bold m-0 mb-0.5 text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis">{prod.name}</h4>
-                    <p className="text-[11px] text-slate-400 m-0">{prod.unit}</p>
-                    <p className="text-[10px] font-medium text-slate-500 m-0 mt-0.5 truncate">by:- <span className="font-bold text-slate-700">{prod.seller || 'Fashion Hub'}</span></p>
+                    <h4 className="text-[13px] md:text-[15px] font-bold m-0 mb-0.5 text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis">{prod.name}</h4>
+                    <p className="text-[11px] md:text-[13px] text-slate-400 m-0">{prod.unit}</p>
+                    <p className="text-[10px] md:text-[12px] font-medium text-slate-500 m-0 mt-0.5 truncate">by:- <span className="font-bold text-slate-700">{prod.seller || 'Fashion Hub'}</span></p>
                   </div>
                   
-                  <div className="flex items-baseline justify-between gap-1">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-1 gap-y-0.5">
                     <div className="flex items-baseline gap-1">
-                      <span className="text-[14px] font-extrabold text-slate-900">₹{prod.price.toFixed(2)}</span>
+                      <span className="text-[14px] md:text-[18px] font-extrabold text-slate-900">₹{prod.price.toFixed(2)}</span>
                       {prod.originalPrice > prod.price && (
-                        <span className="text-[10px] text-slate-400 line-through">₹{prod.originalPrice.toFixed(2)}</span>
+                        <span className="text-[10px] md:text-[13px] text-slate-400 line-through">₹{prod.originalPrice.toFixed(2)}</span>
                       )}
                     </div>
                     {prod.discount && (
-                      <span className="text-[9.5px] font-extrabold text-[#F7941D] whitespace-nowrap shrink-0">{prod.discount}</span>
+                      <span className="text-[9.5px] md:text-[12px] font-extrabold text-[#F7941D] whitespace-nowrap shrink-0">{prod.discount}</span>
                     )}
                   </div>
 
@@ -773,7 +773,7 @@ const Home = () => {
                     {!isInCart(prod.id || prod._id) ? (
                       <button 
                         onClick={() => handleAddToCart(prod)} 
-                        className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[12px] flex items-center justify-center gap-1 border-none cursor-pointer shadow-2xs active:scale-98 transition-all"
+                        className="w-full py-1.5 md:py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[12px] md:text-[14px] flex items-center justify-center gap-1 border-none cursor-pointer shadow-2xs active:scale-98 transition-all"
                         aria-label="Add to cart"
                       >
                         <Plus size={14} strokeWidth={3} /> ADD
@@ -781,7 +781,7 @@ const Home = () => {
                     ) : (
                       <button 
                         onClick={() => removeFromCart(prod.id || prod._id)}
-                        className="w-full py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[12px] flex items-center justify-center gap-1 border-none cursor-pointer shadow-2xs active:scale-98 transition-all"
+                        className="w-full py-1.5 md:py-2.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[12px] md:text-[14px] flex items-center justify-center gap-1 border-none cursor-pointer shadow-2xs active:scale-98 transition-all"
                         aria-label="Remove from cart"
                       >
                         <Trash2 size={13} strokeWidth={2.5} /> REMOVE
@@ -802,15 +802,15 @@ const Home = () => {
         {/* Best Sellers (List of All Sellers / Top Stores) */}
         <div className="flex justify-between items-center mb-3 mt-6">
           <div className="flex items-center gap-2">
-            <h3 className="text-[16px] md:text-xl font-bold m-0 text-[#F7941D]">Best Sellers</h3>
+            <h3 className="text-[16px] md:text-2xl font-bold m-0 text-[#F7941D]">Best Sellers</h3>
             <span className="bg-amber-100 text-amber-900 text-[10.5px] md:text-xs font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
               <Sparkles size={11} className="text-amber-600 fill-amber-500" /> Top Stores
             </span>
           </div>
-          <button onClick={() => navigate('/sellers')} className="bg-transparent border-none text-blue-600 text-[12px] md:text-sm font-semibold cursor-pointer hover:underline">See All</button>
+          <button onClick={() => navigate('/sellers')} className="bg-transparent border-none text-blue-600 text-[12px] md:text-[15px] font-semibold cursor-pointer hover:underline">See All</button>
         </div>
 
-        <div className="flex overflow-x-auto md:grid md:grid-cols-3 lg:grid-cols-4 gap-3.5 md:gap-5 pb-4 hide-scrollbar [&::-webkit-scrollbar]:hidden mb-4">
+        <div className="flex overflow-x-auto md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3.5 md:gap-5 pb-4 hide-scrollbar [&::-webkit-scrollbar]:hidden mb-4">
           {sellers.length > 0 ? (
             sellers.map((seller) => (
               <div 
@@ -819,7 +819,7 @@ const Home = () => {
                 className="min-w-[190px] max-w-[190px] md:min-w-0 md:max-w-none bg-white border border-slate-100/90 rounded-2xl overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.04)] flex flex-col justify-between cursor-pointer group hover:shadow-md transition-all shrink-0 md:shrink hover:-translate-y-0.5"
               >
                 {/* Store Mini Banner & Logo */}
-                <div className="h-20 w-full bg-slate-100 relative overflow-hidden">
+                <div className="h-20 md:h-28 w-full bg-slate-100 relative overflow-hidden">
                   <img 
                     src={seller.banner || 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=600&auto=format&fit=crop&q=80'} 
                     alt={seller.businessName} 
@@ -888,16 +888,16 @@ const Home = () => {
         {/* Best Selling Products */}
         <div className="flex justify-between items-center mb-4 mt-8">
           <div className="flex items-center gap-2">
-            <h3 className="text-[16px] md:text-xl font-bold m-0 text-[#F7941D]">Best Selling Products</h3>
+            <h3 className="text-[16px] md:text-2xl font-bold m-0 text-[#F7941D]">Best Selling Products</h3>
           </div>
-          <button onClick={() => navigate('/bestseller')} className="bg-transparent border-none text-blue-600 text-[12px] md:text-sm font-semibold cursor-pointer hover:underline">See All</button>
+          <button onClick={() => navigate('/bestseller')} className="bg-transparent border-none text-blue-600 text-[12px] md:text-[15px] font-semibold cursor-pointer hover:underline">See All</button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-5 pb-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-5 pb-4">
           {bestsellerProducts.length > 0 ? (
             bestsellerProducts.map((prod) => (
               <div key={prod.id} className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] flex flex-col justify-between">
-                <div className="h-[125px] w-full overflow-hidden bg-slate-50 relative cursor-pointer" onClick={() => navigate(`/product/${prod.id}`)}>
+                <div className="h-[125px] md:h-[180px] w-full overflow-hidden bg-slate-50 relative cursor-pointer" onClick={() => navigate(`/product/${prod.id}`)}>
                   <img 
                     src={getImageUrl(prod.image, prod.name)} 
                     alt={prod.name} 
@@ -907,22 +907,22 @@ const Home = () => {
                     onError={(e) => handleImageError(e, prod.name)}
                   />
                 </div>
-                <div className="flex flex-col p-2.5 flex-1 justify-between gap-2">
+                <div className="flex flex-col p-2.5 md:p-4 flex-1 justify-between gap-2 md:gap-3">
                   <div>
-                    <h4 className="text-[13px] font-bold m-0 mb-0.5 text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis">{prod.name}</h4>
-                    <p className="text-[11px] text-slate-400 m-0">{prod.unit}</p>
-                    <p className="text-[10px] font-medium text-slate-500 m-0 mt-0.5 truncate">by:- <span className="font-bold text-slate-700">{prod.seller || 'Fashion Hub'}</span></p>
+                    <h4 className="text-[13px] md:text-[15px] font-bold m-0 mb-0.5 text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis">{prod.name}</h4>
+                    <p className="text-[11px] md:text-[13px] text-slate-400 m-0">{prod.unit}</p>
+                    <p className="text-[10px] md:text-[12px] font-medium text-slate-500 m-0 mt-0.5 truncate">by:- <span className="font-bold text-slate-700">{prod.seller || 'Fashion Hub'}</span></p>
                   </div>
                   
-                  <div className="flex items-baseline justify-between gap-1">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-1 gap-y-0.5">
                     <div className="flex items-baseline gap-1">
-                      <span className="text-[14px] font-extrabold text-slate-900">₹{prod.price.toFixed(2)}</span>
+                      <span className="text-[14px] md:text-[18px] font-extrabold text-slate-900">₹{prod.price.toFixed(2)}</span>
                       {prod.originalPrice > prod.price && (
-                        <span className="text-[10px] text-slate-400 line-through">₹{prod.originalPrice.toFixed(2)}</span>
+                        <span className="text-[10px] md:text-[13px] text-slate-400 line-through">₹{prod.originalPrice.toFixed(2)}</span>
                       )}
                     </div>
                     {prod.discount && (
-                      <span className="text-[9.5px] font-extrabold text-[#F7941D] whitespace-nowrap shrink-0">{prod.discount}</span>
+                      <span className="text-[9.5px] md:text-[12px] font-extrabold text-[#F7941D] whitespace-nowrap shrink-0">{prod.discount}</span>
                     )}
                   </div>
 
@@ -930,7 +930,7 @@ const Home = () => {
                     {!isInCart(prod.id || prod._id) ? (
                       <button 
                         onClick={() => handleAddToCart(prod)} 
-                        className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[12px] flex items-center justify-center gap-1 border-none cursor-pointer shadow-2xs active:scale-98 transition-all"
+                        className="w-full py-1.5 md:py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[12px] md:text-[14px] flex items-center justify-center gap-1 border-none cursor-pointer shadow-2xs active:scale-98 transition-all"
                         aria-label="Add to cart"
                       >
                         <Plus size={14} strokeWidth={3} /> ADD
@@ -938,7 +938,7 @@ const Home = () => {
                     ) : (
                       <button 
                         onClick={() => removeFromCart(prod.id || prod._id)}
-                        className="w-full py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[12px] flex items-center justify-center gap-1 border-none cursor-pointer shadow-2xs active:scale-98 transition-all"
+                        className="w-full py-1.5 md:py-2.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[12px] md:text-[14px] flex items-center justify-center gap-1 border-none cursor-pointer shadow-2xs active:scale-98 transition-all"
                         aria-label="Remove from cart"
                       >
                         <Trash2 size={13} strokeWidth={2.5} /> REMOVE

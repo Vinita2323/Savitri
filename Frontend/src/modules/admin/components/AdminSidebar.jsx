@@ -413,7 +413,7 @@ export const AdminSidebar = () => {
         >
           <img 
             src="/LogoSavitri.png" 
-            alt="ShippNex Logo" 
+            alt="Savitri Logo" 
             className={`${sidebarOpen ? 'h-16' : 'h-10'} max-w-full object-contain transition-all`} 
           />
         </button>

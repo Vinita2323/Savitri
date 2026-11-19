@@ -343,9 +343,9 @@ const CaptainProfile = () => {
             {activeModal === 'help' && (
               <div className="space-y-2.5 py-1 text-xs text-slate-600">
                 <p className="font-semibold text-slate-800">Need assistance with your deliveries?</p>
-                <p>Contact ShippNex Captain Dispatch Support anytime 24/7:</p>
+                <p>Contact Savitri Captain Dispatch Support anytime 24/7:</p>
                 <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-100 text-emerald-800 font-bold text-center">
-                  📞 Toll Free: 1800-SHIPPNEX
+                  📞 Toll Free: +91 81029 14300
                 </div>
               </div>
             )}

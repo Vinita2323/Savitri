@@ -179,9 +179,9 @@ export const requestItemReturn = async (req, res, next) => {
         pincode: order.shippingAddress?.pincode,
       },
       seller: sellerDoc ? sellerDoc._id : null,
-      sellerName: sellerDoc?.businessName || targetItem.seller || 'ShippNex Store',
+      sellerName: sellerDoc?.businessName || targetItem.seller || 'Savitri Store',
       sellerAddress: {
-        storeName: sellerDoc?.businessName || targetItem.seller || 'ShippNex Warehouse',
+        storeName: sellerDoc?.businessName || targetItem.seller || 'Savitri Warehouse',
         phone: sellerDoc?.phone || '',
         addressLine1: sellerDoc?.pickupAddress?.addressLine1 || sellerDoc?.addressLine1 || 'Main Warehouse, Sector 62',
         city: sellerDoc?.city || 'Noida',

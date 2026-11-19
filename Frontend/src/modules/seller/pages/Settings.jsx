@@ -1443,7 +1443,7 @@ const Settings = () => {
                   <div className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-xl flex items-center gap-3">
                     <Shield size={18} className="text-blue-600 shrink-0" />
                     <span className="text-xs font-medium text-blue-900">
-                      All uploaded business & banking documents are encrypted and verified by Shippnex administrators for settlement and compliance.
+                      All uploaded business & banking documents are encrypted and verified by Savitri administrators for settlement and compliance.
                     </span>
                   </div>
                 </div>

@@ -6,7 +6,7 @@
 export const STORE_BRANDS = [
   { slug: 'auriva-bites', name: 'Auriva Bites', code: 'AB-RET', color: 'emerald' },
   { slug: 'quick-commerce', name: 'Quick Commerce', code: 'QC-EXP', color: 'blue' },
-  { slug: 'shippnex', name: 'Shippnex', code: 'SX-LOG', color: 'amber' },
+  { slug: 'shippnex', name: 'Savitri', code: 'SX-LOG', color: 'amber' },
   { slug: 'medcred', name: 'MedCred', code: 'MC-HLT', color: 'rose' },
 ];
 
@@ -543,14 +543,14 @@ export const BRAND_STORES = [
     },
   },
 
-  // ── Shippnex Stores (4 stores) ───────────────────────────────────────
+  // ── Savitri Stores (4 stores) ───────────────────────────────────────
   {
     storeId: 'STR-SX-301',
-    storeName: 'Shippnex Logistics Hub',
+    storeName: 'Savitri Logistics Hub',
     sellerId: 'SEL-305',
     sellerName: 'Demo Seller SX One',
     brandSlug: 'shippnex',
-    brandName: 'Shippnex',
+    brandName: 'Savitri',
     city: 'Indore',
     state: 'Madhya Pradesh',
     address: 'Plot 108, Sanwer Road Industrial Area, Sector C',
@@ -594,7 +594,7 @@ export const BRAND_STORES = [
     sellerId: 'SEL-312',
     sellerName: 'Demo Seller SX Two',
     brandSlug: 'shippnex',
-    brandName: 'Shippnex',
+    brandName: 'Savitri',
     city: 'Bhopal',
     state: 'Madhya Pradesh',
     address: 'Govindpura Industrial Estate, Shed No 4',
@@ -638,7 +638,7 @@ export const BRAND_STORES = [
     sellerId: 'SEL-320',
     sellerName: 'Demo Seller SX Three',
     brandSlug: 'shippnex',
-    brandName: 'Shippnex',
+    brandName: 'Savitri',
     city: 'Ujjain',
     state: 'Madhya Pradesh',
     address: 'Near Dewas Gate Bus Depot',
@@ -682,7 +682,7 @@ export const BRAND_STORES = [
     sellerId: 'SEL-328',
     sellerName: 'Demo Seller SX Four',
     brandSlug: 'shippnex',
-    brandName: 'Shippnex',
+    brandName: 'Savitri',
     city: 'Jabalpur',
     state: 'Madhya Pradesh',
     address: 'Adhartal Transport Nagar, Block 12',

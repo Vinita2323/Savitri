@@ -11,7 +11,7 @@ import { haversineDistanceRaw } from '../utils/haversine.js';
 import { getEffectiveStock } from '../utils/productStock.js';
 import { isValidCoordinate } from '../utils/sellerLocationHelper.js';
 
-const DEFAULT_SELLER_KEY = 'ShippNex Official Store';
+const DEFAULT_SELLER_KEY = 'Savitri Official Store';
 
 export const REASONS = {
   OUT_OF_STOCK: 'OUT_OF_STOCK',

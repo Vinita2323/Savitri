@@ -95,7 +95,7 @@ const PAYMENT_METHODS = [
   },
   {
     id: 'WALLET',
-    name: 'ShippNex Wallet',
+    name: 'Savitri Wallet',
     tagline: 'Instant 1-click payment from your account balance',
     icon: Wallet,
     badge: null,

@@ -22,7 +22,7 @@ const SellerSupport = () => {
   const [faqs, setFaqs] = useState([]);
   const [supportSettings, setSupportSettings] = useState({
     sellerPhone: '+91 63774 60692',
-    sellerEmail: 'shippnexin26@gmail.com',
+    sellerEmail: 'sreplwm@gmail.com',
     sellerHours: 'Mon - Sat (9 AM - 8 PM)',
   });
   const [loading, setLoading] = useState(true);
@@ -117,7 +117,7 @@ const SellerSupport = () => {
 
         {/* Email Support */}
         <a 
-          href={`mailto:${supportSettings.sellerEmail || 'shippnexin26@gmail.com'}`}
+          href={`mailto:${supportSettings.sellerEmail || 'sreplwm@gmail.com'}`}
           className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs hover:border-rose-300 hover:bg-rose-50/20 transition-all flex items-center justify-between no-underline group cursor-pointer"
         >
           <div className="flex items-center gap-3.5">
@@ -126,7 +126,7 @@ const SellerSupport = () => {
             </div>
             <div>
               <span className="text-[14px] font-bold text-slate-900 block leading-tight">Merchant Relations Email</span>
-              <span className="text-[13px] font-bold text-rose-600 block mt-0.5">{supportSettings.sellerEmail || 'shippnexin26@gmail.com'}</span>
+              <span className="text-[13px] font-bold text-rose-600 block mt-0.5">{supportSettings.sellerEmail || 'sreplwm@gmail.com'}</span>
               <span className="text-[11px] text-slate-400 font-medium">Response within 24 business hours</span>
             </div>
           </div>
@@ -144,7 +144,7 @@ const SellerSupport = () => {
             <HelpCircle size={20} className="text-[#E6A800]" />
             <div>
               <h2 className="text-[15px] font-black text-slate-900 m-0">Merchant Frequently Asked Questions</h2>
-              <p className="text-[12px] text-slate-400 m-0">Official guidelines and answers updated by ShippNex admin</p>
+              <p className="text-[12px] text-slate-400 m-0">Official guidelines and answers updated by Savitri admin</p>
             </div>
           </div>
 
