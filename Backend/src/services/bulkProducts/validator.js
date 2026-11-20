@@ -140,6 +140,36 @@ export const validateRows = (rows, ctx) => {
       else errors.push('status must be active or inactive (or empty)');
     }
 
+    // returns: returnable (yes / no) and returnDays (1-30). Empty cells keep the product's current value (UPDATE) or the
+    // platform default, returnable for 7 days (CREATE). Nothing here touches variants, stock or any other field.
+    let retFlag;
+    if (provided('returnable')) {
+      const t = norm(v.returnable).replace(/[\s_-]+/g, '');
+      if (['yes', 'y', 'true', '1', 'returnable'].includes(t)) retFlag = true;
+      else if (['no', 'n', 'false', '0', 'nonreturnable', 'notreturnable'].includes(t)) retFlag = false;
+      else errors.push('returnable must be yes or no (or empty)');
+    }
+    let retDays;
+    if (provided('returnDays')) {
+      const d = toNumber(v.returnDays);
+      if (Number.isNaN(d) || !Number.isInteger(d) || d < 1 || d > 30) errors.push('returnDays must be a whole number between 1 and 30');
+      else retDays = d;
+    }
+    if (retFlag !== undefined || retDays !== undefined) {
+      const effFlag = retFlag !== undefined ? retFlag : (existing ? existing.isReturnable !== false : true);
+      if (retFlag !== undefined) set.isReturnable = retFlag;
+      if (retDays !== undefined) {
+        if (effFlag) set.returnWindow = retDays; else warnings.push('returnDays was ignored because the product is non-returnable');
+      }
+      if (retFlag !== undefined || (retDays !== undefined && effFlag)) {
+        // the policy label follows the product editor; a custom note written by the seller is kept
+        const curPolicy = existing ? String(existing.returnPolicy || '') : '';
+        if (create || !curPolicy || /^\d+ Days Returnable/i.test(curPolicy) || /^Non-Returnable/i.test(curPolicy)) {
+          set.returnPolicy = effFlag ? `${set.returnWindow !== undefined ? set.returnWindow : (existing?.returnWindow || 7)} Days Returnable / Replacement` : 'Non-Returnable';
+        }
+      }
+    }
+
     // images (resolved when the import runs; here we only check that links look right and ZIP files exist)
     const refs = [];
     const tokens = splitImages(v.images);

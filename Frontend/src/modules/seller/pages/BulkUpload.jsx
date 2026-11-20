@@ -144,6 +144,7 @@ export default function BulkUpload() {
             </div>
             <ul className="text-xs text-slate-500 m-0 pl-4 space-y-1">
               <li>Required for new products: productName, SKU, category, MRP, sellingPrice, stock.</li>
+              <li>Optional: returnable (yes / no) and returnDays (1 to 30). Leave them empty to keep the current setting, or the default of 7 days for new products.</li>
               <li>Your SKUs are your own: another seller can use the same SKU.</li>
               <li>Images: https links, or file names from your ZIP. Without a column value, files named SKU.jpg, SKU_1.jpg… are matched automatically.</li>
             </ul>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trash2, Minus, Plus, Tag, ShoppingCart, Sparkles } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import ReturnBadge from '../components/ReturnBadge';
 import { getImageUrl, handleImageError } from '../../../utils/imageUtils';
 import { cartLineId, variantLabel } from '../../../utils/variantLabel';
 import commissionService from '../../../services/commissionService';
@@ -124,7 +125,8 @@ const Cart = () => {
                             <Trash2 size={16} />
                           </button>
                         </div>
-                        <p className="text-[11px] text-slate-400 m-0 mb-3">{optionLabel || item.unit || '1 Pack'}</p>
+                        <p className="text-[11px] text-slate-400 m-0 mb-1.5">{optionLabel || item.unit || '1 Pack'}</p>
+                        <div className="mb-2 empty:hidden"><ReturnBadge item={item} /></div>
                         <div className="flex justify-between items-center mt-auto">
                           <span className="text-[15px] md:text-base font-extrabold text-slate-900">₹{itemPrice.toFixed(2)}</span>
                           <div className="flex items-center gap-3 border border-slate-200 rounded-xl py-1 px-2.5 bg-slate-50">

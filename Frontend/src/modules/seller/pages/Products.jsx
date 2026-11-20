@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, Search, Download, ChevronDown, Edit, Trash2, Eye, FileText, 
   FileSpreadsheet, CheckCircle2, RefreshCw, Package, X, Upload, CheckCircle, 
-  AlertCircle, ExternalLink, ArrowRight, Layers, DollarSign, Tag, Info
+  AlertCircle, ExternalLink, ArrowRight, Layers, DollarSign, Tag, Info, RotateCcw, Ban
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { productService, authService, categoryService } from '../../../services/authService';
@@ -14,6 +14,7 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [returnFilter, setReturnFilter] = useState('All'); // All | Returnable | Non-returnable
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const [serverTotal, setServerTotal] = useState(null); // how many products the server says this seller has
@@ -44,6 +45,9 @@ const Products = () => {
   // The product LIST api returns a slim record without the description, so the full product is fetched when a
   // product is opened. 'loading' | 'ready' | 'failed' - the description is only ever saved when it was actually loaded.
   const [descStatus, setDescStatus] = useState('ready');
+
+  // Quick edit of a product's return setting (only isReturnable / returnWindow / returnPolicy are ever sent)
+  const [returnEdit, setReturnEdit] = useState(null); // { product, isReturnable, days, saving, error }
 
   // View modal state
   const [viewingProduct, setViewingProduct] = useState(null);
@@ -156,6 +160,8 @@ const Products = () => {
       unit: ap.unit || '1 kg',
       minStockLimit: ap.minStockLimit !== undefined ? ap.minStockLimit : 10,
       returnPolicy: ap.returnPolicy || '7 Days Returnable / Replacement',
+      isReturnable: ap.isReturnable !== false,
+      returnWindow: Number(ap.returnWindow) > 0 ? Number(ap.returnWindow) : 7,
       hasVariants: Boolean(ap.hasVariants || (Array.isArray(ap.variants) && ap.variants.length > 0)),
       variantOptions: ap.variantOptions || [],
       variants: ap.variants || [],
@@ -180,7 +186,8 @@ const Products = () => {
                           (p.sku || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'All' || p.category === categoryFilter;
     const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
-    return matchesSearch && matchesCategory && matchesStatus;
+    const matchesReturn = returnFilter === 'All' || (returnFilter === 'Returnable' ? p.isReturnable !== false : p.isReturnable === false);
+    return matchesSearch && matchesCategory && matchesStatus && matchesReturn;
   });
 
   // Pagination over the (filtered) list
@@ -195,7 +202,7 @@ const Products = () => {
     nums.forEach((n, i) => { if (i > 0 && n - nums[i - 1] > 1) out.push('gap-' + n); out.push(n); });
     return out;
   })();
-  useEffect(() => { setPage(1); }, [searchTerm, categoryFilter, statusFilter, pageSize]);
+  useEffect(() => { setPage(1); }, [searchTerm, categoryFilter, statusFilter, returnFilter, pageSize]);
 
   // The header checkbox selects / unselects the products on the current page; "Select all N" in the bar below picks the
   // whole filtered list.
@@ -211,7 +218,7 @@ const Products = () => {
   const selectAllFiltered = () => setSelectedIds(filteredProducts.map(p => p.id));
   const clearSelection = () => setSelectedIds([]);
   // a different search / filter means a different list, so start with nothing selected
-  useEffect(() => { setSelectedIds([]); }, [searchTerm, categoryFilter, statusFilter]);
+  useEffect(() => { setSelectedIds([]); }, [searchTerm, categoryFilter, statusFilter, returnFilter]);
 
   const handleSelectOne = (id) => {
     if (selectedIds.includes(id)) {
@@ -277,6 +284,47 @@ const Products = () => {
     } catch (err) {
       console.warn('Could not load the product description:', err.message);
       setDescStatus('failed');
+    }
+  };
+
+  const RETURN_POLICY_GENERATED = /^(\d+ Days Returnable|Non-Returnable)/i;
+  const handleOpenReturnEdit = (product) => {
+    setReturnEdit({
+      product,
+      isReturnable: product.isReturnable !== false,
+      days: String(Number(product.returnWindow) > 0 ? Number(product.returnWindow) : 7),
+      saving: false,
+      error: '',
+    });
+  };
+
+  const handleSaveReturnEdit = async () => {
+    if (!returnEdit || returnEdit.saving) return;
+    const { product, isReturnable, days } = returnEdit;
+    const win = Number(days);
+    if (isReturnable && (!Number.isInteger(win) || win < 1 || win > 30)) {
+      setReturnEdit((prev) => ({ ...prev, error: 'Return days must be a whole number from 1 to 30.' }));
+      return;
+    }
+    const id = product._id || product.id;
+    // only the return fields are sent: price, stock, variants and every other field stay exactly as they are
+    const payload = { isReturnable };
+    if (isReturnable) payload.returnWindow = win;
+    const curPolicy = String(product.returnPolicy || '');
+    // keep a custom policy note the seller wrote; the standard label follows the setting
+    if (!curPolicy || RETURN_POLICY_GENERATED.test(curPolicy)) {
+      payload.returnPolicy = isReturnable ? `${win} Days Returnable / Replacement` : 'Non-Returnable';
+    }
+    setReturnEdit((prev) => ({ ...prev, saving: true, error: '' }));
+    try {
+      await productService.updateProduct(id, payload);
+      const patch = { isReturnable, ...(isReturnable ? { returnWindow: win } : {}), ...(payload.returnPolicy ? { returnPolicy: payload.returnPolicy } : {}) };
+      setProducts((prev) => prev.map((p) => ((p._id || p.id) === id ? { ...p, ...patch } : p)));
+      setViewingProduct((prev) => (prev && (prev._id || prev.id) === id ? { ...prev, ...patch } : prev));
+      showToast(isReturnable ? `"${product.name}" is now returnable for ${win} days.` : `"${product.name}" is now non-returnable.`, 'success');
+      setReturnEdit(null);
+    } catch (err) {
+      setReturnEdit((prev) => ({ ...prev, saving: false, error: err.response?.data?.message || err.message || 'Could not save. Please try again.' }));
     }
   };
 
@@ -511,6 +559,21 @@ const Products = () => {
             </select>
           </div>
 
+          {/* Returns Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-slate-600 font-normal">Returns</span>
+            <select
+              data-testid="returns-filter"
+              value={returnFilter}
+              onChange={(e) => setReturnFilter(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 bg-white outline-none focus:border-[#ff7526] cursor-pointer text-sm font-normal transition-all"
+            >
+              <option value="All">All Products</option>
+              <option value="Returnable">Returnable</option>
+              <option value="Non-returnable">Non-returnable</option>
+            </select>
+          </div>
+
           {/* Page Size Dropdown */}
           <div>
             <select
@@ -606,13 +669,14 @@ const Products = () => {
                 <th className="px-5 py-4 font-semibold">Price (₹)</th>
                 <th className="px-5 py-4 font-semibold">Stock</th>
                 <th className="px-5 py-4 font-semibold">Status</th>
+                <th className="px-5 py-4 font-semibold">Returns</th>
                 <th className="px-5 py-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="text-[15px] font-normal text-slate-700 divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-slate-500 text-sm font-medium">
+                  <td colSpan={8} className="text-center py-8 text-slate-500 text-sm font-medium">
                     <div className="flex items-center justify-center gap-2">
                       <RefreshCw size={16} className="animate-spin text-[#ff7526]" />
                       Loading product catalog...
@@ -672,6 +736,19 @@ const Products = () => {
                   <td className="px-5 py-4">
                     <StatusBadge status={product.status} />
                   </td>
+                  <td className="px-5 py-4" data-testid={`returns-cell-${product.sku}`}>
+                    <div className="flex flex-col items-start gap-1.5">
+                      <ReturnsPill product={product} />
+                      <button
+                        type="button"
+                        onClick={() => handleOpenReturnEdit(product)}
+                        className="bg-transparent border-none p-0 text-xs font-semibold text-[#ff7526] hover:underline cursor-pointer"
+                        title="Change the return setting of this product"
+                      >
+                        Quick edit
+                      </button>
+                    </div>
+                  </td>
                   <td className="px-5 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button 
@@ -702,7 +779,7 @@ const Products = () => {
               
               {!loading && filteredProducts.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-slate-400 text-sm font-normal">
+                  <td colSpan={8} className="text-center py-12 text-slate-400 text-sm font-normal">
                     No products found in database. Click "+ Add New Product" to create your first item.
                   </td>
                 </tr>
@@ -1102,7 +1179,12 @@ const Products = () => {
                 </div>
                 <div>
                   <span className="text-slate-400">Return Policy:</span>
-                  <div className="font-bold text-slate-800 mt-0.5">{viewingProduct.returnPolicy || '7 Days Returnable'}</div>
+                  <div className="font-bold text-slate-800 mt-0.5">
+                    {viewingProduct.isReturnable === false ? 'Non-returnable' : `Returnable · ${viewingProduct.returnWindow || 7} days`}
+                  </div>
+                  {viewingProduct.returnPolicy && (
+                    <div className="text-[11px] font-normal text-slate-500 mt-0.5">{viewingProduct.returnPolicy}</div>
+                  )}
                 </div>
                 <div>
                   <span className="text-slate-400">Seller:</span>
@@ -1144,7 +1226,60 @@ const Products = () => {
         </div>
       )}
 
+      {returnEdit && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" data-testid="return-edit-modal" onClick={() => !returnEdit.saving && setReturnEdit(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+              <div className="min-w-0">
+                <h3 className="m-0 text-base font-bold text-slate-900">Return setting</h3>
+                <p className="m-0 mt-0.5 truncate text-xs text-slate-500">{returnEdit.product.name} · {returnEdit.product.sku}</p>
+              </div>
+              <button type="button" onClick={() => setReturnEdit(null)} disabled={returnEdit.saving} className="rounded-lg border-none bg-transparent p-1 text-slate-400 hover:text-slate-700 cursor-pointer" aria-label="Close"><X size={18} /></button>
+            </div>
+            <div className="space-y-4 px-5 py-4">
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" data-testid="return-opt-yes" onClick={() => setReturnEdit((p) => ({ ...p, isReturnable: true, error: '' }))}
+                  className={`rounded-xl border px-3 py-2.5 text-sm font-semibold cursor-pointer ${returnEdit.isReturnable ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-600'}`}>Returnable</button>
+                <button type="button" data-testid="return-opt-no" onClick={() => setReturnEdit((p) => ({ ...p, isReturnable: false, error: '' }))}
+                  className={`rounded-xl border px-3 py-2.5 text-sm font-semibold cursor-pointer ${!returnEdit.isReturnable ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-slate-200 bg-white text-slate-600'}`}>Non-returnable</button>
+              </div>
+              {returnEdit.isReturnable ? (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700" htmlFor="return-days">Return window (days, 1 to 30)</label>
+                  <input id="return-days" data-testid="return-days" type="number" min={1} max={30} step={1} inputMode="numeric" value={returnEdit.days}
+                    onChange={(e) => setReturnEdit((p) => ({ ...p, days: e.target.value, error: '' }))}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-[#ff7526]" />
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {[3, 7, 10, 14, 30].map((d) => (
+                      <button key={d} type="button" onClick={() => setReturnEdit((p) => ({ ...p, days: String(d), error: '' }))}
+                        className={`rounded-full border px-2.5 py-1 text-xs font-semibold cursor-pointer ${String(d) === String(returnEdit.days) ? 'border-[#ff7526] bg-orange-50 text-[#ff7526]' : 'border-slate-200 bg-white text-slate-600'}`}>{d} days</button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="m-0 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800"><AlertCircle size={15} className="mt-px shrink-0 text-amber-600" />Customers will see a "Non-returnable" notice and cannot raise a return request for this product. They can still buy it.</p>
+              )}
+              {returnEdit.error && <p data-testid="return-edit-error" className="m-0 text-xs font-semibold text-red-600">{returnEdit.error}</p>}
+            </div>
+            <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50 px-5 py-3 rounded-b-2xl">
+              <button type="button" onClick={() => setReturnEdit(null)} disabled={returnEdit.saving} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 cursor-pointer">Cancel</button>
+              <button type="button" data-testid="return-save" onClick={handleSaveReturnEdit} disabled={returnEdit.saving} className="rounded-xl border-none bg-[#ff7526] px-4 py-2 text-xs font-semibold text-white cursor-pointer disabled:opacity-60">{returnEdit.saving ? 'Saving…' : 'Save'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
+  );
+};
+
+/** Green "Returnable · 7d" / grey "Non-returnable" tag. A product with no setting counts as returnable, the platform default. */
+const ReturnsPill = ({ product, className = '' }) => {
+  const no = product.isReturnable === false;
+  return no ? (
+    <span data-testid="returns-pill" data-returnable="false" className={`inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 ${className}`}><Ban size={11} /> Non-returnable</span>
+  ) : (
+    <span data-testid="returns-pill" data-returnable="true" className={`inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ${className}`}><RotateCcw size={11} /> Returnable · {product.returnWindow || 7}d</span>
   );
 };
 

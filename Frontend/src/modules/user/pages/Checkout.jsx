@@ -9,6 +9,7 @@ import { useLocationContext } from '../../../context/LocationContext';
 import { addressService, orderService, walletService } from '../../../services/authService';
 import commissionService from '../../../services/commissionService';
 import DeliveryMethodsCard from '../components/DeliveryMethodsCard';
+import ReturnBadge from '../components/ReturnBadge';
 import { variantLabel, toSelectedVariants, missingVariantOptions } from '../../../utils/variantLabel';
 
 /** Build delivery slots from the current clock — no hard-coded "Tomorrow" default. */
@@ -826,9 +827,12 @@ const Checkout = () => {
           {/* Cart Items List */}
           <div className="flex flex-col gap-2 mb-3 pb-3 border-b border-slate-100 max-h-[160px] overflow-y-auto [&::-webkit-scrollbar]:hidden">
             {cartItems.map((item) => (
-              <div key={item.id || item._id} className="flex justify-between items-center py-1">
-                <span className="text-[12px] font-medium text-slate-700 truncate max-w-[200px]">
-                  {item.name}{variantLabel(item) ? ` (${variantLabel(item)})` : ''} <strong className="text-slate-900">x{item.quantity}</strong>
+              <div key={item.id || item._id} className="flex justify-between items-center gap-2 py-1">
+                <span className="min-w-0 flex flex-col gap-0.5">
+                  <span className="text-[12px] font-medium text-slate-700 truncate max-w-[200px]">
+                    {item.name}{variantLabel(item) ? ` (${variantLabel(item)})` : ''} <strong className="text-slate-900">x{item.quantity}</strong>
+                  </span>
+                  <ReturnBadge item={item} className="self-start" />
                 </span>
                 <span className="text-[12px] font-bold text-slate-900">
                   ₹{(Number(item.price || 0) * item.quantity).toFixed(2)}

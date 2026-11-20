@@ -109,6 +109,8 @@ export const CartProvider = ({ children }) => {
             unit: prod.unit || '',
             mainImage: prod.mainImage || image,
             hasVariants: Boolean(prod.hasVariants),
+            isReturnable: prod.isReturnable !== false,
+            returnWindow: Number(prod.returnWindow) > 0 ? Number(prod.returnWindow) : 7,
             variantOptions: Array.isArray(prod.variantOptions) ? prod.variantOptions : [],
             variantSku,
             variantId,

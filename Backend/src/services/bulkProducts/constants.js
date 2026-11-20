@@ -3,10 +3,10 @@ import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-/** Column order of the downloadable template (the first 15 are the supported spec; productId is optional, UPDATE only). */
+/** Column order of the downloadable template (the first 15 are the original spec; returnable / returnDays are optional and may be missing from older files; productId is optional, UPDATE only). */
 export const COLUMNS = [
   'productName', 'SKU', 'barcode', 'category', 'brand', 'description', 'MRP', 'sellingPrice',
-  'purchasePrice', 'stock', 'unit', 'GST', 'weight', 'images', 'status',
+  'purchasePrice', 'stock', 'unit', 'GST', 'weight', 'images', 'status', 'returnable', 'returnDays',
 ];
 export const OPTIONAL_COLUMNS = ['productId'];
 
@@ -27,6 +27,8 @@ export const HEADER_ALIASES = {
   weight: 'weight',
   images: 'images', image: 'images', imageurls: 'images', imageurl: 'images', photos: 'images',
   status: 'status',
+  returnable: 'returnable', isreturnable: 'returnable', returnallowed: 'returnable', returnpolicy: 'returnable',
+  returndays: 'returnDays', returnwindow: 'returnDays', returnperiod: 'returnDays', returnwindowdays: 'returnDays',
   productid: 'productId', id: 'productId',
 };
 

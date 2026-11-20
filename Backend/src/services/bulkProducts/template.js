@@ -22,7 +22,7 @@ export const loadTemplateLists = async (sellerId) => {
 
 const SAMPLE = {
   productName: 'Tata Salt 1 kg', SKU: 'SALT-1KG', barcode: '8901052007118', category: '', brand: 'Tata', description: 'Vacuum evaporated iodised salt',
-  MRP: 28, sellingPrice: 26, purchasePrice: 21, stock: 120, unit: '1 kg', GST: 5, weight: '1 kg', images: 'SALT-1KG.jpg', status: 'active',
+  MRP: 28, sellingPrice: 26, purchasePrice: 21, stock: 120, unit: '1 kg', GST: 5, weight: '1 kg', images: 'SALT-1KG.jpg', status: 'active', returnable: 'yes', returnDays: 7,
 };
 
 const INSTRUCTIONS = [
@@ -37,6 +37,8 @@ const INSTRUCTIONS = [
   ['   If you upload an images ZIP and leave "images" empty, files named SKU.jpg, SKU_1.jpg, SKU_2.jpg ... are used (first = main image).'],
   ['7. status: active or inactive. Leave empty to publish automatically (active when stock > 0, out of stock when stock is 0).'],
   ['8. Format the SKU and barcode columns as Text so Excel does not drop leading zeros.'],
+  ['9. returnable (optional): yes or no. returnDays (optional): a whole number from 1 to 30. Leave both empty to keep the current setting (UPDATE) or'],
+  ['   the default of returnable for 7 days (CREATE). returnDays is ignored for a non-returnable product.'],
   [''],
   ['Modes'],
   ['CREATE: adds new products; a SKU that already exists in YOUR catalogue is rejected.'],
@@ -71,6 +73,7 @@ export const buildXlsxTemplate = async ({ categories, brands }) => {
   for (let r = 2; r <= 501; r += 1) {
     if (categories.length) ws.getCell(`D${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: [`Lists!$A$2:$A$${catEnd}`], showErrorMessage: true, errorTitle: 'Category', error: 'Choose a category from the list.' };
     ws.getCell(`O${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['"active,inactive"'] };
+    ws.getCell(`P${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['"yes,no"'] };
   }
 
   const help = wb.addWorksheet('Instructions');

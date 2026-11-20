@@ -463,7 +463,7 @@ export const getProducts = async (req, res) => {
       : 50;
 
     let dbQuery = Product.find(query)
-      .select(`name category subCategory brand unitValue unitType unit seller sellerId mrp salePrice stock mainImage homeSections status isFeatured isReturnable sku createdAt hasVariants variantOptions variants isPublished adminBlocked listingStatus fulfillmentType shippingReady${privileged ? ' purchasePrice barcode weight blockedReason source importId hsnCode shippingEnabled fulfillmentType weightKg length breadth height countryOfOrigin isFragile requiresSpecialHandling shippingReady' : ''}`)
+      .select(`name category subCategory brand unitValue unitType unit seller sellerId mrp salePrice stock mainImage homeSections status isFeatured isReturnable returnWindow returnPolicy sku createdAt hasVariants variantOptions variants isPublished adminBlocked listingStatus fulfillmentType shippingReady${privileged ? ' purchasePrice barcode weight blockedReason source importId hsnCode shippingEnabled fulfillmentType weightKg length breadth height countryOfOrigin isFragile requiresSpecialHandling shippingReady' : ''}`)
       .sort({ createdAt: -1 })
       .lean();
 

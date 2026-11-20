@@ -64,7 +64,7 @@ export const runValidation = async (importId, { dataFile, ext, zipFile }) => {
     const ids = [...new Set(parsed.rows.map((r) => r.values.productId).filter((x) => /^[0-9a-fA-F]{24}$/.test(x || '')))];
     const bySku = new Map();
     const byIdMap = new Map();
-    const sel = '_id sku mrp salePrice stock hasVariants';
+    const sel = '_id sku mrp salePrice stock hasVariants isReturnable returnWindow returnPolicy';
     for (let i = 0; i < skus.length; i += 500) {
       // eslint-disable-next-line no-await-in-loop
       const found = await Product.find({ sellerId, sku: { $in: skus.slice(i, i + 500) } }).collation(CI).select(sel).lean();
@@ -182,6 +182,10 @@ export const runImport = async (importId) => {
                 description: s.description || '', mrp: s.mrp, salePrice: s.salePrice, purchasePrice: s.purchasePrice || 0,
                 taxRate: s.taxRate || '5%', stock: s.stock, sku: s.sku, barcode: s.barcode || '', weight: s.weight || '',
                 mainImage: imgs[0] || '', galleryImages: imgs.slice(1), homeSections: [], hasVariants: false, variants: [],
+                // return fields only when the sheet gave them; otherwise the model defaults (returnable, 7 days) apply
+                ...(s.isReturnable !== undefined ? { isReturnable: s.isReturnable } : {}),
+                ...(s.returnWindow !== undefined ? { returnWindow: s.returnWindow } : {}),
+                ...(s.returnPolicy !== undefined ? { returnPolicy: s.returnPolicy } : {}),
                 ...publishFields(s.stock, inactive), publishedAt: inactive ? null : now, source: 'bulk', importId: imp._id,
               },
             },
@@ -216,7 +220,7 @@ export const runImport = async (importId) => {
           if (!cur) { done.set(String(r._id), { ok: false, error: 'Product not found in your catalogue' }); continue; }
           const s = r.data.set;
           const $set = {};
-          for (const k of ['name', 'barcode', 'category', 'subCategory', 'brand', 'description', 'weight', 'mrp', 'salePrice', 'purchasePrice', 'stock', 'unitValue', 'unitType', 'unit', 'taxRate', 'sku']) {
+          for (const k of ['name', 'barcode', 'category', 'subCategory', 'brand', 'description', 'weight', 'mrp', 'salePrice', 'purchasePrice', 'stock', 'unitValue', 'unitType', 'unit', 'taxRate', 'sku', 'isReturnable', 'returnWindow', 'returnPolicy']) {
             if (s[k] !== undefined) $set[k] = s[k];
           }
           const imgs = imageUrls.get(String(r._id));
