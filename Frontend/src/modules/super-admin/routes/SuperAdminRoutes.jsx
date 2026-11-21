@@ -10,6 +10,7 @@ const SuperAdminLogin = lazy(() => import('../pages/SuperAdminLogin').then(m => 
 const SuperAdminDashboard = lazy(() => import('../pages/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
 const SuperAdminTransactions = lazy(() => import('../pages/SuperAdminTransactions').then(m => ({ default: m.SuperAdminTransactions })));
 const SuperAdminPayouts = lazy(() => import('../pages/SuperAdminPayouts').then(m => ({ default: m.SuperAdminPayouts })));
+const SuperAdminSellerPurchases = lazy(() => import('../pages/SuperAdminSellerPurchases').then(m => ({ default: m.SuperAdminSellerPurchases })));
 const SuperAdminSellerSettlements = lazy(() => import('../pages/SuperAdminSellerSettlements').then(m => ({ default: m.SuperAdminSellerSettlements })));
 const SuperAdminRefunds = lazy(() => import('../pages/SuperAdminRefunds').then(m => ({ default: m.SuperAdminRefunds })));
 const SuperAdminCommissions = lazy(() => import('../pages/SuperAdminCommissions').then(m => ({ default: m.SuperAdminCommissions })));
@@ -17,6 +18,8 @@ const SuperAdminReports = lazy(() => import('../pages/SuperAdminReports').then(m
 const SuperAdminInventory = lazy(() => import('../pages/SuperAdminInventory'));
 const SuperAdminStores = lazy(() => import('../pages/SuperAdminStores'));
 const SuperAdminDeliveryPartners = lazy(() => import('../pages/SuperAdminDeliveryPartners'));
+const SuperAdminBrands = lazy(() => import('../pages/SuperAdminBrands'));
+const CreateBrandPage = lazy(() => import('../pages/CreateBrandPage'));
 
 // Quotation Management Module Pages
 import { QuotationProvider } from '../../admin/quotations/context/QuotationContext';
@@ -176,10 +179,12 @@ const SuperAdminRoutesContent = () => {
           <Route path="/payments" element={<SuperAdminTransactions fixedCategory="CUSTOMER_PAYMENT" pageTitle="Customer Payments" />} />
           <Route path="/payments/brands/*" element={<Navigate to="/super-admin/payments" replace />} />
           <Route path="/seller-settlements" element={<SuperAdminSellerSettlements />} />
+          <Route path="/seller-purchases" element={<SuperAdminSellerPurchases />} />
           <Route path="/stores" element={<SuperAdminStores />} />
           <Route path="/brands/:brandSlug/stores" element={<SuperAdminStores />} />
-          <Route path="/brands" element={<Navigate to="/super-admin/dashboard" replace />} />
-          <Route path="/brands/*" element={<Navigate to="/super-admin/dashboard" replace />} />
+          <Route path="/brands" element={<SuperAdminBrands />} />
+          <Route path="/brands/create" element={<CreateBrandPage />} />
+          <Route path="/brands/edit/:id" element={<CreateBrandPage />} />
           <Route path="/inventory" element={<SuperAdminInventory />} />
           <Route path="/bulk-uploads" element={<BulkUploadsPage />} />
           <Route path="/catalog-control" element={<CatalogControlPage />} />

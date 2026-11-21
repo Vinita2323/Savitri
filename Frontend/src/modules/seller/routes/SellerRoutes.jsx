@@ -14,6 +14,7 @@ const AddProduct = lazy(() => import('../pages/AddProduct'));
 const BulkUpload = lazy(() => import('../pages/BulkUpload'));
 const Orders = lazy(() => import('../pages/Orders'));
 const Inventory = lazy(() => import('../pages/Inventory'));
+const Purchases = lazy(() => import('../pages/Purchases'));
 const Dispatch = lazy(() => import('../pages/Dispatch'));
 const Customers = lazy(() => import('../pages/Customers'));
 const Reports = lazy(() => import('../pages/Reports'));
@@ -63,6 +64,7 @@ const SellerRoutes = () => {
             <Route path="product/list" element={<Products />} />
             <Route path="stock-management" element={<Inventory />} />
             <Route path="inventory" element={<Inventory />} />
+            <Route path="purchases" element={<Purchases />} />
 
             {/* Finance & CRM */}
             <Route path="wallet" element={<Wallet />} />

@@ -3438,6 +3438,329 @@ export const CaptainManagement = () => {
 
 
 /* =========================================================================
+   4.5. BRAND MANAGEMENT PAGE
+   ========================================================================= */
+export const BrandManagement = () => {
+  const [brands, setBrands] = React.useState([
+    { id: '751452', name: 'Amul', image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=100&auto=format&fit=crop&q=80' },
+    { id: '3c02a3', name: 'Mother Dairy', image: 'https://images.unsplash.com/photo-1528751014936-863e6e7a319c?w=100&auto=format&fit=crop&q=80' },
+    { id: '768417', name: 'test br', image: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=100&auto=format&fit=crop&q=80' }
+  ]);
+
+  const [brandName, setBrandName] = React.useState('');
+  const [brandImage, setBrandImage] = React.useState('');
+  const [editingId, setEditingId] = React.useState(null);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [entriesPerPage, setEntriesPerPage] = React.useState('10');
+  const [currentPage, setCurrentPage] = React.useState(1);
+
+  // File Upload Handler
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setBrandImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Add / Edit Brand Form Action
+  const handleSubmitBrand = (e) => {
+    e.preventDefault();
+    if (!brandName.trim()) {
+      alert('Please enter a Brand Name');
+      return;
+    }
+
+    if (editingId) {
+      setBrands(prev => prev.map(b => b.id === editingId ? {
+        ...b,
+        name: brandName,
+        image: brandImage || b.image
+      } : b));
+      setEditingId(null);
+    } else {
+      const newBrand = {
+        id: Math.random().toString(36).substring(2, 8),
+        name: brandName,
+        image: brandImage || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=100&auto=format&fit=crop&q=80'
+      };
+      setBrands(prev => [newBrand, ...prev]);
+    }
+
+    setBrandName('');
+    setBrandImage('');
+  };
+
+  // Edit Action
+  const handleEdit = (brand) => {
+    setEditingId(brand.id);
+    setBrandName(brand.name);
+    setBrandImage(brand.image);
+  };
+
+  // Delete Action
+  const handleDelete = (id) => {
+    if (window.confirm('Are you sure you want to delete this brand?')) {
+      setBrands(prev => prev.filter(b => b.id !== id));
+    }
+  };
+
+  // CSV Export Action
+  const handleExportCSV = () => {
+    const rows = [['ID', 'Brand Name', 'Image URL'].join(',')];
+    brands.forEach(b => {
+      rows.push([`"${b.id}"`, `"${b.name}"`, `"${b.image}"`].join(','));
+    });
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `savitri_brands_export_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+  };
+
+  // Filtered Brands
+  const filteredBrands = brands.filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  return (
+    <div className="space-y-6 animate-fadeIn">
+      {/* Top Header & Breadcrumb */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Brand</h1>
+        <div className="text-xs text-slate-500 font-medium">
+          Home / <span className="text-[#F7941D] font-semibold">Dashboard</span>
+        </div>
+      </div>
+
+      {/* Grid Layout: Add Brand (Left) & View Brand (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        {/* Left Side Card: Add Brand / Edit Brand */}
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          {/* Card Header matching Light Orange Theme */}
+          <div className="bg-[#fff4ed] border-b border-orange-200/70 text-[#1A2E0A] px-6 py-4 flex items-center justify-between">
+            <h2 className="text-sm font-bold tracking-tight text-[#1A2E0A] flex items-center gap-2">
+              <Plus size={16} className="text-[#F7941D]" />
+              {editingId ? 'Edit Brand' : 'Add Brand'}
+            </h2>
+          </div>
+
+          <form onSubmit={handleSubmitBrand} className="p-6 space-y-5">
+            {/* Brand Name Input */}
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                Brand Name: *
+              </label>
+              <input 
+                type="text" 
+                required
+                placeholder="Enter Brand Name"
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+                className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:border-[#F7941D] bg-slate-50/50"
+              />
+            </div>
+
+            {/* Brand Image Upload Box */}
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                Brand Image:
+              </label>
+              
+              <label className="w-full border-2 border-dashed border-slate-200 hover:border-[#F7941D] rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors bg-slate-50/40 group">
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+                
+                {brandImage ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <img 
+                      src={brandImage} 
+                      alt="Brand Preview" 
+                      className="w-20 h-14 rounded-xl object-contain border border-slate-200 bg-white p-1 shadow-2xs" 
+                    />
+                    <span className="text-[11px] text-[#F7941D] font-bold">Click to Change Image</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-slate-400 group-hover:text-[#F7941D] transition-colors">
+                    <Upload size={24} />
+                    <span className="text-xs font-bold text-slate-600">Choose File</span>
+                    <span className="text-[10px] text-slate-400">Max 5MB (JPG, PNG, WEBP)</span>
+                  </div>
+                )}
+              </label>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex items-center gap-2 pt-2">
+              <button 
+                type="submit"
+                className="w-full py-2.5 bg-[#79B433] hover:bg-[#689A2B] text-white text-xs font-bold rounded-xl border-none cursor-pointer shadow-xs transition-all active:scale-98"
+              >
+                {editingId ? 'Update Brand' : 'Add Brand'}
+              </button>
+              {editingId && (
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setEditingId(null);
+                    setBrandName('');
+                    setBrandImage('');
+                  }}
+                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border-none cursor-pointer"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+
+        {/* Right Side Card: View Brand Table */}
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          {/* Card Header matching Dark Teal Theme */}
+          <div className="bg-[#1A2E0A] text-white px-6 py-4 flex items-center justify-between">
+            <h2 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+              <ChevronRight size={16} className="text-[#F7941D]" />
+              View Brand
+            </h2>
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white/90 px-2.5 py-1 rounded-full">
+              {brands.length} Total Brands
+            </span>
+          </div>
+
+          <div className="p-6 space-y-4">
+            {/* Toolbar Controls: Show entries dropdown, Export, Search */}
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-medium text-slate-600">
+              <div className="flex items-center gap-2">
+                <span>Show</span>
+                <select 
+                  value={entriesPerPage}
+                  onChange={(e) => setEntriesPerPage(e.target.value)}
+                  className="border border-slate-200 rounded-xl px-2.5 py-1.5 bg-slate-50 text-xs text-slate-800 outline-none focus:border-[#F7941D]"
+                >
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                </select>
+                <span>entries</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* Export Button */}
+                <button 
+                  onClick={handleExportCSV}
+                  className="px-3.5 py-1.5 bg-[#1A2E0A] hover:bg-[#003837] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 border-none cursor-pointer shadow-2xs transition-all active:scale-95"
+                >
+                  <Download size={13} className="text-[#F7941D]" /> Export
+                </button>
+
+                {/* Search Input */}
+                <div className="flex items-center gap-1.5">
+                  <span>Search:</span>
+                  <input 
+                    type="text"
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-40 border border-slate-200 rounded-xl px-3 py-1.5 bg-slate-50 text-xs text-slate-800 outline-none focus:border-[#F7941D]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Brand Table */}
+            <div className="overflow-x-auto border border-slate-200 rounded-xl">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
+                    <th className="py-3 px-4">ID</th>
+                    <th className="py-3 px-4">BRAND NAME</th>
+                    <th className="py-3 px-4">BRAND IMAGE</th>
+                    <th className="py-3 px-4 text-center">ACTION</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {filteredBrands.length > 0 ? (
+                    filteredBrands.map((brand) => (
+                      <tr key={brand.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-4 font-mono font-medium text-slate-500">{brand.id}</td>
+                        <td className="py-3 px-4 font-bold text-slate-900">{brand.name}</td>
+                        <td className="py-3 px-4">
+                          <img 
+                            src={brand.image} 
+                            alt={brand.name} 
+                            className="w-14 h-10 rounded-lg object-contain bg-white border border-slate-100 p-1 shadow-2xs" 
+                          />
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <button 
+                              onClick={() => handleEdit(brand)}
+                              className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg border border-blue-200 cursor-pointer transition-colors"
+                              title="Edit Brand"
+                            >
+                              <Edit3 size={13} />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(brand.id)}
+                              className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-200 cursor-pointer transition-colors"
+                              title="Delete Brand"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="4" className="py-6 text-center text-slate-400 italic text-xs">
+                        No brands found matching "{searchQuery}"
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Table Footer & Pagination */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-slate-500">
+              <span>Showing 1 to {filteredBrands.length} of {brands.length} entries</span>
+              
+              <div className="inline-flex rounded-xl border border-slate-200 p-0.5 bg-slate-50">
+                <button 
+                  onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                  className="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 border-none bg-transparent cursor-pointer"
+                >
+                  ‹
+                </button>
+                <button className="px-3 py-1 bg-[#79B433] text-white text-xs font-bold rounded-lg shadow-2xs border-none cursor-pointer">
+                  {currentPage}
+                </button>
+                <button 
+                  onClick={() => setCurrentPage(p => p + 1)}
+                  className="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 border-none bg-transparent cursor-pointer"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+/* =========================================================================
    5. CATEGORIES PAGE
    ========================================================================= */
 export const CategoryManagement = ({ initialSubcategoriesOnly = false }) => {

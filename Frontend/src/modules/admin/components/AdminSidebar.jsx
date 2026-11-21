@@ -4,6 +4,7 @@ import { useAdmin } from '../context/useAdmin';
 import { 
   LayoutDashboard, 
   FolderTree, 
+  Tag, 
   Package, 
   UserCheck, 
   Store, 
@@ -151,6 +152,7 @@ export const AdminSidebar = () => {
             { id: 'subcategories', label: 'Sub Categories' }
           ]
         },
+        { id: 'brands', label: 'Brand', icon: Tag },
         {
           id: 'products',
           label: 'Product',

@@ -6,6 +6,7 @@ import {
   BookOpen,
   Receipt,
   Store,
+  Building2,
   Wallet,
   Bike,
   RotateCcw,
@@ -26,6 +27,7 @@ import {
   ClipboardList,
   CalendarRange,
   Clock,
+  ShoppingBag,
 } from 'lucide-react';
 import { SuperAdminBrandSwitcher } from './SuperAdminBrandSwitcher';
 
@@ -77,11 +79,21 @@ export const SuperAdminSidebar = () => {
           label: 'Seller Settlements',
           icon: Store,
         },
+        {
+          to: '/super-admin/seller-purchases',
+          label: 'Seller Purchases',
+          icon: ShoppingBag,
+        },
       ],
     },
     {
       group: 'OPERATIONS & INVENTORY',
       items: [
+        {
+          to: '/super-admin/brands',
+          label: 'Business Brands',
+          icon: Building2,
+        },
         {
           to: '/super-admin/stores',
           label: 'Stores & Sellers',

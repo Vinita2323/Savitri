@@ -12,6 +12,7 @@ const SellerManagement = lazy(() => import('../pages/AdminSubPages').then(m => (
 const SellersOverview = lazy(() => import('../pages/AdminSubPages').then(m => ({ default: m.SellersOverview })));
 const CaptainManagement = lazy(() => import('../pages/AdminSubPages').then(m => ({ default: m.CaptainManagement })));
 const CategoryManagement = lazy(() => import('../pages/AdminSubPages').then(m => ({ default: m.CategoryManagement })));
+const BrandManagement = lazy(() => import('../pages/AdminSubPages').then(m => ({ default: m.BrandManagement })));
 const ProductManagement = lazy(() => import('../pages/AdminSubPages').then(m => ({ default: m.ProductManagement })));
 const AddProductPage = lazy(() => import('../pages/AdminSubPages').then(m => ({ default: m.AddProductPage })));
 const SkuAuditManagement = lazy(() => import('../pages/AdminSubPages').then(m => ({ default: m.SkuAuditManagement })));
@@ -178,6 +179,8 @@ export const AdminLayout = () => {
         return <CategoryManagement initialSubcategoriesOnly={false} />;
       case 'subcategories':
         return <CategoryManagement initialSubcategoriesOnly={true} />;
+      case 'brands':
+        return <BrandManagement />;
       case 'products':
         return <ProductManagement />;
       case 'bulk_uploads':

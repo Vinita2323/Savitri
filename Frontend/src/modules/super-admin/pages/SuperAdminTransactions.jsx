@@ -319,7 +319,7 @@ export const SuperAdminTransactions = ({ fixedCategory, pageTitle } = {}) => {
         subtitleClassName="m-0 mt-0.5 text-sm font-normal text-slate-500"
       />
 
-      <div className="mx-auto w-full max-w-[1400px] flex-1 space-y-5 p-4 sm:p-6">
+      <div className="w-full flex-1 space-y-5 p-4 sm:p-6">
         <div className="flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="m-0 text-sm font-semibold text-emerald-800">
             Live data from the platform ledger (MongoDB) — {brandName}. {liveConnected ? 'Real-time updates on.' : 'Auto-refreshing every 30s.'}

@@ -292,3 +292,10 @@
   }
 }
 
+
+/* Super admin panel: pages fill the whole content area. Pages shared with the admin panel (employees,
+   delivery challans, ...) centre themselves with `mx-auto max-w-*`, which leaves empty space on both sides.
+   Only centred page-width wrappers are lifted; modals/drawers (fixed) and small forms keep their width. */
+.sa-full-width .mx-auto:is([class*="max-w-7xl"], [class*="max-w-6xl"], [class*="max-w-5xl"], [class*="max-w-[1400px]"], [class*="max-w-[1280px]"], [class*="max-w-[1200px]"]):not(.fixed *, .fixed) {
+  max-width: none;
+}

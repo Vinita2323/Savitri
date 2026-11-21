@@ -31,6 +31,12 @@ import {
   getSellerCommissionHistory,
 } from '../controllers/sellerCommissionController.js';
 
+import {
+  getSuperAdminSellerPurchases,
+  exportSuperAdminSellerPurchases,
+  getSuperAdminSellerPurchaseReport,
+} from '../controllers/sellerPurchaseController.js';
+
 const router = express.Router();
 
 // Strict security: Most routes REQUIRE super_admin role
@@ -55,6 +61,11 @@ router.get('/payouts/:id', payoutAuth, getPayoutRequestById);
 router.put('/payouts/:id/approve', payoutAuth, approvePayout);
 router.put('/payouts/:id/reject', payoutAuth, rejectPayout);
 router.put('/payouts/:id/process', payoutAuth, processPayout);
+
+// Seller purchases (restocks recorded by sellers), brand scoped
+router.get('/seller-purchases/export', superAdminAuth, exportSuperAdminSellerPurchases);
+router.get('/seller-purchases/report', superAdminAuth, getSuperAdminSellerPurchaseReport);
+router.get('/seller-purchases', superAdminAuth, getSuperAdminSellerPurchases);
 
 // Settlements
 router.get('/settlements/sellers', superAdminAuth, getSellerSettlements);

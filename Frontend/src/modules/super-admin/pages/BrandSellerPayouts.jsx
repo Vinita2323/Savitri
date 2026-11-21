@@ -91,7 +91,7 @@ const BrandSellerPayouts = () => {
         titleClassName="m-0 text-xl font-semibold tracking-tight text-[#1A2E0A] sm:text-2xl"
         subtitleClassName="m-0 mt-0.5 text-sm font-normal text-slate-500"
       />
-      <div className="mx-auto w-full max-w-[1400px] space-y-5 p-4 sm:p-6">
+      <div className="w-full space-y-5 p-4 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <nav className="flex flex-wrap items-center gap-1 text-sm font-semibold text-slate-400">
             <Link to="/super-admin/dashboard" className="text-slate-500 no-underline hover:text-[#F7941D]">

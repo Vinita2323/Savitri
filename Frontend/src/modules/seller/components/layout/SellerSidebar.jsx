@@ -19,7 +19,8 @@ import {
   HelpCircle,
   Gift,
   UploadCloud,
-  X
+  X,
+  ShoppingBag,
 } from 'lucide-react';
 
 // Desktop (>= 1024px): the original fixed sidebar. Phones/tablets: the same navigation as a slide-in drawer.
@@ -38,7 +39,7 @@ const SellerSidebar = ({ isOpen: isOpenProp, isCompact = false, mobileOpen = fal
   // Automatically keep submenus open if active route is inside them
   useEffect(() => {
     const path = location.pathname;
-    if (path.includes('/seller/product') || path.includes('/seller/stock-management') || path.includes('/seller/products')) {
+    if (path.includes('/seller/product') || path.includes('/seller/stock-management') || path.includes('/seller/purchases') || path.includes('/seller/products')) {
       setOpenMenus(prev => ({ ...prev, product: true }));
     }
     if (path.includes('/seller/reports')) {
@@ -187,6 +188,19 @@ const SellerSidebar = ({ isOpen: isOpenProp, isCompact = false, mobileOpen = fal
               >
                 <Boxes size={18} className="shrink-0 text-white/90" />
                 <span>Stock Management</span>
+              </Link>
+
+              {/* Stock Purchases (restocks from suppliers) */}
+              <Link
+                to="/seller/purchases"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-medium transition-all ${
+                  isActive('/seller/purchases')
+                    ? 'bg-[#2A4515] text-white font-bold border-l-2 border-[#F7941D]'
+                    : 'text-slate-300 hover:bg-[#2A4515]/50 hover:text-white'
+                }`}
+              >
+                <ShoppingBag size={18} className="shrink-0 text-white/90" />
+                <span>Stock Purchases</span>
               </Link>
             </div>
           )}

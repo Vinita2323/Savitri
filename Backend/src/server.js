@@ -36,6 +36,7 @@ import membershipRoutes from './routes/membershipRoutes.js';
 import policyRoutes from './routes/policyRoutes.js';
 import fcmTokenRoutes from './routes/fcmTokenRoutes.js';
 import sellerRoutes from './routes/sellerRoutes.js';
+import sellerPurchaseRoutes from './routes/sellerPurchaseRoutes.js';
 import sellerShippingRoutes from './routes/sellerShippingRoutes.js';
 import fulfillmentRoutes from './routes/fulfillmentRoutes.js';
 import courierRoutes from './routes/courierRoutes.js';
@@ -178,6 +179,7 @@ const registerRoutes = (prefix = '') => {
   app.use(`${prefix}/categories`, categoryRoutes);
   app.use(`${prefix}/products`, productRoutes);
   app.use(`${prefix}/sellers`, sellerRoutes);
+  app.use(`${prefix}/seller-purchases`, sellerPurchaseRoutes);
   app.use(`${prefix}/shipping`, sellerShippingRoutes);
   app.use(`${prefix}/fulfillment`, fulfillmentRoutes);
   app.use(`${prefix}/courier`, courierRoutes);

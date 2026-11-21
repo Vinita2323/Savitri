@@ -158,7 +158,7 @@ export const SuperAdminReports = () => {
         subtitleClassName="m-0 mt-0.5 text-sm font-normal text-slate-500"
       />
 
-      <div className="mx-auto w-full max-w-[1400px] flex-1 space-y-5 p-4 sm:p-6">
+      <div className="w-full flex-1 space-y-5 p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-1.5 rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-xs">
             {Object.entries(REPORTS).map(([id, r]) => (

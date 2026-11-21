@@ -268,7 +268,7 @@ export const SuperAdminPayouts = ({ fixedRecipientType } = {}) => {
         refreshing={refreshing}
       />
 
-      <div className="p-6 space-y-5 flex-1 max-w-7xl mx-auto w-full">
+      <div className="p-6 space-y-5 flex-1 w-full">
         {/* Recipient Type Tabs & Status Filters */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
           <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200/80 shadow-xs">

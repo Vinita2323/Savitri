@@ -115,7 +115,7 @@ export const SuperAdminCommissions = () => {
         refreshing={refreshing}
       />
 
-      <div className="p-6 space-y-5 flex-1 max-w-7xl mx-auto w-full">
+      <div className="p-6 space-y-5 flex-1 w-full">
         {loadError && (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
             <span>{loadError}</span>

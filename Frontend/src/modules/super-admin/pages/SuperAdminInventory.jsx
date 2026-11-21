@@ -318,7 +318,7 @@ export const SuperAdminInventory = () => {
         subtitleClassName="m-0 mt-0.5 max-w-3xl text-xs font-medium text-slate-500"
       />
 
-      <div className="mx-auto w-full max-w-[1400px] space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="w-full space-y-6 p-4 sm:p-6 lg:p-8">
         {/* Breadcrumb & Quick Actions */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <nav className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-slate-500">

@@ -83,7 +83,7 @@ const SuperAdminSellerPayoutData = () => {
         titleClassName="m-0 text-xl font-semibold tracking-tight text-[#1A2E0A] sm:text-2xl"
         subtitleClassName="m-0 mt-0.5 text-sm font-normal text-slate-500"
       />
-      <div className="mx-auto w-full max-w-[1400px] space-y-5 p-4 sm:p-6">
+      <div className="w-full space-y-5 p-4 sm:p-6">
         <p className="m-0 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
           Showing {brandName} only. Sellers, amounts, and history on this page belong to the brand selected in the sidebar.
         </p>

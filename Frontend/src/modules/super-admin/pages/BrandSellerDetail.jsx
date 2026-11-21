@@ -67,7 +67,7 @@ const BrandSellerDetail = () => {
         title={`${seller.name} — Payout History`}
         subtitle={`${brand.name} · ${seller.store} · sample records only`}
       />
-      <div className="mx-auto w-full max-w-[1400px] space-y-5 p-4 sm:p-6">
+      <div className="w-full space-y-5 p-4 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <nav className="flex flex-wrap items-center gap-1 text-[11px] font-semibold text-slate-400">
             <Link to="/super-admin/dashboard" className="text-slate-500 no-underline hover:text-[#F7941D]">

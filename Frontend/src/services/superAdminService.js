@@ -159,6 +159,20 @@ export const superAdminService = {
     return response.data;
   },
 
+  // Seller purchases (restocks recorded by sellers), brand scoped
+  getSellerPurchases: async (params = {}) => {
+    const response = await API.get('/super-admin/seller-purchases', { params });
+    return response.data;
+  },
+  getSellerPurchaseReport: async (params = {}) => {
+    const response = await API.get('/super-admin/seller-purchases/report', { params });
+    return response.data;
+  },
+  exportSellerPurchases: async (params = {}) => {
+    const response = await API.get('/super-admin/seller-purchases/export', { params, responseType: 'blob' });
+    return response.data;
+  },
+
   // Business Brands Management
   getBrands: async (params = {}) => {
     const response = await API.get('/super-admin/brands', { params });

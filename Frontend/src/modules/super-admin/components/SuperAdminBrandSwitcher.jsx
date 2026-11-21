@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Building2, ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Building2, ChevronDown, Plus, Settings, Layers } from 'lucide-react';
 import { useSuperAdmin } from '../context/SuperAdminContext';
 
 /**
  * Super Admin Brand / Regional Hub Switcher for the sidebar.
  * Displays live database brands, allows instantaneous scope switching,
- * (brand creation / management pages have been removed).
+ * and provides direct links to Create Business Brand and Brand Management.
  */
 export const SuperAdminBrandSwitcher = ({ collapsed = false }) => {
+  const navigate = useNavigate();
   const {
     brands,
     selectedBrand,
@@ -39,6 +41,16 @@ export const SuperAdminBrandSwitcher = ({ collapsed = false }) => {
   const handleSelectScope = (id) => {
     setSelectedBrandId(id);
     setOpen(false);
+  };
+
+  const handleCreateNew = () => {
+    setOpen(false);
+    navigate('/super-admin/brands/create');
+  };
+
+  const handleManageBrands = () => {
+    setOpen(false);
+    navigate('/super-admin/brands');
   };
 
   const panel = open ? (
@@ -87,6 +99,13 @@ export const SuperAdminBrandSwitcher = ({ collapsed = false }) => {
             <p className="mt-1 text-[11px] text-slate-400">
               All regional brands are currently deactivated. Operating in consolidated platform mode.
             </p>
+            <button
+              type="button"
+              onClick={handleManageBrands}
+              className="mt-2.5 inline-flex cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-[#79B433] shadow-xs hover:bg-slate-50"
+            >
+              Activate Brands
+            </button>
           </div>
         ) : (
           activeBrands.map((brand) => {
@@ -123,6 +142,25 @@ export const SuperAdminBrandSwitcher = ({ collapsed = false }) => {
         )}
       </div>
 
+      <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/70 p-1.5">
+        <button
+          type="button"
+          onClick={handleCreateNew}
+          className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-white py-2 text-xs font-bold text-[#2563eb] shadow-sm hover:bg-slate-100"
+        >
+          <Plus size={14} /> Create Brand
+        </button>
+
+        <button
+          type="button"
+          onClick={handleManageBrands}
+          className="flex items-center justify-center gap-1 rounded-lg border-none bg-transparent px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200"
+          title="Manage All Brands"
+        >
+          <Settings size={14} />
+          <span>Manage</span>
+        </button>
+      </div>
     </div>
   ) : null;
 

@@ -250,7 +250,7 @@ export const SuperAdminRefunds = () => {
         subtitleClassName="m-0 mt-0.5 text-sm font-normal text-slate-500"
       />
 
-      <div className="mx-auto w-full max-w-[1400px] flex-1 space-y-5 p-4 sm:p-6">
+      <div className="w-full flex-1 space-y-5 p-4 sm:p-6">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {cards.map((card) => {
             const Icon = card.icon;

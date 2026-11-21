@@ -74,7 +74,7 @@ export const SuperAdminPayments = () => {
         titleClassName={headerTitleClass}
         subtitleClassName={headerSubtitleClass}
       />
-      <div className="mx-auto w-full max-w-[1400px] space-y-5 p-4 sm:p-6">
+      <div className="w-full space-y-5 p-4 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="m-0 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-normal text-amber-800">
             Showing {brandName} only. {demoBanner}

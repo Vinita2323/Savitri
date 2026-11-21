@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Brand from '../models/Brand.model.js';
 import Seller from '../models/Seller.model.js';
 import { ensureBaselineBrands, canAccessAllBrands, isBrandAuthorizedForUser } from '../middleware/scopeMiddleware.js';
@@ -442,30 +443,33 @@ export const deleteBrand = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Brand not found' });
     }
 
-    if (brand.isDefault) {
-      return res.status(400).json({
-        success: false,
-        message: 'Default baseline brands cannot be deleted.',
-      });
+    // The core (default) brand may be deleted too, but only through the same linked-records check below.
+
+    // Permanent delete is only allowed when nothing is attached to this brand. Any record that carries this
+    // brandId (sellers, employees, quotations, POS sales, challans, ...) would be orphaned, so we report what
+    // blocks the delete instead of silently deactivating or breaking those records.
+    const linked = [];
+    for (const [modelName, model] of Object.entries(mongoose.models)) {
+      if (modelName === 'Brand' || !model.schema.path('brandId')) continue;
+      const count = await model.countDocuments({ brandId: brand.brandId });
+      if (count > 0) linked.push({ model: modelName, count });
     }
 
-    // Check if any sellers are associated
-    const associatedSellers = await Seller.countDocuments({
-      $or: [{ brandId: brand.brandId }, { 'address.city': brand.city }],
-    });
-
-    if (associatedSellers > 0) {
-      // Soft-deactivate instead of hard delete to preserve financial and seller integrity
-      brand.status = 'Inactive';
-      await brand.save();
-      return res.status(200).json({
-        success: true,
-        message: `Brand has ${associatedSellers} associated stores/sellers. To preserve historical records, the brand was deactivated rather than permanently removed.`,
-        brand,
+    if (linked.length > 0) {
+      const summary = linked.map((l) => `${l.count} ${l.model}`).join(', ');
+      return res.status(409).json({
+        success: false,
+        code: 'BRAND_HAS_LINKED_DATA',
+        message: `This brand cannot be permanently deleted because it still has linked records (${summary}). Move or remove them first, or deactivate the brand instead.`,
+        linked,
       });
     }
 
     await Brand.findByIdAndDelete(brand._id);
+    // Admins who were authorised for this brand no longer need the reference.
+    if (mongoose.models.Admin) {
+      await mongoose.models.Admin.updateMany({ authorizedBrands: brand.brandId }, { $pull: { authorizedBrands: brand.brandId } });
+    }
 
     res.status(200).json({
       success: true,
