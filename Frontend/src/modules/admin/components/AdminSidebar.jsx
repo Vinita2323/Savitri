@@ -300,6 +300,24 @@ export const AdminSidebar = () => {
       ]
     },
     {
+      title: 'PURCHASE MANAGEMENT',
+      items: [
+        {
+          id: 'purchase_management',
+          label: 'Purchase Management',
+          icon: Package,
+          submenu: [
+            { id: 'purchase_dashboard', label: 'Purchase Dashboard' },
+            { id: 'purchase_new', label: 'Add New Purchase' },
+            { id: 'purchase_history', label: 'Purchase History' },
+            { id: 'purchase_stock', label: 'Stock Updates' },
+            { id: 'purchase_sellers', label: 'Associated Seller Purchases' },
+            { id: 'purchase_by_seller', label: 'Seller-wise Purchases' },
+          ]
+        }
+      ]
+    },
+    {
       title: 'EMPLOYEE MANAGEMENT',
       items: [
         {

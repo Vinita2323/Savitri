@@ -58,7 +58,7 @@ export const Modal = ({ title, onClose, children, wide = false, testId = 'pr-mod
 
 export const Drawer = ({ title, subtitle, onClose, children, testId = 'pr-drawer' }) => {
   useEffect(() => {
-    const h = (e) => e.key === 'Escape' && onClose();
+    const h = (e) => e.key === 'Escape' && document.querySelectorAll('[role="dialog"]').length <= 1 && onClose();
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, [onClose]);

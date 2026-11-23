@@ -85,6 +85,11 @@ export const SuperAdminSidebar = () => {
           label: 'Seller Purchases',
           icon: ShoppingBag,
         },
+        {
+          to: '/super-admin/admin-purchases',
+          label: 'Admin Purchases',
+          icon: ShoppingBag,
+        },
       ],
     },
     {

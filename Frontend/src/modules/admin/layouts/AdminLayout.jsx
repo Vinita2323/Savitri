@@ -101,6 +101,7 @@ const EmployeeTaskReviewPage = lazy(() => import('../employees/pages/EmployeeTas
 const EmployeeRulesPage = lazy(() => import('../employees/pages/EmployeeRulesPage'));
 const EmployeeSelfieMonitoringPage = lazy(() => import('../employees/pages/EmployeeSelfieMonitoringPage'));
 const EmployeePayrollPage = lazy(() => import('../employees/pages/EmployeePayrollPage'));
+const AdminPurchasePage = lazy(() => import('../purchases/AdminPurchasePage'));
 const EmployeeActivityPage = lazy(() => import('../employees/pages/EmployeeActivityPage'));
 
 export const AdminLayout = () => {
@@ -400,6 +401,18 @@ export const AdminLayout = () => {
       case 'employee_payroll':
       case 'employees/payroll':
         return <EmployeePayrollPage onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'purchase_dashboard':
+        return <AdminPurchasePage tab="dashboard" />;
+      case 'purchase_new':
+        return <AdminPurchasePage tab="new" />;
+      case 'purchase_history':
+        return <AdminPurchasePage tab="history" />;
+      case 'purchase_stock':
+        return <AdminPurchasePage tab="stock" />;
+      case 'purchase_sellers':
+        return <AdminPurchasePage tab="sellers" />;
+      case 'purchase_by_seller':
+        return <AdminPurchasePage tab="bysellers" />;
       case 'employee_selfies':
       case 'employees/selfies':
         return <EmployeeSelfieMonitoringPage onNavigate={(tab) => setActiveTab(tab)} />;

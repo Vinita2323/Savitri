@@ -20,6 +20,7 @@ import { gatewayContextForRefund, initiateGatewayRefund } from '../services/razo
 import { postEntry, actorOf as treasuryActor, ensureTreasuryIndexes } from '../services/treasuryLedger.js';
 import TreasuryAccount from '../models/TreasuryAccount.model.js';
 import { getCityRegex, getScopedOrderIds, orderInScope, getScopedSellerIds, getScopedCaptainIds, sellerScopeFilter, sellerInScope, captainInScope, captainScopeFilter } from '../middleware/scopeMiddleware.js';
+import { PERIODS, isValidDay, istStart, istEnd, rollUp, periodOf } from '../utils/reportPeriods.js';
 
 // Helper: Log financial audit entry
 const logAudit = async ({
@@ -1603,17 +1604,17 @@ export const getFinancialReports = async (req, res, next) => {
   try {
     const scope = req.scope || { isAll: true };
     const { reportType, startDate, endDate } = req.query;
+    // "records" = the detailed list (default); day / week / month = totals grouped by Indian-time period
+    const period = PERIODS.includes(req.query.period) ? req.query.period : 'records';
 
+    // Date filters are Indian-time calendar days (not the server's own timezone)
     const dateQuery = {};
-    if (startDate || endDate) {
+    if ((startDate && isValidDay(startDate)) || (endDate && isValidDay(endDate))) {
       dateQuery.createdAt = {};
-      if (startDate) dateQuery.createdAt.$gte = new Date(startDate);
-      if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        dateQuery.createdAt.$lte = end;
-      }
+      if (startDate && isValidDay(startDate)) dateQuery.createdAt.$gte = istStart(startDate);
+      if (endDate && isValidDay(endDate)) dateQuery.createdAt.$lte = istEnd(endDate);
     }
+    const istDay = (field) => ({ $dateToString: { format: '%Y-%m-%d', date: field, timezone: 'Asia/Kolkata' } });
 
     if (reportType === 'transactions') {
       const query = { ...dateQuery };
@@ -1630,8 +1631,22 @@ export const getFinancialReports = async (req, res, next) => {
           { entityId: { $in: allScopedIds } },
         ];
       }
+      if (period !== 'records') {
+        const perDay = await PlatformLedger.aggregate([
+          { $match: query },
+          { $group: { _id: { day: istDay('$createdAt'), type: '$type', status: '$status' }, amount: { $sum: '$amount' }, count: { $sum: 1 } } },
+        ]);
+        const dayRows = perDay.map((g) => ({
+          day: g._id.day,
+          entries: g.count,
+          credits: g._id.type === 'CREDIT' && g._id.status === 'SUCCESS' ? g.amount : 0,
+          debits: g._id.type === 'DEBIT' && g._id.status === 'SUCCESS' ? g.amount : 0,
+        }));
+        const rows = rollUp(dayRows, period, ['entries', 'credits', 'debits']).map((r) => ({ ...r, net: Math.round((r.credits - r.debits) * 100) / 100 }));
+        return res.status(200).json({ success: true, reportType, period, periods: rows });
+      }
       const transactions = await PlatformLedger.find(query).sort({ createdAt: -1 }).limit(500).lean();
-      return res.status(200).json({ success: true, reportType, transactions });
+      return res.status(200).json({ success: true, reportType, period, transactions });
     }
 
     if (reportType === 'seller-settlements') {
@@ -1640,12 +1655,23 @@ export const getFinancialReports = async (req, res, next) => {
         const scopedSellerIds = await getScopedSellerIds(scope);
         query.sellerId = { $in: (scopedSellerIds || []).map((id) => id.toString()) };
       }
+      if (period !== 'records') {
+        const perDay = await SellerNotification.aggregate([
+          { $match: query },
+          { $group: { _id: { day: istDay('$createdAt'), status: '$settlementStatus' }, count: { $sum: 1 }, orderTotal: { $sum: '$totalAmount' }, commission: { $sum: '$commissionAmount' }, sellerNet: { $sum: '$netSellerAmount' } } },
+        ]);
+        const dayRows = perDay.map((g) => ({
+          day: g._id.day, records: g.count, orderTotal: g.orderTotal, commission: g.commission, sellerNet: g.sellerNet,
+          settled: g._id.status === 'SETTLED' ? g.count : 0, pending: g._id.status === 'PENDING' ? g.count : 0,
+        }));
+        return res.status(200).json({ success: true, reportType, period, periods: rollUp(dayRows, period, ['records', 'orderTotal', 'commission', 'sellerNet', 'settled', 'pending']) });
+      }
       const settlements = await SellerNotification.find(query)
         .select('orderId sellerName sellerId totalAmount commissionRate commissionAmount netSellerAmount settlementStatus settledAt createdAt')
         .sort({ createdAt: -1 })
         .limit(500)
         .lean();
-      return res.status(200).json({ success: true, reportType, settlements });
+      return res.status(200).json({ success: true, reportType, period, settlements });
     }
 
     if (reportType === 'captain-settlements') {
@@ -1666,7 +1692,7 @@ export const getFinancialReports = async (req, res, next) => {
         { $match: orderFilter },
         {
           $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            _id: istDay('$createdAt'),
             grossVolume: { $sum: '$grandTotal' },
             itemsTotal: { $sum: '$itemsTotal' },
             shippingRevenue: { $sum: '$shippingFee' },
@@ -1675,7 +1701,13 @@ export const getFinancialReports = async (req, res, next) => {
         },
         { $sort: { _id: 1 } },
       ]);
-      return res.status(200).json({ success: true, reportType, orders });
+      if (period === 'week' || period === 'month') {
+        const rows = rollUp(orders.map((o) => ({ ...o, day: o._id })), period, ['grossVolume', 'itemsTotal', 'shippingRevenue', 'orderCount']);
+        return res.status(200).json({ success: true, reportType, period, orders: rows });
+      }
+      // day view: newest first, with a readable label
+      const days = orders.map((o) => ({ ...o, label: periodOf(o._id, 'day').label })).reverse();
+      return res.status(200).json({ success: true, reportType, period: 'day', orders: days });
     }
 
     // Default overview report

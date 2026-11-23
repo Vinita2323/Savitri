@@ -150,6 +150,10 @@ const productSchema = new mongoose.Schema(
     // Extra catalogue fields carried by bulk upload
     barcode: { type: String, default: '', trim: true },
     purchasePrice: { type: Number, min: 0, default: 0 },
+    // Own-store product of ONE admin (no sellerId). Unset = a seller's product, or a platform-owned product. Used by Admin purchases.
+    ownerAdminId: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: undefined, index: true },
+    // Keys of stock changes already applied to this product (purchases / reversals). Makes a stock change exactly-once. Bounded.
+    stockRefs: { type: [String], default: undefined, select: false },
     weight: { type: String, default: '' },
     // ── Shipping & package details (Phase 1; additive, safe defaults so existing products are unaffected) ──
     // `weight` above stays the free-text label used by bulk upload; `weightKg` is the numeric shipping weight.

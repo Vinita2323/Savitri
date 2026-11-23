@@ -350,7 +350,7 @@ export const cancelSellerPurchase = async (req, res, next) => {
 
 // ───────────────────────── Super admin ─────────────────────────
 
-const scopedSellerIds = async (scope) => {
+export const scopedSellerIds = async (scope) => {
   if (!scope || scope.isAll) return null; // null = no brand restriction
   const or = [{ brandId: scope.brandId }, ...(scope.brand?._id ? [{ brand: scope.brand._id }] : [])];
   return Seller.find({ $or: or }).distinct('_id');
