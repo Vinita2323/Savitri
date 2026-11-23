@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { protectEmployee } from '../middleware/employeeAuth.js';
+import { mySalaryH, myPayrollsH, myPayrollH, mySlipH, myPaymentsH } from '../controllers/payrollController.js';
 import { simpleRateLimit } from '../middleware/simpleRateLimit.js';
 import {
   getPublicBrands,
@@ -124,6 +125,13 @@ router.post('/selfie/login', simpleRateLimit({ windowMs: 60_000, max: 20 }), upl
 router.post('/selfie/submit', simpleRateLimit({ windowMs: 60_000, max: 20 }), uploadSelfiePhoto, submitMySelfie('PERIODIC'));
 router.post('/push-token', simpleRateLimit({ windowMs: 60_000, max: 30 }), registerPushToken);
 router.delete('/push-token', removePushToken);
+
+// Salary: an employee only ever reads their own data (the controller never takes an employee id from the request)
+router.get('/salary', mySalaryH);
+router.get('/salary/payrolls', myPayrollsH);
+router.get('/salary/payrolls/:id', myPayrollH);
+router.get('/salary/payrolls/:id/slip', mySlipH);
+router.get('/salary/payments', myPaymentsH);
 
 router.get('/notifications', listMyNotifications);
 router.post('/notifications/read-all', markAllNotificationsRead);

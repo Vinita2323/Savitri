@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Bell, CalendarCheck, CalendarDays, Camera, CheckSquare, Clock, LayoutDashboard, LogOut, User } from 'lucide-react';
+import { Bell, CalendarCheck, CalendarDays, Camera, CheckSquare, Clock, LayoutDashboard, LogOut, User, Wallet } from 'lucide-react';
 import { useEmployeeAuth } from '../context/EmployeeAuthContext';
 import employeePortalService from '../../../services/employeePortalService';
 import { SelfieProvider, useSelfie } from '../context/SelfieContext';
@@ -12,6 +12,7 @@ const SIDEBAR_NAV = [
   { to: '/employee/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/employee/attendance', label: 'Attendance', icon: Clock },
   { to: '/employee/selfie', label: 'Selfie Verification', icon: Camera },
+  { to: '/employee/salary', label: 'My Salary', icon: Wallet },
   { to: '/employee/tasks', label: 'My Tasks', icon: CheckSquare },
   { to: '/employee/leaves', label: 'Leave', icon: CalendarCheck },
   { to: '/employee/holidays', label: 'Holidays', icon: CalendarDays },

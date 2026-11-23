@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import payrollService from '../../../../services/payrollService';
+import { SalarySection, SalaryConfigModal, emptySalary, formToBody } from '../payroll/SalaryForm';
 import { useEmployee } from '../context/EmployeeContext';
 import { EmployeeHeader } from '../components/EmployeeHeader';
 import { FilePreview } from '../components/FilePreview';
@@ -51,6 +53,9 @@ export const EmployeeDirectoryPage = ({ onNavigate }) => {
   const [selectedProfileEmp, setSelectedProfileEmp] = useState(null);
   const [preview, setPreview] = useState(null); // { files, index } : employee document shown inside the page
   const [editingEmp, setEditingEmp] = useState(null);
+  const [salaryOn, setSalaryOn] = useState(false);
+  const [salaryForm, setSalaryForm] = useState(emptySalary());
+  const [salaryFor, setSalaryFor] = useState(null);
 
   // New Employee Form
   const [fullName, setFullName] = useState('');
@@ -120,6 +125,16 @@ export const EmployeeDirectoryPage = ({ onNavigate }) => {
 
     const res = await handleCreateEmployee(payload);
     if (res.success) {
+      if (salaryOn && res.employee?._id) {
+        try {
+          await payrollService.saveSalary(brandId, res.employee._id, formToBody({ ...salaryForm, bank: { ...salaryForm.bank, accountHolder: salaryForm.bank.accountHolder || fullName } }));
+        } catch (err) {
+          window.alert(`The employee was added, but the salary was not saved: ${err.message}
+Open Payroll > Salary setup to finish it.`);
+        }
+      }
+      setSalaryOn(false);
+      setSalaryForm(emptySalary());
       setIsAddModalOpen(false);
       resetForm();
     }
@@ -494,6 +509,8 @@ export const EmployeeDirectoryPage = ({ onNavigate }) => {
                 </div>
               </div>
 
+              <SalarySection enabled={salaryOn} setEnabled={setSalaryOn} form={salaryForm} setForm={setSalaryForm} />
+
               <div className="pt-4 flex justify-end gap-2.5 border-t border-slate-100">
                 <button
                   type="button"
@@ -709,6 +726,11 @@ export const EmployeeDirectoryPage = ({ onNavigate }) => {
                 </select>
               </div>
 
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3 flex items-center justify-between gap-3">
+                <span className="text-xs text-emerald-900">Salary configuration (type, amount, payment frequency, overtime, deductions, bank/UPI)</span>
+                <button type="button" data-testid="dir-salary" onClick={() => setSalaryFor({ id: editingEmp._id, employeeId: editingEmp.employeeId, name: editingEmp.fullName, brandId: editingEmp.brandId })} className="px-3 py-1.5 text-xs font-bold bg-white border border-emerald-300 text-emerald-800 rounded-lg cursor-pointer">Open salary</button>
+              </div>
+
               <div className="flex justify-end gap-2.5 pt-4 border-t">
                 <button
                   type="button"
@@ -729,6 +751,7 @@ export const EmployeeDirectoryPage = ({ onNavigate }) => {
         </div>
       )}
 
+      {salaryFor && <SalaryConfigModal employee={salaryFor} brandId={salaryFor.brandId} onClose={() => setSalaryFor(null)} />}
       {preview && <FilePreview files={preview.files} index={preview.index} onIndex={(i) => setPreview((q) => ({ ...q, index: i }))} onClose={() => setPreview(null)} />}
     </div>
   );

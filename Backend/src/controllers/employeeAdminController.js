@@ -11,6 +11,8 @@ import EmployeeActivityLog from '../models/EmployeeActivityLog.model.js';
 import Holiday from '../models/Holiday.model.js';
 import Brand from '../models/Brand.model.js';
 import Admin from '../models/Admin.model.js';
+import { assertAttendanceUnlocked } from '../services/payrollService.js';
+import { PayrollError } from '../services/payrollSalary.js';
 import {
   actorFromReq,
   addDays,
@@ -22,6 +24,7 @@ import {
   getRules,
   isValidDateString,
   istDateString,
+  leaveDateRange,
   istMidnight,
   istMinutesOfDay,
   logActivity,
@@ -537,6 +540,8 @@ export const correctAttendance = async (req, res) => {
       }
     }
     if (!emp) return fail(res, 404, 'Employee not found.');
+    // Attendance inside an approved payroll period is locked (payroll was calculated from it)
+    try { await assertAttendanceUnlocked(emp._id, att.dateString); } catch (e) { if (e instanceof PayrollError) return fail(res, e.status, e.message, { code: 'PAYROLL_LOCKED' }); throw e; }
 
     const parseTime = (v) => {
       if (!v) return null;
@@ -728,6 +733,7 @@ export const decideLeave = async (req, res) => {
     if (status === 'Rejected' && !notes) return fail(res, 400, 'Please add a remark when rejecting.');
 
     if (status === 'Approved') {
+      try { await assertAttendanceUnlocked(leave.employee, leaveDateRange(leave)); } catch (e) { if (e instanceof PayrollError) return fail(res, e.status, e.message, { code: 'PAYROLL_LOCKED' }); throw e; }
       const conflicts = await findLeaveConflicts(leave);
       if (conflicts.length) {
         return fail(res, 409, `The employee already has attendance recorded on ${conflicts.join(', ')}. Correct those days first, then approve.`, { conflicts });

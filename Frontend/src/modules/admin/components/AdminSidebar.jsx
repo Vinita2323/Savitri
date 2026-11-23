@@ -319,6 +319,7 @@ export const AdminSidebar = () => {
             { id: 'employee_shifts', label: 'Shifts & Holidays' },
             { id: 'employee_reports', label: 'Reports & Analytics' },
             { id: 'employee_rules', label: 'Attendance Rules' },
+            { id: 'employee_payroll', label: 'Salary & Payroll' },
             { id: 'employee_selfies', label: 'Selfie Monitoring' },
             { id: 'employee_activity', label: 'Activity Log' },
           ]

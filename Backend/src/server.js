@@ -60,6 +60,7 @@ import posRoutes from './routes/posRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import employeePortalRoutes from './routes/employeePortalRoutes.js';
 import employeeManagementRoutes from './routes/employeeManagementRoutes.js';
+import payrollRoutes from './routes/payrollRoutes.js';
 import employeeSelfieFileRoutes from './routes/employeeSelfieFileRoutes.js';
 import { startEmployeeScheduler } from './services/employeeScheduler.js';
 import bulkProductRoutes from './routes/bulkProductRoutes.js';
@@ -216,6 +217,7 @@ const registerRoutes = (prefix = '') => {
   app.use(`${prefix}/employee-portal`, employeePortalRoutes);
   app.use(`${prefix}/selfie-files`, employeeSelfieFileRoutes);
   app.use(`${prefix}/employee-management`, employeeManagementRoutes);
+  app.use(`${prefix}/payroll`, payrollRoutes);
   app.use(`${prefix}/bulk-products`, bulkProductRoutes);
   app.use(`${prefix}`, commissionRoutes);
 };

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { employeeService } from '../../../../services/employeeService';
 import API from '../../../../services/api';
 import { useSuperAdmin } from '../../../super-admin/context/SuperAdminContext';
@@ -34,6 +34,7 @@ export const EmployeeProvider = ({ children }) => {
   // A brand-restricted admin who can access exactly one brand is always scoped to it (never the consolidated view).
   const activeBrandId = superAdminCtx?.selectedBrandId || (apiBrands.length === 2 ? apiBrands[1].id : 'ALL');
 
+  const employeesTicket = useRef(0);
   const [employees, setEmployees] = useState([]);
   const [allEmployees, setAllEmployees] = useState([]);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
@@ -69,17 +70,18 @@ export const EmployeeProvider = ({ children }) => {
   // 1. Fetch Employees
   const fetchEmployees = useCallback(
     async (params = {}) => {
+      const ticket = ++employeesTicket.current;
       setIsLoading(true);
       try {
         const res = await employeeService.getEmployees({
           brandId: activeBrandId,
           ...params,
         });
+        if (ticket !== employeesTicket.current) return res.employees || []; // a newer brand selection already replaced this request
         setEmployees(res.employees || []);
 
-        // Also retrieve all staff across all brands for assigning tasks & reporting
-        const allRes = await employeeService.getEmployees({ brandId: 'ALL' });
-        setAllEmployees(allRes.employees || res.employees || []);
+        // People lists (attendance, tasks) follow the selected brand: another brand's staff is never mixed in
+        setAllEmployees(res.employees || []);
 
         return res.employees || [];
       } catch (err) {

@@ -24,12 +24,22 @@ import {
 } from '../controllers/adminController.js';
 import { setSellerCommission, resetSellerCommission, getSellerCommissionHistory } from '../controllers/sellerCommissionController.js';
 import { getAdminProfile, updateAdminProfile } from '../controllers/adminAuthController.js';
+import { listMyDocuments, addMyDocument, updateMyDocument, deleteMyDocument, downloadMyDocument, uploadMiddleware } from '../controllers/adminDocumentController.js';
+import { simpleRateLimit } from '../middleware/simpleRateLimit.js';
 
 const router = express.Router();
 
 // Admin Profile
 router.get('/profile', protect('admin', 'super_admin'), getAdminProfile);
 router.put('/profile', protect('admin', 'super_admin'), updateAdminProfile);
+
+// "Your documents": the signed-in admin's own private documents (never visible to anyone else)
+const docGuard = protect('admin', 'super_admin');
+router.get('/documents', docGuard, listMyDocuments);
+router.post('/documents', docGuard, simpleRateLimit({ windowMs: 60_000, max: 20 }), uploadMiddleware, addMyDocument);
+router.put('/documents/:id', docGuard, simpleRateLimit({ windowMs: 60_000, max: 30 }), uploadMiddleware, updateMyDocument);
+router.delete('/documents/:id', docGuard, deleteMyDocument);
+router.get('/documents/:id/file', docGuard, downloadMyDocument);
 
 
 // Everything below requires an authenticated, active admin / super admin, and every

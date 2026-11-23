@@ -66,6 +66,8 @@ const EmployeeAttendanceReportPage = lazy(() => import('../../admin/employees/pa
 const EmployeeTaskReviewPage = lazy(() => import('../../admin/employees/pages/EmployeeTaskReviewPage'));
 const EmployeeRulesPage = lazy(() => import('../../admin/employees/pages/EmployeeRulesPage'));
 const EmployeeSelfieMonitoringPage = lazy(() => import('../../admin/employees/pages/EmployeeSelfieMonitoringPage'));
+const SuperAdminProfilePage = lazy(() => import('../../admin/pages/AdminSubPages').then((m) => ({ default: m.AdminProfile })));
+const EmployeePayrollPage = lazy(() => import('../../admin/employees/pages/EmployeePayrollPage'));
 const EmployeeActivityPage = lazy(() => import('../../admin/employees/pages/EmployeeActivityPage'));
 
 const SuperAdminEmployeeWrapper = ({ Component, currentTab }) => {
@@ -173,6 +175,7 @@ const SuperAdminRoutesContent = () => {
         >
           <Route index element={<Navigate to="/super-admin/dashboard" replace />} />
           <Route path="/dashboard" element={<SuperAdminDashboard />} />
+          <Route path="/profile" element={<SuperAdminProfilePage />} />
           <Route path="/cash-bank" element={<SuperAdminCashBankWrapper />} />
           <Route path="/transactions" element={<SuperAdminTransactions />} />
           <Route path="/brands/:brandSlug/seller-payouts" element={<Navigate to="/super-admin/payouts/sellers" replace />} />
@@ -231,6 +234,7 @@ const SuperAdminRoutesContent = () => {
           <Route path="/employees/attendance-report" element={<SuperAdminEmployeeWrapper Component={EmployeeAttendanceReportPage} currentTab="attendance-report" />} />
           <Route path="/employees/review" element={<SuperAdminEmployeeWrapper Component={EmployeeTaskReviewPage} currentTab="review" />} />
           <Route path="/employees/rules" element={<SuperAdminEmployeeWrapper Component={EmployeeRulesPage} currentTab="rules" />} />
+          <Route path="/employees/payroll" element={<SuperAdminEmployeeWrapper Component={EmployeePayrollPage} currentTab="payroll" />} />
           <Route path="/employees/selfies" element={<SuperAdminEmployeeWrapper Component={EmployeeSelfieMonitoringPage} currentTab="selfies" />} />
           <Route path="/employees/activity" element={<SuperAdminEmployeeWrapper Component={EmployeeActivityPage} currentTab="activity" />} />
 

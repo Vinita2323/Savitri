@@ -77,6 +77,26 @@ export const employeePortalService = {
   markAllRead: () => unwrap(API.post(`${P}/notifications/read-all`)),
 
   // Live selfie verification (the photo comes from the camera screen; there is no gallery upload)
+  // Salary: read only. The server answers only with this employee's own data.
+  salary: () => unwrap(API.get(`${P}/salary`), 'Could not load your salary'),
+  salaryPayrolls: () => unwrap(API.get(`${P}/salary/payrolls`), 'Could not load your salary history'),
+  salaryPayroll: (id) => unwrap(API.get(`${P}/salary/payrolls/${id}`), 'Could not load this salary'),
+  salaryPayments: () => unwrap(API.get(`${P}/salary/payments`), 'Could not load your payments'),
+  downloadSlip: async (id) => {
+    let res;
+    try { res = await API.get(`${P}/salary/payrolls/${id}/slip`, { responseType: 'blob' }); } catch (err) {
+      let msg = 'Could not download the salary slip';
+      try { msg = JSON.parse(await err.response.data.text()).message || msg; } catch { /* keep default */ }
+      throw new Error(msg);
+    }
+    const m = /filename="?([^";]+)"?/i.exec(res.headers?.['content-disposition'] || '');
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement('a');
+    a.href = url; a.download = m ? m[1] : 'salary-slip.pdf';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  },
+
   selfieStatus: () => unwrap(API.get(`${P}/selfie/status`), 'Could not check your selfie status'),
   selfieHistory: (params = {}) => unwrap(API.get(`${P}/selfie/my-history`, { params }), 'Could not load your selfies'),
   submitSelfie: (type, blob, meta = {}, onProgress) => {

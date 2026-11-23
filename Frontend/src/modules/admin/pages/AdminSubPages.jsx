@@ -61,6 +61,7 @@ import {
 } from 'lucide-react';
 import ProductVariantBuilder from '../../seller/components/ProductVariantBuilder';
 import { useDebounce } from '../../../hooks/useDebounce';
+import YourDocuments from '../../../components/YourDocuments';
 
 /* =========================================================================
    1. USER MANAGEMENT PAGE (USERS, USER ORDERS & RETURN ORDERS TABS)
@@ -9739,6 +9740,9 @@ export const AdminProfile = () => {
           </div>
         )}
       </div>
+
+      {/* Personal documents kept for emergencies: private to this account */}
+      <YourDocuments />
     </div>
   );
 };

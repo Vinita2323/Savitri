@@ -206,6 +206,11 @@ export const SuperAdminSidebar = () => {
           icon: Clock,
         },
         {
+          to: '/super-admin/employees/payroll',
+          label: 'Salary & Payroll',
+          icon: Wallet,
+        },
+        {
           to: '/super-admin/employees/selfies',
           label: 'Selfie Monitoring',
           icon: Camera,
@@ -313,7 +318,7 @@ export const SuperAdminSidebar = () => {
       <div className="p-3 border-t border-[#003837] bg-[#001c1b] shrink-0">
         <div className={`flex items-center ${sidebarOpen ? 'justify-between' : 'justify-center'} gap-2`}>
           {sidebarOpen ? (
-            <div className="flex items-center gap-3 overflow-hidden">
+            <NavLink to="/super-admin/profile" data-testid="sa-profile-link" title="My profile and documents" className="flex items-center gap-3 overflow-hidden no-underline">
               <div className="w-9 h-9 rounded-xl bg-[#003837] border border-[#F7941D]/40 flex items-center justify-center text-[#F7941D] shrink-0 font-medium text-sm">
                 CFO
               </div>
@@ -325,7 +330,7 @@ export const SuperAdminSidebar = () => {
                   <Lock size={10} /> Super Admin
                 </p>
               </div>
-            </div>
+            </NavLink>
           ) : (
             <div className="w-9 h-9 rounded-xl bg-[#003837] border border-[#F7941D]/40 flex items-center justify-center text-[#F7941D] font-black text-xs">
               SA
