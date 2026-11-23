@@ -12,6 +12,7 @@ import {
   requestOrApproveCorrection,
   getTasks,
   createTask,
+  createTasksBulk,
   updateTaskStatus,
   updateTask,
   addTaskComment,
@@ -59,6 +60,7 @@ router.post('/attendance/manual', correctAttendance);
 // 3. Task Management
 router.get('/tasks/all', getTasks);
 router.post('/tasks', createTask);
+router.post('/tasks/bulk', createTasksBulk);
 router.patch('/tasks/:id/status', updateTaskStatus);
 router.put('/tasks/:id', updateTask);
 router.post('/tasks/:id/comments', addTaskComment);

@@ -2,6 +2,7 @@ import { sendPushNotification } from '../services/firebaseAdmin.js';
 import User from '../models/User.model.js';
 import Seller from '../models/Seller.model.js';
 import Captain from '../models/Captain.model.js';
+import Employee from '../models/Employee.model.js';
 
 /**
  * Send push notification to a Customer / User (SOP Standard)
@@ -105,6 +106,22 @@ export async function sendNotificationToCaptain(captainId, payload, includeMobil
     await sendPushNotification(uniqueTokens, payload);
   } catch (error) {
     console.error(`[FCM Captain Error] Failed to send notification to captain ${captainId}:`, error.message);
+  }
+}
+
+/**
+ * Send a push notification to an Employee's registered devices (web FCM). Used for selfie reminders so they reach
+ * the employee while the app is in the background. Without Firebase credentials the shared sender only logs.
+ */
+export async function sendNotificationToEmployee(employeeId, payload) {
+  try {
+    if (!employeeId) return;
+    const emp = await Employee.findById(employeeId).select('+fcmTokens');
+    const tokens = [...new Set((emp?.fcmTokens || []).filter(Boolean))];
+    if (!tokens.length) return;
+    await sendPushNotification(tokens, payload);
+  } catch (error) {
+    console.error(`[FCM Employee Error] Failed to send notification to employee ${employeeId}:`, error.message);
   }
 }
 

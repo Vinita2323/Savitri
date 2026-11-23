@@ -308,6 +308,22 @@ export const EmployeeProvider = ({ children }) => {
     }
   };
 
+  // Several tasks at once: one message and one refresh for the whole batch
+  const handleCreateTasksBulk = async (list) => {
+    try {
+      const res = await employeeService.createTasksBulk(list);
+      if (res.created > 0) {
+        showAlert(res.message, res.failed ? 'info' : 'success');
+        fetchTasks();
+        fetchDashboardMetrics();
+      }
+      return res;
+    } catch (err) {
+      showAlert(err.message, 'error');
+      return { success: false, created: 0, failed: list.length, results: [] };
+    }
+  };
+
   const handleUpdateTaskStatus = async (taskId, status, progressPercent) => {
     try {
       const res = await employeeService.updateTaskStatus(taskId, { status, progressPercent });
@@ -429,6 +445,7 @@ export const EmployeeProvider = ({ children }) => {
     handleUpdateEmployee,
     handleToggleStatus,
     handleCreateTask,
+    handleCreateTasksBulk,
     handleUpdateTaskStatus,
     handleAddComment,
     handleSubmitLeave,

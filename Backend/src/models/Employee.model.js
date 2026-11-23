@@ -128,6 +128,17 @@ const employeeSchema = new mongoose.Schema(
       type: { type: String, default: '' },
       documentUrl: { type: String, default: '' },
     },
+    // Optional extra documents uploaded at registration (address proof, certificates, experience letters, ...)
+    additionalDocuments: [
+      {
+        label: { type: String, default: 'Other', trim: true },
+        name: { type: String, default: '', trim: true },
+        url: { type: String, default: '' },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
+    // Web push (FCM) device tokens, used for reminders when the app is in the background
+    fcmTokens: { type: [String], default: [], select: false },
     registrationSource: { type: String, enum: ['self', 'admin'], default: 'admin' },
     // Bumped on password reset / deactivation so older tokens stop working immediately.
     tokenVersion: { type: Number, default: 0 },

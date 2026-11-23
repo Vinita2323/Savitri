@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useEmployee } from '../context/EmployeeContext';
 import { EmployeeHeader } from '../components/EmployeeHeader';
+import { FilePreview } from '../components/FilePreview';
 import {
   Users,
   Search,
@@ -48,6 +49,7 @@ export const EmployeeDirectoryPage = ({ onNavigate }) => {
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedProfileEmp, setSelectedProfileEmp] = useState(null);
+  const [preview, setPreview] = useState(null); // { files, index } : employee document shown inside the page
   const [editingEmp, setEditingEmp] = useState(null);
 
   // New Employee Form
@@ -602,6 +604,23 @@ export const EmployeeDirectoryPage = ({ onNavigate }) => {
                   </div>
                 </div>
               )}
+
+              {(selectedProfileEmp.idProof?.documentUrl || selectedProfileEmp.additionalDocuments?.length > 0) && (() => {
+                const docs = [
+                  ...(selectedProfileEmp.idProof?.documentUrl ? [{ name: `${selectedProfileEmp.idProof.type || 'ID proof'} (ID proof)`, url: selectedProfileEmp.idProof.documentUrl }] : []),
+                  ...(selectedProfileEmp.additionalDocuments || []).map((x) => ({ name: `${x.label || 'Document'} — ${x.name}`, url: x.url })),
+                ];
+                return (
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2" data-testid="dir-docs">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Documents</span>
+                    <div className="flex flex-wrap gap-2">
+                      {docs.map((d, i) => (
+                        <button key={i} type="button" data-testid="dir-doc" onClick={() => setPreview({ files: docs, index: i })} className="text-xs font-bold text-emerald-700 bg-white border border-slate-200 hover:border-emerald-400 rounded-full px-3 py-1.5 cursor-pointer">{d.name}</button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
@@ -709,6 +728,8 @@ export const EmployeeDirectoryPage = ({ onNavigate }) => {
           </div>
         </div>
       )}
+
+      {preview && <FilePreview files={preview.files} index={preview.index} onIndex={(i) => setPreview((q) => ({ ...q, index: i }))} onClose={() => setPreview(null)} />}
     </div>
   );
 };

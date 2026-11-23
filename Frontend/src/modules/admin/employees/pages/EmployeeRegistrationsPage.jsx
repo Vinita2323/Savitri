@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Check, Eye, X } from 'lucide-react';
 import { useEmployee } from '../context/EmployeeContext';
 import { EmployeeHeader } from '../components/EmployeeHeader';
+import { FilePreview } from '../components/FilePreview';
 import { employeeManagementService } from '../../../../services/employeeService';
 import { Badge, Card, Empty, Notice, Spinner, btnDanger, btnGhost, btnPrimary, fmtDate, fmtDateTime, inputCls } from '../../../employee/components/ui';
 
@@ -14,6 +15,7 @@ const Detail = ({ label, value }) => (
 export const EmployeeRegistrationsPage = ({ onNavigate }) => {
   const { activeBrandId } = useEmployee();
   const [status, setStatus] = useState('Pending');
+  const [preview, setPreview] = useState(null); // { files, index } : ID proof shown inside the page
   const [search, setSearch] = useState('');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
@@ -123,10 +125,28 @@ export const EmployeeRegistrationsPage = ({ onNavigate }) => {
               <div className="sm:col-span-3">
                 <p className="text-xs text-slate-500 font-semibold m-0 uppercase tracking-wide">ID proof</p>
                 {view.idProof?.documentUrl ? (
-                  <a href={view.idProof.documentUrl.startsWith('/uploads/') ? `${(import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '') || `${window.location.protocol}//${window.location.hostname}:5000`}${view.idProof.documentUrl}` : view.idProof.documentUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-emerald-700 underline mt-1 inline-block">{view.idProof.type || 'ID proof'} — open document</a>
+                  <button type="button" data-testid="reg-idproof" onClick={() => setPreview({ files: [{ name: view.idProof.type || 'ID proof', url: view.idProof.documentUrl }], index: 0 })} className="text-sm font-bold text-emerald-700 underline mt-1 inline-block bg-transparent border-0 p-0 cursor-pointer">{view.idProof.type || 'ID proof'} — view document</button>
                 ) : (
                   <p className="text-sm font-semibold text-slate-900 m-0 mt-1">Not provided</p>
                 )}
+              </div>
+              <div className="sm:col-span-3" data-testid="reg-view-extra">
+                <p className="text-xs text-slate-500 font-semibold m-0 uppercase tracking-wide">Additional documents</p>
+                {view.additionalDocuments?.length ? (
+                  <div className="flex flex-wrap gap-2 mt-1.5">
+                    {view.additionalDocuments.map((d, i) => (
+                      <button key={i} type="button" data-testid="reg-extra-doc" onClick={() => setPreview({ files: view.additionalDocuments.map((x) => ({ name: `${x.label || 'Document'} — ${x.name}`, url: x.url })), index: i })} className="inline-flex items-center gap-1.5 text-sm font-bold text-emerald-700 bg-white border border-slate-200 hover:border-emerald-400 rounded-full px-3 py-1 cursor-pointer">
+                        {d.label || 'Document'}<span className="font-normal text-slate-400 max-w-[160px] truncate">· {d.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : <p className="text-sm font-semibold text-slate-900 m-0 mt-1">None added</p>}
+              </div>
+              <div className="sm:col-span-3" data-testid="reg-view-emergency">
+                <p className="text-xs text-slate-500 font-semibold m-0 uppercase tracking-wide">Emergency contact</p>
+                {view.emergencyContact?.name ? (
+                  <p className="text-sm font-semibold text-slate-900 m-0 mt-1 break-words">{view.emergencyContact.name}{view.emergencyContact.relationship ? ` (${view.emergencyContact.relationship})` : ''} · <span className="font-mono">{view.emergencyContact.phone}</span></p>
+                ) : <p className="text-sm font-semibold text-slate-900 m-0 mt-1">Not provided</p>}
               </div>
               {view.rejectionReason && <div className="sm:col-span-3"><Detail label="Rejection reason" value={view.rejectionReason} /></div>}
               {view.reviewedBy?.name && <div className="sm:col-span-3"><Detail label="Reviewed by" value={`${view.reviewedBy.name} (${String(view.reviewedBy.role).replace('_', ' ')}) · ${fmtDateTime(view.reviewedBy.at)}`} /></div>}
@@ -154,6 +174,8 @@ export const EmployeeRegistrationsPage = ({ onNavigate }) => {
           </div>
         </div>
       )}
+
+      {preview && <FilePreview files={preview.files} index={preview.index} onIndex={(i) => setPreview((q) => ({ ...q, index: i }))} onClose={() => setPreview(null)} />}
     </div>
   );
 };

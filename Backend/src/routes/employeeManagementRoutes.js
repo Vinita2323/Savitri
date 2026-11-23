@@ -30,6 +30,7 @@ import {
   listAdminAccess,
   updateAdminAccess,
 } from '../controllers/employeeAdminController.js';
+import { adminOverview, adminEmployeeDetail, adminAlerts, adminAlertsRead, getSelfieSettings, saveSelfieSettings } from '../controllers/employeeSelfieController.js';
 
 const router = express.Router();
 
@@ -51,6 +52,14 @@ const superOnly = (req, res, next) =>
     : res.status(403).json({ success: false, message: 'Forbidden: Super Admin only' });
 
 router.get('/overview', getOverview);
+
+// ── live selfie monitoring (Admin: own brand(s); Super Admin: everything) ──
+router.get('/selfies/overview', adminOverview);
+router.get('/selfies/employee/:id', adminEmployeeDetail);
+router.get('/selfies/alerts', adminAlerts);
+router.post('/selfies/alerts/read', adminAlertsRead);
+router.get('/selfies/settings', getSelfieSettings);
+router.put('/selfies/settings', saveSelfieSettings);
 
 router.get('/registrations', listRegistrations);
 router.get('/registrations/:id', getRegistration);

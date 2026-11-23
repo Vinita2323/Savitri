@@ -18,6 +18,7 @@ import {
   ClipboardCheck,
   Settings2,
   Activity,
+  Camera,
 } from 'lucide-react';
 
 export const EmployeeHeader = ({ activeTabName = 'dashboard', onNavigate }) => {
@@ -35,6 +36,7 @@ export const EmployeeHeader = ({ activeTabName = 'dashboard', onNavigate }) => {
     { id: 'attendance', to: `${basePath}/attendance`, label: 'Attendance', icon: Clock },
     { id: 'attendance-report', to: `${basePath}/attendance-report`, label: 'Attendance Reports', icon: CalendarRange },
     { id: 'tasks', to: `${basePath}/tasks`, label: 'Tasks', icon: CheckSquare },
+    { id: 'selfies', to: `${basePath}/selfies`, label: 'Selfie Monitoring', icon: Camera },
     { id: 'review', to: `${basePath}/review`, label: 'Task Review', icon: ClipboardCheck },
     { id: 'leaves', to: `${basePath}/leaves`, label: 'Leaves', icon: CalendarCheck },
     { id: 'shifts', to: `${basePath}/shifts`, label: 'Shifts & Holidays', icon: CalendarDays },

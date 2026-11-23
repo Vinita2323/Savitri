@@ -28,6 +28,7 @@ import {
   CalendarRange,
   Clock,
   ShoppingBag,
+  Camera,
 } from 'lucide-react';
 import { SuperAdminBrandSwitcher } from './SuperAdminBrandSwitcher';
 
@@ -203,6 +204,11 @@ export const SuperAdminSidebar = () => {
           to: '/super-admin/employees/rules',
           label: 'Attendance Rules',
           icon: Clock,
+        },
+        {
+          to: '/super-admin/employees/selfies',
+          label: 'Selfie Monitoring',
+          icon: Camera,
         },
         {
           to: '/super-admin/employees/activity',

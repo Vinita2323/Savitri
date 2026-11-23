@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
-import { Paperclip, Plus, Search, Send, X } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, Paperclip, Plus, Search, Send, X } from 'lucide-react';
 import { useEmployee } from '../context/EmployeeContext';
-import employeeService from '../../../../services/employeeService';
 import { EmployeeHeader } from '../components/EmployeeHeader';
+import { NewTasksModal } from '../components/NewTasksModal';
+import { FilePreview } from '../components/FilePreview';
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
 
@@ -49,6 +50,15 @@ const isOverdue = (t) => !isClosed(t) && t.dueDate && new Date(t.dueDate) < new 
 const statusOf = (t) => (isOverdue(t) ? 'Overdue' : STATUS_LABEL[t.status] || t.status);
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 
+// "on time" / "2 days late" for a finished task
+const lateness = (t) => {
+  if (!t.completedAt || !t.dueDate) return '';
+  const diff = new Date(t.completedAt) - new Date(t.dueDate);
+  if (diff <= 0) return 'on time';
+  const days = Math.ceil(diff / 86400000);
+  return `${days} day${days === 1 ? '' : 's'} late`;
+};
+
 const Pill = ({ label, tone }) => (
   <span className={`inline-flex items-center px-3 py-1 rounded-full text-[13px] font-semibold whitespace-nowrap ${tone}`}>{label}</span>
 );
@@ -57,21 +67,95 @@ const labelCls = 'block text-[13px] font-semibold text-slate-700 mb-1.5';
 const inputCls =
   'w-full px-4 py-3 text-[15px] bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500';
 
+const AVATAR_TONES = ['bg-emerald-100 text-emerald-800', 'bg-blue-100 text-blue-800', 'bg-violet-100 text-violet-800', 'bg-amber-100 text-amber-800', 'bg-rose-100 text-rose-800', 'bg-cyan-100 text-cyan-800'];
+const toneFor = (key) => AVATAR_TONES[[...String(key)].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_TONES.length];
+
+/** Everything one person has been given, in a single card. Click it to open the list of their tasks. */
+const PersonGroup = ({ g, open, onToggle, onOpenTask, onGiveAnother }) => {
+  const st = g.stats;
+  const chips = [
+    st.overdue && { n: st.overdue, label: 'overdue', tone: 'bg-rose-100 text-rose-800' },
+    st.review && { n: st.review, label: 'to review', tone: 'bg-violet-100 text-violet-800' },
+    st.progress && { n: st.progress, label: 'in progress', tone: 'bg-blue-100 text-blue-800' },
+    st.notStarted && { n: st.notStarted, label: 'not started', tone: 'bg-slate-100 text-slate-700' },
+    st.done && { n: st.done, label: 'completed', tone: 'bg-emerald-100 text-emerald-800' },
+    st.rejected && { n: st.rejected, label: 'rejected', tone: 'bg-slate-200 text-slate-700' },
+  ].filter(Boolean);
+  const pctDone = st.total ? Math.round((st.done / st.total) * 100) : 0;
+
+  return (
+    <div data-testid="tg-card" data-person={g.name} className={`bg-white border rounded-2xl overflow-hidden transition ${open ? 'border-emerald-400 shadow-sm' : 'border-slate-200 hover:border-emerald-300'}`}>
+      <button type="button" data-testid="tg-toggle" aria-expanded={open} onClick={onToggle} className="w-full text-left p-5 flex items-center gap-4 bg-white hover:bg-slate-50/70 border-0 cursor-pointer">
+        <span className={`w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-[18px] font-extrabold ${toneFor(g.key)}`}>{(g.name || '?').trim().charAt(0).toUpperCase()}</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[17px] font-extrabold text-slate-900 m-0 truncate">{g.name}</p>
+          <p className="text-[14px] text-slate-500 mt-0.5 mb-0 truncate">{[g.designation, `${st.total} task${st.total === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}</p>
+          <div className="flex flex-wrap gap-2 mt-2.5">
+            {chips.map((c) => <span key={c.label} className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12.5px] font-semibold ${c.tone}`}>{c.n} {c.label}</span>)}
+          </div>
+        </div>
+        <div className="hidden sm:block w-44 shrink-0">
+          <p className="text-[13px] font-semibold text-slate-600 m-0 mb-1.5 text-right">{st.done} of {st.total} done</p>
+          <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pctDone}%` }} /></div>
+        </div>
+        <ChevronDown className={`w-5 h-5 text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div data-testid="tg-tasks" className="border-t border-slate-100 bg-slate-50/50">
+          <ul className="m-0 p-0 list-none divide-y divide-slate-100">
+            {g.tasks.map((t) => {
+              const label = statusOf(t);
+              const others = (t.assignedEmployees || []).filter((a) => String(a.employee || a.name) !== g.key).map((a) => a.name);
+              return (
+                <li key={t._id}>
+                  <button type="button" data-testid="tg-task" onClick={() => onOpenTask(t._id)} className="w-full text-left px-5 sm:px-7 py-4 bg-transparent hover:bg-white border-0 cursor-pointer">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[16px] font-bold text-slate-900 m-0 break-words">{t.title}</p>
+                        <p className="text-[14px] text-slate-500 mt-1 mb-0">
+                          Given <strong className="font-semibold text-slate-700">{fmtDate(t.startDate || t.createdAt)}</strong> · Due{' '}
+                          <strong className={`font-semibold ${isOverdue(t) ? 'text-rose-600' : 'text-slate-700'}`}>{fmtDate(t.dueDate)}</strong>
+                          {t.completedAt ? <> · Completed <strong className="font-semibold text-emerald-700">{fmtDate(t.completedAt)}</strong> <span className="text-slate-400">({lateness(t)})</span></> : null}
+                          {others.length > 0 ? <> · <span className="text-slate-400">Shared with {others.join(', ')}</span></> : null}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Pill label={`${t.priority} priority`} tone={PRIORITY_TONE[t.priority] || PRIORITY_TONE.Medium} />
+                        <Pill label={label} tone={STATUS_TONE[label] || STATUS_TONE['Not started']} />
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="flex-1 h-2 bg-slate-200/70 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: `${t.progressPercent || 0}%` }} /></div>
+                      <span className="text-[14px] font-semibold text-slate-600 w-11 text-right">{t.progressPercent || 0}%</span>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          {g.employeeId && (
+            <div className="px-5 sm:px-7 py-3 border-t border-slate-100 bg-white">
+              <button type="button" data-testid="tg-give" onClick={() => onGiveAnother(g.employeeId)} className="inline-flex items-center gap-2 text-[14px] font-bold text-emerald-700 hover:text-emerald-800 bg-transparent border-0 cursor-pointer p-0"><Plus className="w-4 h-4" /> Give {g.name} another task</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const EmployeeTasksPage = ({ onNavigate }) => {
-  const { tasks, employees, allEmployees, activeBrandId, handleCreateTask, handleUpdateTaskStatus, handleAddComment } = useEmployee();
+  const { tasks, employees, allEmployees, activeBrandId, handleCreateTasksBulk, handleUpdateTaskStatus, handleAddComment } = useEmployee();
 
   const [filter, setFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [prefill, setPrefill] = useState([]); // people to pre-select when the form opens
   const [selectedId, setSelectedId] = useState(null);
   const [comment, setComment] = useState('');
-
-  // New task form
-  const blank = { title: '', description: '', employeeId: '', department: '', priority: 'Medium', dueDate: '', attachments: [] };
-  const [form, setForm] = useState(blank);
-  const [formError, setFormError] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [openGroups, setOpenGroups] = useState({}); // person key -> open?
+  const [preview, setPreview] = useState(null); // { files, index } : attachment shown inside the page
 
   // Only real employees from the database
   const staff = useMemo(() => {
@@ -111,53 +195,39 @@ export const EmployeeTasksPage = ({ onNavigate }) => {
       .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
   }, [inScope, filter, search]);
 
-  const selected = (tasks || []).find((t) => t._id === selectedId) || null;
-
-  const submitTask = async (e) => {
-    e.preventDefault();
-    setFormError('');
-    if (!form.title.trim()) return setFormError('Please enter a task name.');
-    if (!form.dueDate) return setFormError('Please choose a due date.');
-    if (!form.employeeId && !form.department) return setFormError('Choose who this task is for: one employee or a whole department.');
-
-    const person = staff.find((s) => s._id === form.employeeId);
-    const brandId =
-      activeBrandId && activeBrandId !== 'ALL' ? activeBrandId : person?.brandId || staff.find((s) => s.department === form.department)?.brandId || '';
-    if (!brandId) return setFormError('Could not work out the brand for this task. Pick an employee.');
-
-    setSaving(true);
-    const res = await handleCreateTask({
-      title: form.title.trim(),
-      description: form.description,
-      brandId,
-      priority: form.priority,
-      dueDate: form.dueDate,
-      assignedEmployeeIds: form.employeeId ? [form.employeeId] : [],
-      assignedDepartment: form.department || undefined,
-      attachments: form.attachments,
+  // One entry per person; a task shared by several people appears under each of them
+  const groups = useMemo(() => {
+    const map = new Map();
+    visible.forEach((t) => {
+      const people = t.assignedEmployees?.length ? t.assignedEmployees : [{ employee: '', name: 'Not assigned yet' }];
+      people.forEach((a) => {
+        const key = String(a.employee || a.name || 'none');
+        if (!map.has(key)) map.set(key, { key, name: a.name || 'Unknown', designation: a.designation || '', employeeId: a.employee ? String(a.employee) : '', tasks: [] });
+        map.get(key).tasks.push(t);
+      });
     });
-    setSaving(false);
-    if (res?.success) {
-      setCreateOpen(false);
-      setForm(blank);
-    }
-  };
+    return [...map.values()]
+      .map((g) => {
+        // Every task is counted exactly once (an overdue task counts as overdue only), so the chips add up to the total
+        const stats = { total: g.tasks.length, overdue: 0, review: 0, progress: 0, done: 0, notStarted: 0, rejected: 0 };
+        g.tasks.forEach((t) => {
+          if (t.status === 'Completed') stats.done += 1;
+          else if (isClosed(t)) stats.rejected += 1;
+          else if (isOverdue(t)) stats.overdue += 1;
+          else if (t.status === 'Submitted for Review') stats.review += 1;
+          else if (['In Progress', 'Blocked'].includes(t.status)) stats.progress += 1;
+          else stats.notStarted += 1;
+        });
+        return { ...g, stats };
+      })
+      .sort((a, b) => b.stats.overdue - a.stats.overdue || a.name.localeCompare(b.name));
+  }, [visible]);
+  // A new filter or search starts from the default (a lone person opens by itself, otherwise cards are closed)
+  useEffect(() => { setOpenGroups({}); }, [filter, search]);
+  const isGroupOpen = (key) => (key in openGroups ? openGroups[key] : groups.length === 1 || Boolean(search.trim()));
+  const setAllGroups = (value) => setOpenGroups(Object.fromEntries(groups.map((g) => [g.key, value])));
 
-  const onFile = async (e) => {
-    const f = e.target.files?.[0];
-    e.target.value = '';
-    if (!f) return;
-    setUploading(true);
-    setFormError('');
-    try {
-      const up = await employeeService.uploadTaskFile(f);
-      setForm((cur) => ({ ...cur, attachments: [...cur.attachments, up] }));
-    } catch (err) {
-      setFormError(err.message);
-    } finally {
-      setUploading(false);
-    }
-  };
+  const selected = (tasks || []).find((t) => t._id === selectedId) || null;
 
   const postComment = async (e) => {
     e.preventDefault();
@@ -176,8 +246,8 @@ export const EmployeeTasksPage = ({ onNavigate }) => {
             <h2 className="text-xl font-extrabold text-slate-900 m-0">Tasks</h2>
             <p className="text-[15px] text-slate-500 mt-1 mb-0">Give work to your team and follow its progress.</p>
           </div>
-          <button type="button" onClick={() => { setForm(blank); setFormError(''); setCreateOpen(true); }} className="inline-flex items-center gap-2 px-5 py-3 text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl cursor-pointer border-0">
-            <Plus className="w-5 h-5" /> New task
+          <button type="button" onClick={() => { setPrefill([]); setCreateOpen(true); }} className="inline-flex items-center gap-2 px-5 py-3 text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl cursor-pointer border-0">
+            <Plus className="w-5 h-5" /> New tasks
           </button>
         </div>
 
@@ -214,104 +284,40 @@ export const EmployeeTasksPage = ({ onNavigate }) => {
           </div>
         ) : (
           <div className="space-y-3">
-            {visible.map((t) => {
-              const label = statusOf(t);
-              return (
-                <button key={t._id} type="button" onClick={() => setSelectedId(t._id)} className="w-full text-left bg-white border border-slate-200 rounded-2xl p-5 hover:border-emerald-400 hover:shadow-sm transition cursor-pointer">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[16px] font-bold text-slate-900 m-0 break-words">{t.title}</p>
-                      <p className="text-[15px] text-slate-500 mt-1 mb-0">
-                        For <strong className="text-slate-700 font-semibold">{t.assignedEmployees?.map((a) => a.name).join(', ') || 'nobody yet'}</strong> · Due{' '}
-                        <strong className={`font-semibold ${isOverdue(t) ? 'text-rose-600' : 'text-slate-700'}`}>{fmtDate(t.dueDate)}</strong>
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Pill label={`${t.priority} priority`} tone={PRIORITY_TONE[t.priority] || PRIORITY_TONE.Medium} />
-                      <Pill label={label} tone={STATUS_TONE[label] || STATUS_TONE['Not started']} />
-                    </div>
-                  </div>
-                  <div className="mt-4 flex items-center gap-3">
-                    <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: `${t.progressPercent || 0}%` }} /></div>
-                    <span className="text-[15px] font-semibold text-slate-600 w-12 text-right">{t.progressPercent || 0}%</span>
-                  </div>
-                </button>
-              );
-            })}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p data-testid="tg-summary" className="m-0 text-[14px] font-semibold text-slate-500">{groups.length} {groups.length === 1 ? 'person' : 'people'} · {visible.length} task{visible.length === 1 ? '' : 's'}</p>
+              {groups.length > 1 && (
+                <div className="flex gap-4">
+                  <button type="button" data-testid="tg-expand-all" onClick={() => setAllGroups(true)} className="text-[14px] font-semibold text-emerald-700 hover:underline bg-transparent border-0 cursor-pointer p-0">Open all</button>
+                  <button type="button" data-testid="tg-collapse-all" onClick={() => setAllGroups(false)} className="text-[14px] font-semibold text-slate-500 hover:underline bg-transparent border-0 cursor-pointer p-0">Close all</button>
+                </div>
+              )}
+            </div>
+            {groups.map((g) => (
+              <PersonGroup
+                key={g.key}
+                g={g}
+                open={isGroupOpen(g.key)}
+                onToggle={() => setOpenGroups((o) => ({ ...o, [g.key]: !isGroupOpen(g.key) }))}
+                onOpenTask={setSelectedId}
+                onGiveAnother={(id) => { setPrefill([id]); setCreateOpen(true); }}
+              />
+            ))}
           </div>
         )}
       </div>
 
-      {/* ── New task ── */}
+      {preview && <FilePreview files={preview.files} index={preview.index} onIndex={(i) => setPreview((p) => ({ ...p, index: i }))} onClose={() => setPreview(null)} />}
+
+      {/* ── New tasks (one or many) ── */}
       {createOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4" onClick={() => setCreateOpen(false)}>
-          <form onSubmit={submitTask} className="bg-white rounded-2xl w-full max-w-xl max-h-[92vh] overflow-y-auto p-7 space-y-5" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-extrabold text-slate-900 m-0">New task</h3>
-                <p className="text-[15px] text-slate-500 mt-1 mb-0">The employee is notified straight away.</p>
-              </div>
-              <button type="button" onClick={() => setCreateOpen(false)} className="p-2 rounded-lg hover:bg-slate-100 cursor-pointer bg-transparent border-0" aria-label="Close"><X className="w-5 h-5 text-slate-500" /></button>
-            </div>
-
-            <div>
-              <label className={labelCls}>What needs to be done? *</label>
-              <input className={inputCls} value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Count the stock on shelf B" autoFocus />
-            </div>
-            <div>
-              <label className={labelCls}>More details</label>
-              <textarea className={inputCls} rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Instructions the employee should follow (optional)" />
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelCls}>Give it to *</label>
-                <select className={inputCls} value={form.employeeId} onChange={(e) => setForm((f) => ({ ...f, employeeId: e.target.value, department: e.target.value ? '' : f.department }))}>
-                  <option value="">Choose an employee</option>
-                  {staff.map((s) => <option key={s._id} value={s._id}>{s.fullName} — {s.designation}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>…or a whole department</label>
-                <select className={inputCls} value={form.department} disabled={Boolean(form.employeeId)} onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}>
-                  <option value="">No department</option>
-                  {departments.map((d) => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>Due date *</label>
-                <input type="date" className={inputCls} value={form.dueDate} onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))} />
-              </div>
-              <div>
-                <label className={labelCls}>How urgent?</label>
-                <select className={inputCls} value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))}>
-                  {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className={labelCls}>Attach a file (optional)</label>
-              <input type="file" accept="image/*,.pdf" disabled={uploading} onChange={onFile} className="text-[15px]" />
-              {uploading && <span className="text-[13px] text-slate-500 ml-2">Uploading…</span>}
-              <div className="flex flex-wrap gap-2 mt-2">
-                {form.attachments.map((a, i) => (
-                  <span key={i} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 text-[13px] font-semibold text-slate-700">
-                    <Paperclip className="w-4 h-4" />{a.name}
-                    <button type="button" className="text-slate-400 hover:text-rose-600 cursor-pointer bg-transparent border-0 text-[16px] leading-none" onClick={() => setForm((f) => ({ ...f, attachments: f.attachments.filter((_, j) => j !== i) }))}>×</button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {formError && <div className="px-4 py-3 rounded-xl bg-rose-50 border border-rose-200 text-[15px] font-medium text-rose-800">{formError}</div>}
-
-            <div className="flex justify-end gap-3 pt-1">
-              <button type="button" onClick={() => setCreateOpen(false)} className="px-5 py-3 text-[15px] font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 cursor-pointer">Cancel</button>
-              <button type="submit" disabled={saving || uploading} className="px-6 py-3 text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl disabled:opacity-60 cursor-pointer border-0">{saving ? 'Saving…' : 'Create task'}</button>
-            </div>
-          </form>
-        </div>
+        <NewTasksModal
+          staff={staff}
+          initialPeople={prefill}
+          activeBrandId={activeBrandId}
+          onCreate={handleCreateTasksBulk}
+          onClose={() => setCreateOpen(false)}
+        />
       )}
 
       {/* ── Task details ── */}
@@ -333,11 +339,15 @@ export const EmployeeTasksPage = ({ onNavigate }) => {
 
             {selected.description && <p className="text-[15px] text-slate-700 m-0 whitespace-pre-wrap break-words">{selected.description}</p>}
 
-            <div className="grid sm:grid-cols-3 gap-5 text-[15px]">
+            <div data-testid="td-dates" className="grid grid-cols-2 sm:grid-cols-4 gap-5 text-[15px]">
               <div><p className="text-[13px] font-semibold text-slate-500 m-0">For</p><p className="font-semibold text-slate-900 mt-1 mb-0">{selected.assignedEmployees?.map((a) => a.name).join(', ') || 'Nobody yet'}</p></div>
-              <div><p className="text-[13px] font-semibold text-slate-500 m-0">Due date</p><p className={`font-semibold mt-1 mb-0 ${isOverdue(selected) ? 'text-rose-600' : 'text-slate-900'}`}>{fmtDate(selected.dueDate)}</p></div>
+              <div><p className="text-[13px] font-semibold text-slate-500 m-0">Task given on</p><p className="font-semibold text-slate-900 mt-1 mb-0">{fmtDate(selected.startDate || selected.createdAt)}</p></div>
+              <div><p className="text-[13px] font-semibold text-slate-500 m-0">Complete by</p><p className={`font-semibold mt-1 mb-0 ${isOverdue(selected) ? 'text-rose-600' : 'text-slate-900'}`}>{fmtDate(selected.dueDate)}</p></div>
               <div><p className="text-[13px] font-semibold text-slate-500 m-0">Progress</p><p className="font-semibold text-slate-900 mt-1 mb-0">{selected.progressPercent || 0}%</p></div>
             </div>
+            {selected.completedAt && (
+              <p data-testid="td-completed" className="m-0 text-[15px] font-semibold text-emerald-700">Completed on {fmtDate(selected.completedAt)} <span className={lateness(selected) === 'on time' ? 'text-emerald-600' : 'text-rose-600'}>({lateness(selected)})</span></p>
+            )}
 
             {selected.status === 'Submitted for Review' && (
               <div className="bg-violet-50 border border-violet-200 rounded-xl px-5 py-4 flex flex-wrap items-center justify-between gap-3">
@@ -346,12 +356,25 @@ export const EmployeeTasksPage = ({ onNavigate }) => {
               </div>
             )}
 
+            {selected.assignedEmployees?.length > 0 && (
+              <div>
+                <button
+                  type="button"
+                  data-testid="td-give-another"
+                  onClick={() => { setPrefill(selected.assignedEmployees.map((a) => String(a.employee))); setSelectedId(null); setCreateOpen(true); }}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 text-[15px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" /> Give {selected.assignedEmployees.length === 1 ? selected.assignedEmployees[0].name : 'these people'} another task
+                </button>
+              </div>
+            )}
+
             {selected.attachments?.length > 0 && (
               <div>
                 <p className="text-[13px] font-semibold text-slate-500 m-0 mb-2">Files</p>
                 <div className="flex flex-wrap gap-2">
                   {selected.attachments.map((a, i) => (
-                    <a key={i} href={a.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 text-[15px] font-semibold text-emerald-700"><Paperclip className="w-4 h-4" />{a.name}</a>
+                    <button key={i} type="button" data-testid="td-file" onClick={() => setPreview({ files: selected.attachments, index: i })} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-[15px] font-semibold text-emerald-700 border-0 cursor-pointer"><Paperclip className="w-4 h-4" />{a.name}</button>
                   ))}
                 </div>
               </div>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Bell, CalendarCheck, CalendarDays, CheckSquare, LogIn, LogOut } from 'lucide-react';
 import employeePortalService from '../../../services/employeePortalService';
 import { useEmployeeAuth } from '../context/EmployeeAuthContext';
+import { SelfieSummaryCard } from '../components/SelfieWidgets';
 import { Badge, Card, Empty, Notice, Spinner, fmtClock, fmtDate, fmtDateTime, fmtDuration, fmtShort, fmtTime } from '../components/ui';
 
 const Tile = ({ label, value, tone, to }) => {
@@ -55,6 +56,8 @@ export default function PortalDashboard() {
       </div>
 
       {error && <Notice type="error">{error}</Notice>}
+
+      <SelfieSummaryCard />
 
       {/* Today's attendance: the main action, big and thumb-friendly */}
       <section className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-5 shadow-xs">

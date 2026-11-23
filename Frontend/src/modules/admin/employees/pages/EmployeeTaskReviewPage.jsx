@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Paperclip } from 'lucide-react';
 import { useEmployee } from '../context/EmployeeContext';
 import { EmployeeHeader } from '../components/EmployeeHeader';
+import { FilePreview } from '../components/FilePreview';
 import employeeService, { employeeManagementService } from '../../../../services/employeeService';
 import { Badge, Card, Empty, Notice, Spinner, btnDanger, btnGhost, btnPrimary, fmtDate, fmtDateTime, inputCls } from '../../../employee/components/ui';
 
@@ -21,6 +22,7 @@ export const EmployeeTaskReviewPage = ({ onNavigate }) => {
   const [busy, setBusy] = useState(false);
   const [dlg, setDlg] = useState(null); // { task, decision }
   const [notes, setNotes] = useState('');
+  const [preview, setPreview] = useState(null); // { files, index } : attachment shown inside the page
 
   const load = useCallback(async () => {
     setError('');
@@ -77,7 +79,7 @@ export const EmployeeTaskReviewPage = ({ onNavigate }) => {
                     <div className="mt-4 bg-slate-50 rounded-xl p-4 text-[15px]">
                       <p className="m-0 text-[14px] font-bold text-slate-500">SUBMISSION {sub && `· ${fmtDateTime(sub.submittedAt)} · ${sub.employeeName}`}</p>
                       <p className="m-0 mt-1.5 text-slate-800 whitespace-pre-wrap break-words">{sub?.notes || t.completionNotes || 'No notes provided.'}</p>
-                      {sub?.attachments?.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{sub.attachments.map((a, i) => <a key={i} href={a.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[14px] font-bold text-emerald-700 bg-white border border-slate-200 rounded-full px-3 py-1"><Paperclip className="w-3 h-3" />{a.name}</a>)}</div>}
+                      {sub?.attachments?.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{sub.attachments.map((a, i) => <button key={i} type="button" data-testid="rv-file" onClick={() => setPreview({ files: sub.attachments, index: i })} className="inline-flex items-center gap-1.5 text-[14px] font-bold text-emerald-700 bg-white border border-slate-200 hover:border-emerald-400 rounded-full px-3 py-1 cursor-pointer"><Paperclip className="w-3 h-3" />{a.name}</button>)}</div>}
                       <div className="flex flex-wrap gap-2 mt-4">
                         <button type="button" className={btnPrimary} onClick={() => { setDlg({ task: t, decision: 'approve' }); setNotes(''); }}>Approve</button>
                         <button type="button" className={btnGhost} onClick={() => { setDlg({ task: t, decision: 'changes' }); setNotes(''); }}>Request changes</button>
@@ -102,6 +104,8 @@ export const EmployeeTaskReviewPage = ({ onNavigate }) => {
           </div>
         ))}
       </div>
+
+      {preview && <FilePreview files={preview.files} index={preview.index} onIndex={(i) => setPreview((p) => ({ ...p, index: i }))} onClose={() => setPreview(null)} />}
 
       {dlg && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4" onClick={() => setDlg(null)}>

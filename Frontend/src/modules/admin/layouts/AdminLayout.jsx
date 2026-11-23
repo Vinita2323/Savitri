@@ -99,6 +99,7 @@ const EmployeeRegistrationsPage = lazy(() => import('../employees/pages/Employee
 const EmployeeAttendanceReportPage = lazy(() => import('../employees/pages/EmployeeAttendanceReportPage'));
 const EmployeeTaskReviewPage = lazy(() => import('../employees/pages/EmployeeTaskReviewPage'));
 const EmployeeRulesPage = lazy(() => import('../employees/pages/EmployeeRulesPage'));
+const EmployeeSelfieMonitoringPage = lazy(() => import('../employees/pages/EmployeeSelfieMonitoringPage'));
 const EmployeeActivityPage = lazy(() => import('../employees/pages/EmployeeActivityPage'));
 
 export const AdminLayout = () => {
@@ -395,6 +396,9 @@ export const AdminLayout = () => {
       case 'employee_rules':
       case 'employees/rules':
         return <EmployeeRulesPage onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'employee_selfies':
+      case 'employees/selfies':
+        return <EmployeeSelfieMonitoringPage onNavigate={(tab) => setActiveTab(tab)} />;
       case 'employee_activity':
       case 'employees/activity':
         return <EmployeeActivityPage onNavigate={(tab) => setActiveTab(tab)} />;

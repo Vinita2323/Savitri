@@ -5,3 +5,5 @@ node_modules/
 *.log
 uploads/
 config/firebase-service-account.json
+
+private_uploads/

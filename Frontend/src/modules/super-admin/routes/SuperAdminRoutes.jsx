@@ -65,6 +65,7 @@ const EmployeeRegistrationsPage = lazy(() => import('../../admin/employees/pages
 const EmployeeAttendanceReportPage = lazy(() => import('../../admin/employees/pages/EmployeeAttendanceReportPage'));
 const EmployeeTaskReviewPage = lazy(() => import('../../admin/employees/pages/EmployeeTaskReviewPage'));
 const EmployeeRulesPage = lazy(() => import('../../admin/employees/pages/EmployeeRulesPage'));
+const EmployeeSelfieMonitoringPage = lazy(() => import('../../admin/employees/pages/EmployeeSelfieMonitoringPage'));
 const EmployeeActivityPage = lazy(() => import('../../admin/employees/pages/EmployeeActivityPage'));
 
 const SuperAdminEmployeeWrapper = ({ Component, currentTab }) => {
@@ -230,6 +231,7 @@ const SuperAdminRoutesContent = () => {
           <Route path="/employees/attendance-report" element={<SuperAdminEmployeeWrapper Component={EmployeeAttendanceReportPage} currentTab="attendance-report" />} />
           <Route path="/employees/review" element={<SuperAdminEmployeeWrapper Component={EmployeeTaskReviewPage} currentTab="review" />} />
           <Route path="/employees/rules" element={<SuperAdminEmployeeWrapper Component={EmployeeRulesPage} currentTab="rules" />} />
+          <Route path="/employees/selfies" element={<SuperAdminEmployeeWrapper Component={EmployeeSelfieMonitoringPage} currentTab="selfies" />} />
           <Route path="/employees/activity" element={<SuperAdminEmployeeWrapper Component={EmployeeActivityPage} currentTab="activity" />} />
 
           <Route path="/captain-settlements" element={<Navigate to="/super-admin/dashboard" replace />} />

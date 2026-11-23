@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Bell, CalendarCheck, CalendarDays, CheckSquare, Clock, LayoutDashboard, LogOut, User } from 'lucide-react';
+import { Bell, CalendarCheck, CalendarDays, Camera, CheckSquare, Clock, LayoutDashboard, LogOut, User } from 'lucide-react';
 import { useEmployeeAuth } from '../context/EmployeeAuthContext';
 import employeePortalService from '../../../services/employeePortalService';
+import { SelfieProvider, useSelfie } from '../context/SelfieContext';
+import { SelfieChecking, SelfieGate, SelfieReminderBanner } from '../components/SelfieWidgets';
 
 // Desktop sidebar shows everything; the phone's bottom bar keeps the five everyday tabs
 // (notifications live behind the bell, the profile behind the avatar).
 const SIDEBAR_NAV = [
   { to: '/employee/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/employee/attendance', label: 'Attendance', icon: Clock },
+  { to: '/employee/selfie', label: 'Selfie Verification', icon: Camera },
   { to: '/employee/tasks', label: 'My Tasks', icon: CheckSquare },
   { to: '/employee/leaves', label: 'Leave', icon: CalendarCheck },
   { to: '/employee/holidays', label: 'Holidays', icon: CalendarDays },
@@ -24,9 +27,21 @@ const TABS = [
 ];
 
 export default function EmployeeLayout() {
+  return (
+    <SelfieProvider>
+      <EmployeeLayoutInner />
+    </SelfieProvider>
+  );
+}
+
+function EmployeeLayoutInner() {
   const { employee, logout } = useEmployeeAuth();
   const navigate = useNavigate();
   const [unread, setUnread] = useState(0);
+  const { status: selfieStatus, loaded: selfieLoaded, error: selfieError, refresh: refreshSelfie, needsAction } = useSelfie();
+  // The app stays closed until today's login selfie exists (or the server says none is needed)
+  const gateOpen = selfieLoaded && selfieStatus?.required && selfieStatus?.loginRequired;
+  const checking = !selfieLoaded || (selfieError && !selfieStatus);
 
   useEffect(() => {
     let alive = true;
@@ -103,6 +118,10 @@ export default function EmployeeLayout() {
             </div>
           </div>
           <div className="flex-1" />
+          <NavLink to="/employee/selfie" data-testid="header-selfie" className="relative w-11 h-11 rounded-full hover:bg-slate-100 text-slate-600 flex items-center justify-center" aria-label="Selfie verification">
+            <Camera className="w-6 h-6" />
+            {needsAction && <span data-testid="header-selfie-dot" className="absolute top-2 right-2 w-3 h-3 rounded-full bg-rose-500 border-2 border-white" />}
+          </NavLink>
           <NavLink to="/employee/notifications" className="relative w-11 h-11 -mr-1 rounded-full hover:bg-slate-100 text-slate-600 flex items-center justify-center" aria-label="Notifications">
             <Bell className="w-6 h-6" />
             {unread > 0 && <span className="absolute top-2 right-2 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">{unread > 9 ? '9+' : unread}</span>}
@@ -117,8 +136,15 @@ export default function EmployeeLayout() {
         </header>
 
         <main className="flex-1 w-full max-w-6xl mx-auto px-4 pt-4 sm:p-6 pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] lg:pb-6">
-          <Outlet />
+          {!checking && !gateOpen && (
+            <>
+              <SelfieReminderBanner />
+              <Outlet />
+            </>
+          )}
         </main>
+        {checking && <SelfieChecking error={selfieError} onRetry={refreshSelfie} onLogout={handleLogout} />}
+        {gateOpen && <SelfieGate onLogout={handleLogout} />}
 
         {/* Phone bottom tab bar */}
         <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom,0px)]" aria-label="Main">

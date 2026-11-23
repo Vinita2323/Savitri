@@ -76,6 +76,25 @@ export const employeePortalService = {
   markRead: (id) => unwrap(API.post(`${P}/notifications/${id}/read`)),
   markAllRead: () => unwrap(API.post(`${P}/notifications/read-all`)),
 
+  // Live selfie verification (the photo comes from the camera screen; there is no gallery upload)
+  selfieStatus: () => unwrap(API.get(`${P}/selfie/status`), 'Could not check your selfie status'),
+  selfieHistory: (params = {}) => unwrap(API.get(`${P}/selfie/my-history`, { params }), 'Could not load your selfies'),
+  submitSelfie: (type, blob, meta = {}, onProgress) => {
+    const fd = new FormData();
+    fd.append('selfie', blob, 'selfie.jpg');
+    if (meta.capturedAt) fd.append('capturedAt', meta.capturedAt);
+    fd.append('deviceInfo', JSON.stringify(meta.deviceInfo || {}));
+    return unwrap(
+      API.post(`${P}/selfie/${type === 'LOGIN' ? 'login' : 'submit'}`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 90000,
+        onUploadProgress: (e) => onProgress?.(e.total ? Math.min(100, Math.round((e.loaded / e.total) * 100)) : 0),
+      }),
+      'Could not submit your selfie'
+    );
+  },
+  registerPush: (token) => unwrap(API.post(`${P}/push-token`, { token }), 'Could not turn on reminders'),
+
   /** ID proof (image or PDF) at registration, through the same public upload used by seller/captain registration. */
   uploadIdProof: async (file) => {
     const fd = new FormData();

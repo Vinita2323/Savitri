@@ -11,6 +11,10 @@ const employeeSettingsSchema = new mongoose.Schema(
     halfDayMinutes: { type: Number, default: 240, min: 0, max: 1440 },
     weeklyOffs: { type: [String], default: ['Sunday'] },
     timezone: { type: String, default: 'Asia/Kolkata' },
+    // Live selfie verification
+    selfieEnabled: { type: Boolean, default: true },
+    selfieIntervalMinutes: { type: Number, default: 120, min: 30, max: 480 },
+    selfieGraceMinutes: { type: Number, default: 15, min: 1, max: 120 },
     updatedBy: { name: { type: String, default: '' }, role: { type: String, default: '' } },
   },
   { timestamps: true }

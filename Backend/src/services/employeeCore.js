@@ -74,6 +74,9 @@ export const DEFAULT_RULES = {
   halfDayMinutes: 240,
   weeklyOffs: ['Sunday'],
   timezone: BUSINESS_TZ,
+  selfieEnabled: true,
+  selfieIntervalMinutes: 120,
+  selfieGraceMinutes: 15,
 };
 
 /** Brand rules override GLOBAL rules, which override the built-in defaults. */

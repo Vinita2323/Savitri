@@ -14,6 +14,7 @@ const PortalLeaves = lazy(() => import('../pages/PortalLeaves'));
 const PortalHolidays = lazy(() => import('../pages/PortalHolidays'));
 const PortalNotifications = lazy(() => import('../pages/PortalNotifications'));
 const PortalProfile = lazy(() => import('../pages/PortalProfile'));
+const PortalSelfie = lazy(() => import('../pages/PortalSelfie'));
 
 /** Employee-only guard: an unauthenticated visitor is sent to the employee login. Other roles' tokens are never used here. */
 const EmployeeProtected = () => {
@@ -44,6 +45,7 @@ export default function EmployeeRoutes() {
               <Route path="holidays" element={<PortalHolidays />} />
               <Route path="notifications" element={<PortalNotifications />} />
               <Route path="profile" element={<PortalProfile />} />
+              <Route path="selfie" element={<PortalSelfie />} />
               <Route index element={<Navigate to="dashboard" replace />} />
             </Route>
           </Route>

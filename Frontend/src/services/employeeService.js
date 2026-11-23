@@ -31,6 +31,8 @@ export const employeeService = {
   // 3. Tasks
   getTasks: (params = {}) => unwrap(API.get('/employees/tasks/all', { params }), 'Could not load tasks'),
   createTask: (data) => unwrap(API.post('/employees/tasks', data), 'Could not create task'),
+  /** Many tasks in one go. Each task succeeds or fails on its own; see results[] in the answer. */
+  createTasksBulk: (tasks) => unwrap(API.post('/employees/tasks/bulk', { tasks }), 'Could not create the tasks'),
   updateTask: (id, data) => unwrap(API.put(`/employees/tasks/${id}`, data), 'Could not update task'),
   updateTaskStatus: (id, payload) => unwrap(API.patch(`/employees/tasks/${id}/status`, payload), 'Could not update task'),
   addTaskComment: (id, text) => unwrap(API.post(`/employees/tasks/${id}/comments`, { text }), 'Could not add comment'),
@@ -102,6 +104,14 @@ export const employeeManagementService = {
   decideLeave: (id, status, notes = '') => unwrap(API.post(`/employee-management/leaves/${id}/decision`, { status, notes }), 'Could not save decision'),
 
   activity: (params = {}) => unwrap(API.get('/employee-management/activity', { params }), 'Could not load activity'),
+
+  // Live selfie verification monitoring
+  selfieOverview: (params = {}) => unwrap(API.get('/employee-management/selfies/overview', { params }), 'Could not load selfie monitoring'),
+  selfieEmployee: (id, params = {}) => unwrap(API.get(`/employee-management/selfies/employee/${id}`, { params }), 'Could not load the selfies of this employee'),
+  selfieAlerts: (params = {}) => unwrap(API.get('/employee-management/selfies/alerts', { params }), 'Could not load alerts'),
+  selfieAlertsRead: () => unwrap(API.post('/employee-management/selfies/alerts/read'), 'Could not mark alerts as read'),
+  selfieSettings: (params = {}) => unwrap(API.get('/employee-management/selfies/settings', { params }), 'Could not load selfie settings'),
+  saveSelfieSettings: (body) => unwrap(API.put('/employee-management/selfies/settings', body), 'Could not save selfie settings'),
 
   listAdminAccess: () => unwrap(API.get('/employee-management/admin-access'), 'Could not load admins'),
   saveAdminAccess: (id, authorizedBrands) => unwrap(API.put(`/employee-management/admin-access/${id}`, { authorizedBrands }), 'Could not save access'),

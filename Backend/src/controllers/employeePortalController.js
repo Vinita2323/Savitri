@@ -10,6 +10,8 @@ import EmployeeTaskSubmission from '../models/EmployeeTaskSubmission.model.js';
 import LeaveRequest from '../models/LeaveRequest.model.js';
 import EmployeeDepartment from '../models/EmployeeDepartment.model.js';
 import EmployeeNotification from '../models/EmployeeNotification.model.js';
+import { parseTaskDate } from '../utils/taskDates.js';
+import { cancelPendingOnCheckout } from '../services/employeeSelfieService.js';
 import Brand from '../models/Brand.model.js';
 import Holiday from '../models/Holiday.model.js';
 import Admin from '../models/Admin.model.js';
@@ -49,6 +51,38 @@ const ID_PROOF_TYPES = ['Aadhaar Card', 'PAN Card', 'Driving Licence', 'Voter ID
 const safeUrl = (v) => {
   const s = str(v, 600);
   return /^(https?:\/\/|\/uploads\/)/i.test(s) ? s : '';
+};
+
+// ── optional registration extras: more documents + one emergency contact ──
+const MAX_EXTRA_DOCS = 5;
+const DOC_LABELS = ['Address proof', 'Educational certificate', 'Experience letter', 'Bank passbook / cancelled cheque', 'Passport-size photograph', 'Other'];
+
+const parseAdditionalDocuments = (raw) => {
+  if (raw === undefined || raw === null || raw === '') return { value: [] };
+  if (!Array.isArray(raw)) return { error: 'Additional documents are not valid.' };
+  if (raw.length > MAX_EXTRA_DOCS) return { error: `You can attach at most ${MAX_EXTRA_DOCS} additional documents.` };
+  const value = [];
+  for (const d of raw) {
+    const url = safeUrl(d?.url);
+    if (!url) return { error: 'One of the additional documents did not upload properly. Remove it and upload it again.' };
+    const label = DOC_LABELS.includes(d?.label) ? d.label : 'Other';
+    value.push({ label, name: str(d?.name, 150) || 'Document', url, uploadedAt: new Date() });
+  }
+  return { value };
+};
+
+// One optional contact. If any detail is given the name and a valid number are required.
+const parseEmergencyContact = (raw, ownPhone) => {
+  const empty = { name: '', relationship: '', phone: '' };
+  if (!raw || typeof raw !== 'object') return { value: empty };
+  const name = str(raw.name, 80);
+  const relationship = str(raw.relationship, 40);
+  const phone = normalizePhone(raw.phone);
+  if (!name && !relationship && !phone) return { value: empty };
+  if (name.length < 2) return { error: "Enter the emergency contact's name." };
+  if (phone.length !== 10) return { error: "Enter a valid 10-digit mobile number for the emergency contact." };
+  if (phone === ownPhone) return { error: "The emergency contact's number must be different from your own." };
+  return { value: { name, relationship, phone } };
 };
 
 // ── failed-login throttling (per account identifier) ──
@@ -137,6 +171,10 @@ export const registerEmployee = async (req, res) => {
     const idProofUrl = safeUrl(b.idProofUrl);
     if (!ID_PROOF_TYPES.includes(idProofType)) return fail(res, 400, 'Select the type of ID proof.');
     if (!idProofUrl) return fail(res, 400, 'Upload a copy of your ID proof (image or PDF).');
+    const extra = parseAdditionalDocuments(b.additionalDocuments);
+    if (extra.error) return fail(res, 400, extra.error);
+    const emergency = parseEmergencyContact(b.emergencyContact, phone);
+    if (emergency.error) return fail(res, 400, emergency.error);
 
     let dateOfBirth = null;
     if (b.dateOfBirth) {
@@ -183,6 +221,7 @@ export const registerEmployee = async (req, res) => {
           brandId: brand.brandId, brandName: brand.name, avatar: photo || existing.avatar, assignedAdmin,
           password: passwordHash, registrationStatus: 'Pending', rejectionReason: '',
           idProof: { type: idProofType, documentUrl: idProofUrl },
+          additionalDocuments: extra.value, emergencyContact: emergency.value,
         });
         await existing.save();
         await logActivity({ action: 'registration_resubmitted', actor: { type: 'employee', id: existing._id, name: fullName, email }, employee: existing, ip: clientIp(req) });
@@ -197,6 +236,7 @@ export const registerEmployee = async (req, res) => {
       brandId: brand.brandId, brandName: brand.name, storeName: '', avatar: photo, assignedAdmin,
       password: passwordHash, registrationStatus: 'Pending', registrationSource: 'self', employmentStatus: 'Inactive',
       idProof: { type: idProofType, documentUrl: idProofUrl },
+      additionalDocuments: extra.value, emergencyContact: emergency.value,
     });
     await logActivity({ action: 'registration_submitted', actor: { type: 'employee', id: emp._id, name: fullName, email }, employee: emp, entity: 'Employee', entityId: emp._id, ip: clientIp(req) });
 
@@ -298,6 +338,7 @@ export const checkOutEmployee = async (req, res) => {
   try {
     const att = await closeSessions(req.employee, { all: true });
     if (!att) return fail(res, 400, 'You are not checked in.');
+    cancelPendingOnCheckout(req.employee).catch(() => {}); // no more selfie requests for the rest of the day
     await logActivity({ action: 'check_out', actor: req.user, employee: req.employee, entity: 'Attendance', entityId: att._id, ip: clientIp(req) });
     return res.json({ success: true, message: 'Checked out.', attendance: shapeAttendance(att) });
   } catch (err) {
@@ -590,7 +631,7 @@ export const requestTaskExtension = async (req, res) => {
     const task = await loadMyTask(req, res);
     if (!task) return undefined;
     if (['Completed', 'Rejected'].includes(task.status)) return fail(res, 409, 'This task is closed.');
-    const requestedDueDate = new Date(req.body?.requestedDueDate);
+    const requestedDueDate = parseTaskDate(req.body?.requestedDueDate, { endOfDay: true });
     const reason = str(req.body?.reason, 1000);
     if (Number.isNaN(requestedDueDate.getTime()) || requestedDueDate <= new Date(task.dueDate)) return fail(res, 400, 'Choose a new deadline later than the current one.');
     if (!reason) return fail(res, 400, 'Please give a reason.');

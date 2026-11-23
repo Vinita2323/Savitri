@@ -1,6 +1,7 @@
 import EmployeeTask from '../models/EmployeeTask.model.js';
 import Employee from '../models/Employee.model.js';
 import { notifyEmployee } from './employeeCore.js';
+import { runSelfieSweep } from './employeeSelfieService.js';
 
 const CLOSED = ['Completed', 'Rejected'];
 const DAY = 24 * 60 * 60 * 1000;
@@ -41,4 +42,14 @@ export const startEmployeeScheduler = () => {
   const run = () => runTaskDeadlineSweep().catch((e) => console.error('[EmployeeScheduler] sweep failed:', e.message));
   setTimeout(run, 30_000).unref?.();
   setInterval(run, 15 * 60 * 1000).unref?.();
+
+  // Selfie verification: reminders, missed detection and alerts. Every pass is idempotent (atomic claims in MongoDB).
+  let selfieRunning = false;
+  const selfieRun = async () => {
+    if (selfieRunning) return; // never overlap two passes of the same process
+    selfieRunning = true;
+    try { await runSelfieSweep(); } catch (e) { console.error('[SelfieScheduler] sweep failed:', e.message); } finally { selfieRunning = false; }
+  };
+  setTimeout(selfieRun, 10_000).unref?.();
+  setInterval(selfieRun, 60 * 1000).unref?.();
 };

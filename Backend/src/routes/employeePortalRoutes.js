@@ -36,6 +36,8 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
 } from '../controllers/employeePortalController.js';
+import { myTodayStatus, myHistory, submitMySelfie, registerPushToken, removePushToken, selfieGate } from '../controllers/employeeSelfieController.js';
+import { MAX_IMAGE_BYTES } from '../services/employeeSelfieService.js';
 
 const router = express.Router();
 
@@ -55,6 +57,19 @@ const upload = multer({
   limits: { fileSize: MAX_DOC_BYTES, files: 1 },
 });
 
+// Selfie photos are kept in memory only, validated, then written to the private storage folder by the service.
+const selfieUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_IMAGE_BYTES, files: 1, fields: 10 },
+  fileFilter: (req, file, cb) => (/^image\/(jpeg|png|webp)$/.test(file.mimetype || '') ? cb(null, true) : cb(new Error('INVALID_IMAGE_TYPE'))),
+});
+const uploadSelfiePhoto = (req, res, next) =>
+  selfieUpload.single('selfie')(req, res, (err) => {
+    if (!err) return next();
+    const message = err.code === 'LIMIT_FILE_SIZE' ? 'The photo is too large. Please try again.' : err.message === 'INVALID_IMAGE_TYPE' ? 'Only a photo taken with the camera (JPEG, PNG or WEBP) is accepted.' : 'The photo could not be read. Please try again.';
+    return res.status(err.code === 'LIMIT_FILE_SIZE' ? 413 : 400).json({ success: false, message });
+  });
+
 // ── public ──
 router.get('/public/brands', simpleRateLimit({ windowMs: 60_000, max: 60 }), getPublicBrands);
 router.get('/public/departments', simpleRateLimit({ windowMs: 60_000, max: 60 }), getPublicDepartments);
@@ -64,6 +79,7 @@ router.post('/login', simpleRateLimit({ windowMs: 60_000, max: 20 }), loginEmplo
 
 // ── authenticated employee only: everything below is scoped to req.employee, never to an id in the request ──
 router.use(protectEmployee);
+router.use(selfieGate);
 
 router.post('/logout', logoutEmployee);
 router.post('/attendance/check-in', checkInEmployee);
@@ -100,6 +116,14 @@ router.post(
 router.get('/leaves', listMyLeaves);
 router.post('/leaves', applyMyLeave);
 router.post('/leaves/:id/cancel', cancelMyLeave);
+
+// ── live selfie verification (photo comes from the in-app camera screen) ──
+router.get(['/selfie/status', '/selfie/today-status'], myTodayStatus);
+router.get('/selfie/my-history', myHistory);
+router.post('/selfie/login', simpleRateLimit({ windowMs: 60_000, max: 20 }), uploadSelfiePhoto, submitMySelfie('LOGIN'));
+router.post('/selfie/submit', simpleRateLimit({ windowMs: 60_000, max: 20 }), uploadSelfiePhoto, submitMySelfie('PERIODIC'));
+router.post('/push-token', simpleRateLimit({ windowMs: 60_000, max: 30 }), registerPushToken);
+router.delete('/push-token', removePushToken);
 
 router.get('/notifications', listMyNotifications);
 router.post('/notifications/read-all', markAllNotificationsRead);

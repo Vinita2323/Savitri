@@ -6,6 +6,7 @@ import LeaveRequest from '../models/LeaveRequest.model.js';
 import Shift from '../models/Shift.model.js';
 import Holiday from '../models/Holiday.model.js';
 import Brand from '../models/Brand.model.js';
+import { parseTaskDate } from '../utils/taskDates.js';
 import bcrypt from 'bcryptjs';
 import {
   actorFromReq,
@@ -615,10 +616,11 @@ export const createTask = async (req, res) => {
     if (!title || !dueDate) {
       return res.status(400).json({ success: false, message: 'Task title and due date are required.' });
     }
-    const due = new Date(dueDate);
+    const due = parseTaskDate(dueDate, { endOfDay: true });
     if (Number.isNaN(due.getTime())) return res.status(400).json({ success: false, message: 'Enter a valid due date.' });
-    const start = startDate ? new Date(startDate) : new Date();
-    if (Number.isNaN(start.getTime()) || start > due) return res.status(400).json({ success: false, message: 'Start date must be before the deadline.' });
+    const start = startDate ? parseTaskDate(startDate) : new Date();
+    if (Number.isNaN(start.getTime())) return res.status(400).json({ success: false, message: 'Enter a valid date for when the task is given.' });
+    if (start > due) return res.status(400).json({ success: false, message: 'The due date must be on or after the date the task is given.' });
     if (priority && !['Low', 'Medium', 'High', 'Urgent'].includes(priority)) return res.status(400).json({ success: false, message: 'Invalid priority.' });
 
     const brand = brandId ? await Brand.findOne({ brandId }).select('brandId name').lean() : null;
@@ -693,6 +695,46 @@ export const createTask = async (req, res) => {
   }
 };
 
+// POST /api/employees/tasks/bulk  { tasks: [ {...same fields as one task...}, ... ] }
+// Every task goes through createTask, so the rules (brand, assignees, dates, notifications) are identical. Each task
+// succeeds or fails on its own and the answer lists the outcome per task, so a typo in one row never blocks the rest.
+const runCreateTask = (req, body) =>
+  new Promise((resolve) => {
+    const sub = Object.create(req);
+    sub.body = body;
+    const out = { code: 200 };
+    const fakeRes = {
+      status(code) { out.code = code; return this; },
+      json(payload) { resolve({ status: out.code, ...payload }); return this; },
+    };
+    createTask(sub, fakeRes).catch((err) => resolve({ status: 500, success: false, message: err.message }));
+  });
+
+export const createTasksBulk = async (req, res) => {
+  try {
+    const list = Array.isArray(req.body?.tasks) ? req.body.tasks : [];
+    if (!list.length) return res.status(400).json({ success: false, message: 'Add at least one task.' });
+    if (list.length > 50) return res.status(400).json({ success: false, message: 'You can create at most 50 tasks at a time.' });
+    const results = [];
+    for (let i = 0; i < list.length; i += 1) {
+      const row = list[i] && typeof list[i] === 'object' ? list[i] : {};
+      const r = await runCreateTask(req, row);
+      const ok = r.status === 201 && r.success;
+      results.push({ index: i, success: ok, message: ok ? '' : r.message || 'Could not create this task.', task: ok ? { _id: r.task._id, taskId: r.task.taskId, title: r.task.title } : undefined });
+    }
+    const created = results.filter((r) => r.success).length;
+    return res.status(created === list.length ? 201 : 200).json({
+      success: created > 0,
+      created,
+      failed: list.length - created,
+      message: created === list.length ? `${created} task${created === 1 ? '' : 's'} created.` : created ? `${created} of ${list.length} tasks created; ${list.length - created} need fixing.` : 'No tasks were created.',
+      results,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const ADMIN_TASK_STATUSES = ['To Do', 'Assigned', 'In Progress', 'Blocked', 'Submitted for Review', 'Completed', 'Reopened', 'Pending', 'Rejected'];
 
 export const updateTaskStatus = async (req, res) => {
@@ -744,7 +786,7 @@ export const updateTask = async (req, res) => {
     if (b.category !== undefined) task.category = b.category;
     if (['Low', 'Medium', 'High', 'Urgent'].includes(b.priority)) task.priority = b.priority;
     if (b.dueDate) {
-      const d = new Date(b.dueDate);
+      const d = parseTaskDate(b.dueDate, { endOfDay: true });
       if (!Number.isNaN(d.getTime())) {
         task.dueDate = d;
         task.overdueNotified = false;
