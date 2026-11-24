@@ -8,7 +8,7 @@ const SplashScreen = ({ onGetStarted }) => {
         <div className="flex flex-col items-center pt-0 mt-0">
           <img 
             src="/LogoSavitri.png" 
-            alt="Savitri Logo" 
+            alt="Natural Agro Farm Logo" 
             className="max-w-[120px] h-auto object-contain"
           />
           <div className="flex items-center gap-[5px] mt-[4px]">

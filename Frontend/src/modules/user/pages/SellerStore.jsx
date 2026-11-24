@@ -106,8 +106,8 @@ export const SellerStore = () => {
 
   // Share Store Link
   const handleShareStore = async () => {
-    const title = seller?.businessName ? `${seller.businessName} on Savitri` : 'Savitri Store';
-    const text = `Order groceries & essentials from ${seller?.businessName || 'this store'} on Savitri with fast 15-25 min delivery!`;
+    const title = seller?.businessName ? `${seller.businessName} on Natural Agro Farm` : 'Natural Agro Farm Store';
+    const text = `Order groceries & essentials from ${seller?.businessName || 'this store'} on Natural Agro Farm with fast 15-25 min delivery!`;
     const url = window.location.href;
 
     if (navigator.share) {

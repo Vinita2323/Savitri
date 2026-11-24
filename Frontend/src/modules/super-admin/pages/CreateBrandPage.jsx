@@ -57,6 +57,7 @@ const STATES = [
   'Karnataka',
   'Other'
 ];
+const LISTED_STATES = STATES.filter((x) => x !== 'Other');
 
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
@@ -68,7 +69,12 @@ export const CreateBrandPage = () => {
   const { id: editBrandId } = useParams();
   const isEditMode = Boolean(editBrandId);
 
-  const { createBrand, updateBrand, fetchBrands } = useSuperAdmin();
+  const { createBrand, updateBrand, fetchBrands, brands } = useSuperAdmin();
+  // States already used by saved brands join the list, so a state typed once under "Other" can be picked next time
+  const stateOptions = React.useMemo(() => {
+    const extra = [...new Set((brands || []).map((b) => String(b.state || '').trim()).filter((x) => x && x.toLowerCase() !== 'other' && !LISTED_STATES.some((l) => l.toLowerCase() === x.toLowerCase())))].sort((a, b) => a.localeCompare(b));
+    return [...LISTED_STATES, ...extra];
+  }, [brands]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -136,6 +142,7 @@ export const CreateBrandPage = () => {
   const [validationErrors, setValidationErrors] = useState({});
 
   // Active section scrolling tracking
+  const [otherState, setOtherState] = useState(false); // "Other" picked in the State list: the name is typed in
   const [activeSection, setActiveSection] = useState(() => (typeof window !== 'undefined' && window.location.hash === '#cityadmin' ? 'cityadmin' : 'identity'));
 
   // Load existing brand data if in edit mode
@@ -331,6 +338,7 @@ export const CreateBrandPage = () => {
     }
 
     if (!formData.city.trim()) errors.city = 'Operating city is required';
+    if (!String(formData.state || '').trim()) errors.state = 'State is required';
     if (!formData.address.trim()) errors.address = 'Operating address is required';
 
     if (formData.contact && !PHONE_REGEX.test(formData.contact.replace(/\D/g, '').slice(-10))) {
@@ -394,7 +402,7 @@ export const CreateBrandPage = () => {
       status: targetStatus || formData.status,
 
       country: formData.country,
-      state: formData.state,
+      state: String(formData.state || '').trim(),
       city: formData.city.trim(),
       locality: formData.locality.trim(),
       address: formData.address.trim(),
@@ -898,16 +906,37 @@ export const CreateBrandPage = () => {
                   <div>
                     <label className="block text-sm font-bold text-slate-700">State / राज्य</label>
                     <select
-                      value={formData.state}
-                      onChange={(e) => handleFieldChange('state', e.target.value)}
+                      data-testid="state-select"
+                      value={otherState || !formData.state.trim() ? 'Other' : formData.state}
+                      onChange={(e) => {
+                        if (e.target.value === 'Other') { setOtherState(true); handleFieldChange('state', ''); }
+                        else { setOtherState(false); handleFieldChange('state', e.target.value); }
+                      }}
                       className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none transition focus:border-[#79B433]"
                     >
-                      {STATES.map((s) => (
+                      {[...stateOptions, ...(!otherState && formData.state.trim() && !stateOptions.includes(formData.state) ? [formData.state] : []), 'Other'].map((s) => (
                         <option key={s} value={s}>
-                          {s}
+                          {s === 'Other' ? (otherState && formData.state.trim() ? formData.state.trim() : 'Other (type a new state)') : s}
                         </option>
                       ))}
                     </select>
+                    {(otherState || !formData.state.trim()) && (
+                      <input
+                        data-testid="state-other-input"
+                        type="text"
+                        maxLength={60}
+                        value={formData.state}
+                        onChange={(e) => handleFieldChange('state', e.target.value)}
+                        // once the name is typed, it moves into the State box above and this box goes away
+                        onBlur={() => { const v = formData.state.trim(); if (v) { handleFieldChange('state', v); setOtherState(false); } }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
+                        placeholder="Type the state name"
+                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none transition focus:border-[#79B433]"
+                      />
+                    )}
+                    {validationErrors.state && (
+                      <p className="mt-1 text-xs font-semibold text-rose-600">{validationErrors.state}</p>
+                    )}
                   </div>
 
                   {/* Locality / Area */}

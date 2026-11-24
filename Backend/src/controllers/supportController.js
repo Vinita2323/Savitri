@@ -11,7 +11,7 @@ const DEFAULT_SETTINGS = {
   captainEmail: 'sreplwm@gmail.com',
   captainHours: '24/7 Active Dispatch Line',
   whatsappNumber: '+91 63774 60692',
-  footerBrandName: 'Savitri',
+  footerBrandName: 'Natural Agro Farm',
   footerTagline: 'Fresh groceries, staples and daily essentials from stores near you, delivered fast to your doorstep.',
   footerPhone: '+91 81029 14300',
   footerEmail: 'sreplwm@gmail.com',

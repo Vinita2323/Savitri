@@ -680,7 +680,7 @@ const Categories = () => {
                           {item.unit || `${item.unitValue || 1} ${item.unitType || 'unit'}`}
                         </p>
                         <p className="text-[11px] sm:text-xs md:text-[13px] font-medium text-slate-500 m-0 mt-0.5 truncate">
-                          by <span className="font-bold text-slate-700">{typeof item.seller === 'string' ? item.seller : 'Savitri Store'}</span>
+                          by <span className="font-bold text-slate-700">{typeof item.seller === 'string' ? item.seller : 'Natural Agro Farm Store'}</span>
                         </p>
                       </div>
 

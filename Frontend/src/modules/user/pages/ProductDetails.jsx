@@ -251,9 +251,9 @@ const ProductDetails = () => {
   };
 
   const similarProducts = [
-    { id: 2, name: 'Refined Sunflower Oil', brand: 'Savitri Select', price: 699, originalPrice: 1118, discount: 38, image: oilGheeImg, rating: 4.6 },
-    { id: 3, name: 'Premium Toor Dal 5kg', brand: 'Savitri Select', price: 1499, originalPrice: 2398, discount: 38, image: masalaImg, rating: 4.8 },
-    { id: 4, name: 'Organic Fine Sugar', brand: 'Savitri Select', price: 1299, originalPrice: 2078, discount: 38, image: sugarImg, rating: 4.7 },
+    { id: 2, name: 'Refined Sunflower Oil', brand: 'Natural Agro Farm Select', price: 699, originalPrice: 1118, discount: 38, image: oilGheeImg, rating: 4.6 },
+    { id: 3, name: 'Premium Toor Dal 5kg', brand: 'Natural Agro Farm Select', price: 1499, originalPrice: 2398, discount: 38, image: masalaImg, rating: 4.8 },
+    { id: 4, name: 'Organic Fine Sugar', brand: 'Natural Agro Farm Select', price: 1299, originalPrice: 2078, discount: 38, image: sugarImg, rating: 4.7 },
   ];
 
   const handleWishlistClick = () => {
@@ -265,7 +265,7 @@ const ProductDetails = () => {
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: product?.name || 'Savitri Product',
+        title: product?.name || 'Natural Agro Farm Product',
         url: window.location.href,
       }).catch(() => {});
     } else {
@@ -786,7 +786,7 @@ const ProductDetails = () => {
             </div>
             {activeAccordion === 'product' && (
               <div className="pt-2 md:pt-3 text-[12px] md:text-[15px] text-slate-600 grid grid-cols-2 gap-2 md:gap-3 font-normal">
-                <div><span className="text-slate-400">Brand:</span> <strong>{product.brand || product.seller || 'Savitri'}</strong></div>
+                <div><span className="text-slate-400">Brand:</span> <strong>{product.brand || product.seller || 'Natural Agro Farm'}</strong></div>
                 <div><span className="text-slate-400">Category:</span> <strong>{product.category || 'Grocery'}</strong></div>
                 <div><span className="text-slate-400">Sub-Category:</span> <strong>{product.subCategory || 'Staples'}</strong></div>
                 <div>

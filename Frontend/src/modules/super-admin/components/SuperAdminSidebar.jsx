@@ -29,8 +29,18 @@ import {
   Clock,
   ShoppingBag,
   Camera,
+  FileText,
+  IdCard,
+  MapPinned,
+  Scale,
+  HeartPulse,
+  Phone,
+  FolderOpen,
 } from 'lucide-react';
+import { DOCUMENT_PAGES } from '../../../utils/documentPages';
 import { SuperAdminBrandSwitcher } from './SuperAdminBrandSwitcher';
+
+const DOC_ICONS = { all: FolderOpen, identity: IdCard, address: MapPinned, tax: FileText, bank: Landmark, legal: Scale, insurance: HeartPulse, emergency: Phone, other: FileText };
 
 export const SuperAdminSidebar = () => {
   const { sidebarOpen, setSidebarOpen, logout, superAdmin } = useSuperAdmin();
@@ -61,6 +71,10 @@ export const SuperAdminSidebar = () => {
           icon: Receipt,
         },
       ],
+    },
+    {
+      group: 'MY DOCUMENTS',
+      items: DOCUMENT_PAGES.map((p) => ({ to: `/super-admin/documents/${p.slug}`, label: p.label, icon: DOC_ICONS[p.slug] || FileText })),
     },
     {
       group: 'SETTLEMENTS & PAYOUTS',

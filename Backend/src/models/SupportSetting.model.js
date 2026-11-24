@@ -53,7 +53,7 @@ const supportSettingSchema = new mongoose.Schema(
       trim: true,
     },
     // Customer website footer (managed by admin)
-    footerBrandName: { type: String, default: 'Savitri', trim: true, maxlength: 60 },
+    footerBrandName: { type: String, default: 'Natural Agro Farm', trim: true, maxlength: 60 },
     footerTagline: { type: String, default: 'Fresh groceries, staples and daily essentials from stores near you, delivered fast to your doorstep.', trim: true, maxlength: 240 },
     footerPhone: { type: String, default: '+91 81029 14300', trim: true, maxlength: 30 },
     footerEmail: { type: String, default: 'sreplwm@gmail.com', trim: true, maxlength: 120 },

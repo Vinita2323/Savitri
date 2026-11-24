@@ -6,7 +6,7 @@ import supportService from '../../../services/supportService';
 // Shown until the admin-managed settings load (and if they cannot be loaded). Admin edits these under
 // Support & FAQs > "Customer Website Footer".
 const DEFAULTS = {
-  footerBrandName: 'Savitri',
+  footerBrandName: 'Natural Agro Farm',
   footerTagline: 'Fresh groceries, staples and daily essentials from stores near you, delivered fast to your doorstep.',
   footerPhone: '+91 81029 14300',
   footerEmail: 'sreplwm@gmail.com',

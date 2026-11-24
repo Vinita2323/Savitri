@@ -46,7 +46,7 @@ const paymentMethods = [
   { id: 'UPI', name: 'UPI (GPay / PhonePe / Paytm)', icon: Smartphone, description: 'Instant UPI payment' },
   { id: 'CARD', name: 'Credit / Debit Card', icon: CreditCard, description: 'Visa, Mastercard, RuPay' },
   { id: 'NETBANKING', name: 'Net Banking', icon: Building2, description: 'All major banks supported' },
-  { id: 'WALLET', name: 'Savitri Wallet', icon: Wallet, description: 'Pay instantly from your wallet balance' },
+  { id: 'WALLET', name: 'Natural Agro Farm Wallet', icon: Wallet, description: 'Pay instantly from your wallet balance' },
 ];
 
 const Checkout = () => {
@@ -416,7 +416,7 @@ const Checkout = () => {
         key,
         amount: amountPaise,
         currency: razorpayOrderRes.currency || 'INR',
-        name: 'Savitri',
+        name: 'Natural Agro Farm',
         description: 'Order Payment',
         order_id: razorpayOrderId,
         prefill,
@@ -573,7 +573,7 @@ const Checkout = () => {
         return;
       }
 
-      // COD or Savitri Wallet — place order directly (wallet debited on server)
+      // COD or Natural Agro Farm Wallet — place order directly (wallet debited on server)
       if (selectedPayment === 'WALLET' && walletBalance !== null && walletBalance < finalGrandTotal) {
         setErrorMsg(`Insufficient wallet balance (₹${walletBalance.toFixed(2)}). Add funds via refunds or choose another payment method.`);
         return;

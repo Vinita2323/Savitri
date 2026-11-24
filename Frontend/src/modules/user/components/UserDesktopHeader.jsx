@@ -167,11 +167,11 @@ const UserDesktopHeader = () => {
           <div className="flex items-center gap-3 xl:gap-5 shrink-0">
             <Link to="/" className="flex items-center gap-2.5 group">
               <div className="w-11 h-11 rounded-xl bg-orange-50 p-1.5 flex items-center justify-center border border-orange-100 group-hover:border-orange-300 transition-colors shadow-2xs">
-                <img src="/LogoSavitri.png" alt="Savitri" className="w-full h-full object-contain" />
+                <img src="/LogoSavitri.png" alt="Natural Agro Farm" className="w-full h-full object-contain" />
               </div>
               <div className="hidden lg:flex flex-col">
                 <span className="text-xl font-black tracking-tight text-slate-900 leading-none">
-                  Savitri
+                  Natural Agro Farm
                 </span>
                 <span className="hidden xl:block text-[10px] font-bold text-slate-400 tracking-wider uppercase mt-0.5">Express Hyperlocal</span>
               </div>

@@ -64,11 +64,11 @@ const logAudit = async ({
 export const getFinancialDashboardStats = async (req, res, next) => {
   try {
     const scope = req.scope || { isAll: true };
-    const cityRegex = getCityRegex(scope.city);
-
-    // Resolve scoped entity IDs if not global
+    // Brand scope follows the same rules as every other Super Admin page: sellers by brand, orders = orders routed
+    // to a seller of the brand, captains by operating city. Anything with no link to the brand is left out (fails closed).
     const scopedSellerIds = await getScopedSellerIds(scope);
-    const scopedCaptainIds = await getScopedCaptainIds(scope);
+    const scopedCaptainIds = scope.isAll ? null : (await getScopedCaptainIds(scope)) || [];
+    const scopedOrderIds = await getScopedOrderIds(scope);
     const sellerIdStrs = (scopedSellerIds || []).map((id) => id.toString());
     const captainIdStrs = (scopedCaptainIds || []).map((id) => id.toString());
 
@@ -89,15 +89,12 @@ export const getFinancialDashboardStats = async (req, res, next) => {
       $or: [{ paymentStatus: 'Paid' }, { paymentMethod: 'COD' }],
     };
 
-    if (!scope.isAll && cityRegex) {
-      orderMatch['shippingAddress.city'] = cityRegex;
-      todayOrderMatch['shippingAddress.city'] = cityRegex;
+    if (!scope.isAll) {
+      orderMatch._id = { $in: scopedOrderIds };
+      todayOrderMatch._id = { $in: scopedOrderIds };
     }
 
-    const sellerMatch = {};
-    if (!scope.isAll && cityRegex) {
-      sellerMatch['warehouseLocation.city'] = cityRegex;
-    }
+    const sellerMatch = scope.isAll ? {} : sellerScopeFilter(scope);
 
     const captainMatch = scope.isAll ? {} : captainScopeFilter(scope);
 
@@ -117,18 +114,14 @@ export const getFinancialDashboardStats = async (req, res, next) => {
 
     // Settlements match
     const settlementMatch = { settlementStatus: 'PENDING' };
-    if (!scope.isAll && sellerIdStrs.length > 0) {
-      settlementMatch.sellerId = { $in: sellerIdStrs };
-    }
+    if (!scope.isAll) settlementMatch.sellerId = { $in: sellerIdStrs };
 
     // Monthly volume match
     const monthlyOrderMatch = {
       createdAt: { $gte: sixMonthsAgo },
       $or: [{ paymentStatus: 'Paid' }, { paymentMethod: 'COD' }],
     };
-    if (!scope.isAll && cityRegex) {
-      monthlyOrderMatch['shippingAddress.city'] = cityRegex;
-    }
+    if (!scope.isAll) monthlyOrderMatch._id = { $in: scopedOrderIds };
 
     // Recent ledger match
     const ledgerFilter = {};
@@ -136,7 +129,6 @@ export const getFinancialDashboardStats = async (req, res, next) => {
       const allScopedIds = [...sellerIdStrs, ...captainIdStrs];
       ledgerFilter.$or = [
         { 'metadata.brandId': scope.brandId },
-        { 'metadata.city': cityRegex },
         { entityId: { $in: allScopedIds } },
       ];
     }
@@ -244,6 +236,7 @@ export const getFinancialDashboardStats = async (req, res, next) => {
 
       // Refunds Summary
       RefundRequest.aggregate([
+        ...(scope.isAll ? [] : [{ $match: { order: { $in: scopedOrderIds } } }]),
         {
           $group: {
             _id: '$status',
@@ -298,9 +291,7 @@ export const getFinancialDashboardStats = async (req, res, next) => {
 
     // Calculate Captain Total Earnings from transactions
     const captainTxnMatch = { type: 'CREDIT' };
-    if (!scope.isAll && scopedCaptainIds && scopedCaptainIds.length > 0) {
-      captainTxnMatch.captainId = { $in: scopedCaptainIds };
-    }
+    if (!scope.isAll) captainTxnMatch.captainId = { $in: scopedCaptainIds };
     const captainEarningsAgg = await CaptainTransaction.aggregate([
       { $match: captainTxnMatch },
       { $group: { _id: null, total: { $sum: '$amount' } } },
@@ -351,9 +342,7 @@ export const getFinancialDashboardStats = async (req, res, next) => {
     );
 
     const cashSettlementMatch = { status: 'PENDING' };
-    if (!scope.isAll && scopedCaptainIds && scopedCaptainIds.length > 0) {
-      cashSettlementMatch.captainId = { $in: scopedCaptainIds };
-    }
+    if (!scope.isAll) cashSettlementMatch.captainId = { $in: scopedCaptainIds };
     const pendingCaptainCashSettlements = await CaptainCashSettlement.aggregate([
       { $match: cashSettlementMatch },
       { $group: { _id: null, totalAmount: { $sum: '$amount' }, count: { $sum: 1 } } },

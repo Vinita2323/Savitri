@@ -95,7 +95,7 @@ const PAYMENT_METHODS = [
   },
   {
     id: 'WALLET',
-    name: 'Savitri Wallet',
+    name: 'Natural Agro Farm Wallet',
     tagline: 'Instant 1-click payment from your account balance',
     icon: Wallet,
     badge: null,
@@ -313,7 +313,7 @@ const FareSummary = () => {
         key: orderData.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_TgHKKogdCDai1c',
         amount: orderData.amountPaise || Math.round(orderData.amount * 100),
         currency: orderData.currency || 'INR',
-        name: 'Savitri',
+        name: 'Natural Agro Farm',
         description: `Booking payment for ${activeBooking.vehicle.name} (₹${orderData.amount})`,
         order_id: orderData.orderId,
         prefill: {

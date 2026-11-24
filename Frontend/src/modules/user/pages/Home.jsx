@@ -461,7 +461,7 @@ const Home = () => {
         <header className="flex justify-between items-center px-4 pt-1.5 pb-2.5">
           <div className="flex items-center flex-1">
             <div className="bg-white rounded-xl p-1 shadow-sm flex items-center justify-center w-11 h-11 shrink-0">
-              <img src="/LogoSavitri.png" alt="Savitri Logo" className="w-full h-full object-contain" />
+              <img src="/LogoSavitri.png" alt="Natural Agro Farm Logo" className="w-full h-full object-contain" />
             </div>
             
             <div className="flex flex-col ml-3 text-white cursor-pointer overflow-hidden" onClick={() => navigate('/location')}>

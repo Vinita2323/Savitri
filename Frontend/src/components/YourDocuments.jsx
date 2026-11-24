@@ -35,7 +35,7 @@ const Modal = ({ title, onClose, children, wide, testId }) => {
 
 /** Add or edit one document. Editing can also replace the file. */
 const DocForm = ({ meta, existing, onClose, onSaved }) => {
-  const [f, setF] = useState({ title: existing?.title || '', category: existing?.category || 'Identity proof', documentNumber: existing?.documentNumber || '', expiryDate: existing?.expiryDate || '', notes: existing?.notes || '' });
+  const [f, setF] = useState({ title: existing?.title || '', category: existing?.category || meta.categories[0] || 'Identity proof', documentNumber: existing?.documentNumber || '', expiryDate: existing?.expiryDate || '', notes: existing?.notes || '' });
   const [file, setFile] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -120,7 +120,11 @@ const Preview = ({ doc, onClose }) => {
   );
 };
 
-export default function YourDocuments() {
+/**
+ * `categories` limits the page to some document types (a sidebar page such as "Identity Documents"); without it every document is shown.
+ * Each type page lists only its own documents and adds new ones in that type.
+ */
+export default function YourDocuments({ categories = null, title = 'Your Documents', subtitle = '' }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [form, setForm] = useState(null); // {existing?}
@@ -143,7 +147,8 @@ export default function YourDocuments() {
   const confirmDelete = async () => {
     try { await adminDocumentService.remove(del.id); setDel(null); setMsg('Document deleted.'); load(); } catch (e) { setError(e.message); setDel(null); }
   };
-  const docs = data?.documents || [];
+  const allDocs = data?.documents || [];
+  const docs = categories ? allDocs.filter((d) => categories.includes(d.category)) : allDocs;
   const flagged = docs.filter((d) => ['expired', 'soon'].includes(expiryInfo(d.expiryDate, data.today)?.state));
 
   return (
@@ -152,11 +157,11 @@ export default function YourDocuments() {
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#243D12] flex items-center justify-center text-white"><FileText size={20} /></div>
           <div>
-            <h3 className="text-base font-bold text-slate-800 m-0">Your Documents</h3>
-            <p className="text-xs text-slate-500 m-0 flex items-center gap-1"><Lock size={11} /> Private: only you can see these. Keep your important papers here for emergencies.</p>
+            <h3 className="text-base font-bold text-slate-800 m-0">{title}</h3>
+            <p className="text-xs text-slate-500 m-0 flex items-center gap-1"><Lock size={11} /> {subtitle || 'Private: only you can see these. Keep your important papers here for emergencies.'}</p>
           </div>
         </div>
-        <button type="button" data-testid="yd-add" onClick={() => { setMsg(''); setForm({}); }} disabled={data && docs.length >= data.max} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white border-0 cursor-pointer disabled:opacity-50"><Plus size={16} /> Add document</button>
+        <button type="button" data-testid="yd-add" onClick={() => { setMsg(''); setForm({}); }} disabled={data && allDocs.length >= data.max} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white border-0 cursor-pointer disabled:opacity-50"><Plus size={16} /> Add document</button>
       </div>
       <div className="p-6 space-y-4">
         {error && <p role="alert" data-testid="yd-list-error" className="m-0 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">{error}</p>}
@@ -197,9 +202,9 @@ export default function YourDocuments() {
             })}
           </div>
         )}
-        {data && <p className="m-0 text-[11px] text-slate-400">{docs.length} of {data.max} documents used.</p>}
+        {data && <p className="m-0 text-[11px] text-slate-400">{categories ? `${docs.length} here · ` : ''}{allDocs.length} of {data.max} documents used.</p>}
       </div>
-      {form && data && <DocForm meta={data} existing={form.existing} onClose={() => setForm(null)} onSaved={() => { setForm(null); setMsg(form.existing ? 'Document updated.' : 'Document saved.'); load(); }} />}
+      {form && data && <DocForm meta={categories ? { ...data, categories } : data} existing={form.existing} onClose={() => setForm(null)} onSaved={() => { setForm(null); setMsg(form.existing ? 'Document updated.' : 'Document saved.'); load(); }} />}
       {view && <Preview doc={view} onClose={() => setView(null)} />}
       {del && (
         <Modal title="Delete this document?" onClose={() => setDel(null)} testId="yd-confirm">
