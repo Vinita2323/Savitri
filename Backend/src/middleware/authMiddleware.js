@@ -3,6 +3,7 @@ import User from '../models/User.model.js';
 import Admin from '../models/Admin.model.js';
 import { extractBearerOrCookieToken } from '../utils/adminAuthCookie.js';
 import { getJwtSecret, JWT_ALGORITHMS } from '../utils/jwtConfig.js';
+import { permissionForPath } from '../utils/cityAdminAccess.js';
 
 /** 'super-admin' / 'Super_Admin' -> 'super_admin' so route declarations cannot drift from token roles. */
 export const normalizeRole = (role) => String(role || '').trim().toLowerCase().replace(/-/g, '_');
@@ -34,7 +35,7 @@ export const protect = (...requiredRoles) => {
       if (ADMIN_ROLES.has(tokenRole)) {
         const adminId = decoded.id || decoded._id;
         const admin = adminId
-          ? await Admin.findById(adminId).select('role status tokenVersion authorizedBrands email name').lean().catch(() => null)
+          ? await Admin.findById(adminId).select('role status tokenVersion authorizedBrands email name adminType permissions mustChangePassword').lean().catch(() => null)
           : null;
 
         if (!admin) {
@@ -56,7 +57,19 @@ export const protect = (...requiredRoles) => {
           email: admin.email,
           name: admin.name,
           authorizedBrands: Array.isArray(admin.authorizedBrands) ? admin.authorizedBrands : undefined,
+          adminType: admin.adminType,
         };
+        // City Admin: the permissions saved in the database decide which part of the API may be used (live, on every request)
+        if (admin.adminType === 'CITY_ADMIN') {
+          // a temporary password must be changed first: nothing else works until then
+          if (admin.mustChangePassword && !/^\/api(\/v\d+)?\/auth\/(city-admin|admin)\//.test(String(req.originalUrl || '').split('?')[0])) {
+            return res.status(403).json({ success: false, code: 'PASSWORD_CHANGE_REQUIRED', message: 'Please change your temporary password to continue.' });
+          }
+          const need = permissionForPath(req.originalUrl);
+          if (need && !(admin.permissions || []).includes(need)) {
+            return res.status(403).json({ success: false, message: 'Your City Admin account does not have permission for this area.' });
+          }
+        }
       }
 
       if (requiredRoles && requiredRoles.length > 0) {

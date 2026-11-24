@@ -3,6 +3,7 @@ import { isAdminAccountActive } from '../middleware/authMiddleware.js';
 import { generateToken } from '../utils/generateToken.js';
 import {
   ADMIN_AUTH_COOKIE,
+  SUPER_ADMIN_AUTH_COOKIE,
   ADMIN_REMEMBER_TTL,
   ADMIN_SESSION_TTL,
   clearAdminAuthCookie,
@@ -95,6 +96,9 @@ export const adminLogin = async (req, res, next) => {
 export const adminLogout = async (req, res, next) => {
   try {
     clearAdminAuthCookie(res, ADMIN_AUTH_COOKIE);
+    // The server also accepts the Super Admin cookie on admin routes. If it were left behind, the Admin Panel would
+    // find it right after logout and sign the person straight back in, so logging out clears both.
+    clearAdminAuthCookie(res, SUPER_ADMIN_AUTH_COOKIE);
     res.status(200).json({
       success: true,
       message: 'Admin logged out successfully',

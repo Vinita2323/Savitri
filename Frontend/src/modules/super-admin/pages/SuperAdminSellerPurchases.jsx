@@ -8,6 +8,7 @@ import { superAdminService } from '../../../services/superAdminService';
 import { subscribeRealtime } from '../../../services/financeSocket';
 import { fileHref } from '../../../utils/fileUrl';
 import { PurchaseReportView } from '../components/seller-purchases/PurchaseReportView';
+import { downloadTablePdf, pdfMoney } from '../utils/tablePdf';
 import {
   DetailDrawer, Fact, PurchaseSummaryCards, selectClass, tableClass, tableWrap, tdClass, textButtonClass, thClass,
 } from '../components/seller-purchases/purchaseUi';
@@ -36,6 +37,7 @@ export const SuperAdminSellerPurchases = () => {
   const [reload, setReload] = useState(0);
   const [live, setLive] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [open, setOpen] = useState(null);
   const silent = useRef(false);
   // Purchases list or the weekly/monthly reports; kept in the address (?view=reports) so it survives a refresh
@@ -121,6 +123,37 @@ export const SuperAdminSellerPurchases = () => {
     }
   };
 
+  // PDF of everything the current filters match (not only the page on screen)
+  const exportPdf = async () => {
+    setExportingPdf(true);
+    try {
+      const all = [];
+      for (let pg = 1; pg <= 100; pg += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        const res = await superAdminService.getSellerPurchases({ ...params, page: pg, limit: 100 });
+        if (!res?.success) throw new Error(res?.message || 'Could not load the purchases.');
+        all.push(...(res.purchases || []));
+        if (pg >= (res.pages || 1)) break;
+      }
+      const day = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
+      const recorded = all.filter((p) => p.status !== 'CANCELLED');
+      const used = Object.entries(filters).filter(([, v]) => v && v !== 'ALL').map(([k, v]) => `${k}: ${v}`).join(', ');
+      downloadTablePdf({
+        title: `Seller Purchases - ${brandName}`,
+        subtitle: used ? `Filters: ${used}` : 'All purchases',
+        columns: ['Date', 'Purchase ID', 'Seller', 'Product', 'SKU', 'Qty', 'Unit price', 'Total', 'Supplier', 'Status'],
+        rows: all.map((p) => [day(p.purchaseDate), p.purchaseId, p.seller?.name || '', `${p.productName}${p.variantTitle ? ` (${p.variantTitle})` : ''}`, p.sku || '', `${p.quantity}${p.unit ? ` ${p.unit}` : ''}`, pdfMoney(p.unitPrice), pdfMoney(p.totalAmount), p.supplierName, p.status === 'CANCELLED' ? 'Cancelled' : 'Recorded']),
+        totals: ['Total (recorded)', '', '', '', '', String(recorded.reduce((t, p) => t + (p.quantity || 0), 0)), '', pdfMoney(recorded.reduce((t, p) => t + (p.totalAmount || 0), 0)), '', ''],
+        numericColumns: [5, 6, 7],
+        filename: `seller-purchases-${new Date().toISOString().slice(0, 10)}.pdf`,
+      });
+    } catch (err) {
+      setError(err?.response?.status === 403 ? 'You do not have permission to export.' : err?.message || 'Could not export the purchases.');
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   const dirty = JSON.stringify(filters) !== JSON.stringify(EMPTY_FILTERS);
   const sel = open;
 
@@ -195,6 +228,9 @@ export const SuperAdminSellerPurchases = () => {
               )}
               <button data-testid="sp-export" type="button" onClick={exportCsv} disabled={exporting || data.total === 0} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-[#79B433] px-3.5 py-1.5 text-sm font-semibold text-white hover:bg-[#689A2B] disabled:cursor-not-allowed disabled:opacity-40">
                 {exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Export CSV
+              </button>
+              <button data-testid="sp-export-pdf" type="button" onClick={exportPdf} disabled={exportingPdf || data.total === 0} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#79B433] bg-white px-3.5 py-1.5 text-sm font-semibold text-[#4d7a1c] hover:bg-[#79B433]/10 disabled:cursor-not-allowed disabled:opacity-40">
+                {exportingPdf ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Export PDF
               </button>
             </div>
           </div>

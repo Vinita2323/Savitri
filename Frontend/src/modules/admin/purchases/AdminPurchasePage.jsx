@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAdmin } from '../context/useAdmin';
 import PurchaseForm from './PurchaseForm';
-import { Dashboard, History, StockUpdates, SellerPurchases, SellerWise, PurchaseDetail } from './PurchaseViews';
+import { Dashboard, History, StockUpdates, SellerPurchases, PurchaseDetail } from './PurchaseViews';
 import { Notice } from '../../employee/components/ui';
 import { fmtMoney } from './purchaseUi';
 
 const KEYS = { dashboard: 'purchase_dashboard', new: 'purchase_new', history: 'purchase_history', stock: 'purchase_stock', sellers: 'purchase_sellers', bysellers: 'purchase_by_seller' };
 const MINE = [['dashboard', 'Purchase Dashboard'], ['new', 'Add New Purchase'], ['history', 'Purchase History'], ['stock', 'Stock Updates']];
-const SELLERS = [['sellers', 'Associated Seller Purchases'], ['bysellers', 'Seller-wise Purchases']];
+const SELLERS = [['sellers', 'Associated Seller Purchases']];
 
 const Nav = ({ tab, go, items, label, testId }) => (
   <div data-testid={testId}>
@@ -25,8 +26,10 @@ export default function AdminPurchasePage({ tab = 'dashboard' }) {
   const { setActiveTab } = useAdmin();
   const [version, setVersion] = useState(0);
   const [saved, setSaved] = useState(null);
-  const [sellerPreset, setSellerPreset] = useState('');
   const [openId, setOpenId] = useState(null);
+  const location = useLocation();
+  // the old Seller-wise Purchases address now opens the combined page with its summary section expanded
+  useEffect(() => { if (tab === 'bysellers') setActiveTab(KEYS.sellers, { showSummary: true }); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
   const go = (t) => { setSaved(null); setActiveTab(KEYS[t]); };
   const bump = () => setVersion((v) => v + 1);
   return (
@@ -54,8 +57,7 @@ export default function AdminPurchasePage({ tab = 'dashboard' }) {
       )}
       {tab === 'history' && <History version={version} onChanged={bump} />}
       {tab === 'stock' && <StockUpdates version={version} />}
-      {tab === 'sellers' && <SellerPurchases presetSeller={sellerPreset} onClearPreset={() => setSellerPreset('')} />}
-      {tab === 'bysellers' && <SellerWise onOpenSeller={(id) => { setSellerPreset(id); setActiveTab(KEYS.sellers); }} />}
+      {tab === 'sellers' && <SellerPurchases showSummary={Boolean(location.state?.showSummary)} />}
       {openId && <PurchaseDetail id={openId} onClose={() => setOpenId(null)} onChanged={bump} />}
     </div>
   );

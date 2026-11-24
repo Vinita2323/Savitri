@@ -134,7 +134,7 @@ export const SuperAdminProvider = ({ children }) => {
         };
         setBrands((prev) => [created, ...prev.filter((b) => b.brandId !== created.brandId)]);
         fetchBrands();
-        return { ok: true, brand: created };
+        return { ok: true, brand: created, cityAdmin: res.data.cityAdmin || null, temporaryPassword: res.data.temporaryPassword, adminPending: Boolean(res.data.adminPending) };
       }
       return { ok: false, message: res.data?.message || 'Could not create brand.' };
     } catch (err) {

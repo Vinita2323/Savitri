@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import Brand from '../models/Brand.model.js';
 import Seller from '../models/Seller.model.js';
+import Admin from '../models/Admin.model.js';
+import { CityAdminError, readPerson, readStatus, readPermissions, createCityAdmin, shapeCityAdmin } from '../services/cityAdminService.js';
 import { ensureBaselineBrands, canAccessAllBrands, isBrandAuthorizedForUser } from '../middleware/scopeMiddleware.js';
 import { findEligibleBrands, countMisconfiguredBrands, listRegistrationCities, parseLatLng } from '../utils/brandEligibility.js';
 import { normalizeCity } from '../utils/cityNormalization.js';
@@ -263,6 +265,20 @@ export const createBrand = async (req, res, next) => {
 
     const serviceCoverage = req.body.serviceCoverage === 'WHOLE_CITY' ? 'WHOLE_CITY' : 'RADIUS';
 
+    // 4b. Optional City Admin, checked BEFORE the brand is created so a bad admin form never leaves a half-made brand
+    const adminReq = req.body.cityAdmin && req.body.cityAdmin.mode === 'NOW' ? req.body.cityAdmin : null;
+    let adminPlan = null;
+    if (adminReq) {
+      try {
+        adminPlan = { person: readPerson(adminReq), status: readStatus(adminReq.status), permissions: readPermissions(adminReq.permissions) };
+        const dup = await Admin.findOne({ $or: [{ email: adminPlan.person.email }, ...(adminPlan.person.username ? [{ username: adminPlan.person.username }] : [])] }).select('_id');
+        if (dup) throw new CityAdminError(409, 'An admin with this email or username already exists. Use different details for the City Admin.');
+      } catch (e) {
+        if (e instanceof CityAdminError) return res.status(e.status).json({ success: false, message: `City Admin: ${e.message}` });
+        throw e;
+      }
+    }
+
     // 5. Generate stable brandId
     const brandId = `brand_${cleanCode.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now().toString().slice(-4)}`;
 
@@ -309,10 +325,28 @@ export const createBrand = async (req, res, next) => {
       isDefault: false,
     });
 
+    let cityAdmin = null;
+    let temporaryPassword;
+    if (adminPlan) {
+      try {
+        const created = await createCityAdmin({ brand: newBrand, person: adminPlan.person, status: adminPlan.status, permissions: adminPlan.permissions, actor: { id: req.user.id, name: req.user.name || req.user.email } });
+        cityAdmin = shapeCityAdmin(created);
+        if (adminPlan.person.temporary) temporaryPassword = adminPlan.person.password;
+      } catch (e) {
+        // the brand was created a moment ago and nothing uses it yet: remove it so the form can simply be corrected and sent again
+        await Brand.deleteOne({ _id: newBrand._id }).catch(() => {});
+        if (e instanceof CityAdminError) return res.status(e.status).json({ success: false, message: `City Admin: ${e.message} The brand was not created.` });
+        throw e;
+      }
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Business Brand created successfully and persisted in MongoDB',
+      message: cityAdmin ? 'Business Brand and its City Admin were created.' : 'Business Brand created successfully and persisted in MongoDB',
       brand: newBrand,
+      cityAdmin,
+      temporaryPassword,
+      adminPending: !cityAdmin,
     });
   } catch (err) {
     if (err.code === 11000) {
@@ -394,6 +428,12 @@ export const updateBrand = async (req, res, next) => {
       new: true,
       runValidators: true,
     });
+
+    // keep the City Admin's city in step with the brand's city (the brand record stays the source of truth)
+    if (updated && String(updated.city || '') !== String(existing.city || '')) {
+      const key = normalizeCity(updated.city) || String(updated.city || '').toLowerCase();
+      await Admin.updateMany({ adminType: 'CITY_ADMIN', brandId: existing.brandId }, { $set: { city: updated.city || undefined, cityId: key || undefined } }).catch(() => {});
+    }
 
     res.status(200).json({
       success: true,

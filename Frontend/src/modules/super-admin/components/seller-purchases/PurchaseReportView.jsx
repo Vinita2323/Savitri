@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, ArrowDownRight, ArrowUpRight, Boxes, CalendarRange, Download, IndianRupee, Loader2, Minus, ShoppingBag, TrendingUp } from 'lucide-react';
 import { superAdminService } from '../../../../services/superAdminService';
 import { selectClass, tableClass, tableWrap, tdClass, thClass } from './purchaseUi';
+import { downloadTablePdf, pdfMoney } from '../../utils/tablePdf';
 
 const RANGES = {
   week: [{ v: 4, l: 'Last 4 weeks' }, { v: 8, l: 'Last 8 weeks' }, { v: 12, l: 'Last 12 weeks' }, { v: 26, l: 'Last 26 weeks' }, { v: 52, l: 'Last 52 weeks' }],
@@ -189,6 +190,18 @@ export const PurchaseReportView = ({ brandId, facets, reloadKey, onLive }) => {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
+  const exportPdf = () => {
+    downloadTablePdf({
+      title: `Seller Purchases - ${period === 'week' ? 'Weekly' : 'Monthly'} Report`,
+      subtitle: `${dmy(data.from)} to ${dmy(data.to)}. Cancelled purchases are not counted.`,
+      columns: [period === 'week' ? 'Week' : 'Month', 'Purchases', 'Units', 'Sellers', 'Suppliers', 'Total value'],
+      rows: rows.map((b) => [`${periodLabel(b, period)}${b.current ? ' (in progress)' : ''}`, String(b.purchases), String(b.units), String(b.sellers), String(b.suppliers), pdfMoney(b.totalSpend)]),
+      totals: ['Total', String(data.totals.purchases), String(data.totals.units), String(data.totals.sellers), String(data.totals.suppliers), pdfMoney(data.totals.totalSpend)],
+      numericColumns: [1, 2, 3, 4, 5],
+      filename: `seller-purchases-${period}ly-report-${new Date().toISOString().slice(0, 10)}.pdf`,
+    });
+  };
+
   return (
     <div className="space-y-5" data-testid="pr-view">
       <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
@@ -208,7 +221,8 @@ export const PurchaseReportView = ({ brandId, facets, reloadKey, onLive }) => {
               <label className="flex items-center gap-2 text-xs font-medium text-slate-500">To <input data-testid="pr-to" type="date" value={custom.to} min={custom.from || undefined} onChange={(e) => setCustom({ ...custom, to: e.target.value })} className={`${selectClass} !w-auto`} /></label>
             </>
           )}
-          <button data-testid="pr-export" type="button" onClick={exportCsv} disabled={!data || loading} className="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-[#79B433] px-3.5 py-1.5 text-sm font-semibold text-white hover:bg-[#689A2B] disabled:cursor-not-allowed disabled:opacity-40"><Download size={14} /> Export report</button>
+          <button data-testid="pr-export" type="button" onClick={exportCsv} disabled={!data || loading} className="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-[#79B433] px-3.5 py-1.5 text-sm font-semibold text-white hover:bg-[#689A2B] disabled:cursor-not-allowed disabled:opacity-40"><Download size={14} /> Export CSV</button>
+          <button data-testid="pr-export-pdf" type="button" onClick={exportPdf} disabled={!data || loading} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#79B433] bg-white px-3.5 py-1.5 text-sm font-semibold text-[#4d7a1c] hover:bg-[#79B433]/10 disabled:cursor-not-allowed disabled:opacity-40"><Download size={14} /> Export PDF</button>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <select data-testid="pr-seller" className={selectClass} value={f.sellerId} onChange={(e) => setF({ ...f, sellerId: e.target.value })}><option value="">All Sellers</option>{facets.sellers.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>

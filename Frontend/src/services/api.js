@@ -47,6 +47,13 @@ API.interceptors.request.use(
     const currentPath = (typeof window !== 'undefined' && window.location && window.location.pathname) ? window.location.pathname : '';
     const requestUrl = config.url || '';
 
+    // City Admin endpoints carry exactly the header their page sets (or none, for the login): never a token picked from
+    // whatever other logins (seller, customer, Super Admin ...) happen to be saved in this browser
+    if (requestUrl.includes('/city-admin/')) {
+      if (requestUrl.includes('/city-admin/login') && config.headers) delete config.headers.Authorization;
+      return config;
+    }
+
     // Never attach stale authorization headers to public login/otp endpoints
     const isPublicAuthEndpoint =
       requestUrl.includes('/auth/admin/login') ||
@@ -152,6 +159,25 @@ API.interceptors.response.use(
   (response) => (isStaleBrandResponse(response.config) ? new Promise(() => {}) : response),
   (error) => {
     if (isStaleBrandResponse(error?.config)) return new Promise(() => {});
+    // A Super Admin page that was answered with a non-Super-Admin login (for example a City Admin login left in this browser
+    // after the Super Admin session ended): send the person to the Super Admin login instead of showing a confusing error
+    if (error.response?.status === 403 && /restricted to super_admin/i.test(String(error.response?.data?.message || '')) && typeof window !== 'undefined' && window.location.pathname.startsWith('/super-admin') && !window.location.pathname.startsWith('/super-admin/login')) {
+      const stale = localStorage.getItem('savitri_super_admin_token') ? null : 'admin';
+      if (stale) { localStorage.removeItem('savitri_admin_token'); localStorage.removeItem('savitri_admin_data'); localStorage.removeItem('savitri_admin_session'); }
+      localStorage.removeItem('savitri_super_admin_token'); localStorage.removeItem('savitri_super_admin_data'); localStorage.removeItem('savitri_super_admin_session');
+      sessionStorage.setItem('savitri_super_admin_auth_expired_redirect', window.location.pathname);
+      window.location.href = '/super-admin/login';
+      return new Promise(() => {});
+    }
+    // A City Admin still on a temporary password must set a new one on the City Admin login page first
+    if (error.response?.status === 403 && error.response?.data?.code === 'PASSWORD_CHANGE_REQUIRED' && typeof window !== 'undefined' && !window.location.pathname.startsWith('/city-admin')) {
+      localStorage.removeItem('savitri_admin_token');
+      localStorage.removeItem('savitri_admin_data');
+      localStorage.removeItem('savitri_admin_session');
+      sessionStorage.setItem('savitri_city_admin_notice', 'Please sign in here and choose your own password first.');
+      window.location.href = '/city-admin/login';
+      return new Promise(() => {});
+    }
     if (error.response && error.response.status === 401) {
       const currentPath = (typeof window !== 'undefined' && window.location && window.location.pathname) ? window.location.pathname : '';
 
@@ -185,13 +211,17 @@ API.interceptors.response.use(
           sessionStorage.setItem('savitri_captain_auth_expired_redirect', currentPath);
           window.location.href = '/captain/login';
         }
+      } else if (currentPath.startsWith('/city-admin')) {
+        // the City Admin login page: a wrong password is an ordinary error shown on that page, not a redirect
       } else if (currentPath.startsWith('/admin')) {
         if (!currentPath.startsWith('/admin/login')) {
+          let wasCityAdmin = false;
+          try { wasCityAdmin = JSON.parse(localStorage.getItem('savitri_admin_data') || 'null')?.adminType === 'CITY_ADMIN'; } catch { /* ignore */ }
           localStorage.removeItem('savitri_admin_token');
           localStorage.removeItem('savitri_admin_data');
           localStorage.removeItem('savitri_admin_session');
           sessionStorage.setItem('savitri_admin_auth_expired_redirect', currentPath);
-          window.location.href = '/admin/login';
+          window.location.href = wasCityAdmin ? '/city-admin/login' : '/admin/login';
         }
       } else {
         // Consumer / Customer

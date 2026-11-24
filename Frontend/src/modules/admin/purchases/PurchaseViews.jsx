@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Download, Eye, Lock } from 'lucide-react';
 import adminPurchaseService from '../../../services/adminPurchaseService';
+import { downloadPurchasePdf } from './purchasePdf';
+import { downloadTablePdf, pdfMoney } from '../../super-admin/utils/tablePdf';
 import { Card, Empty, Notice, Spinner, btnGhost, btnPrimary, btnDanger, inputCls } from '../../employee/components/ui';
 import { Drawer, Labeled, Modal, Pager, Stat, PayChip, StatusChip, fmtMoney, fmtDate, fmtDateTime, useDebounced, METHODS, today } from './purchaseUi';
 
@@ -118,7 +120,8 @@ export function PurchaseDetail({ id, onClose, onChanged, fetcher = adminPurchase
       {msg && <Notice type="success">{msg}</Notice>}
       {p && (
         <div className="space-y-5 mt-3" data-testid="pur-detail">
-          <div className="flex flex-wrap items-center gap-2"><StatusChip status={p.status} /><PayChip status={p.paymentStatus} />{p.paymentMethod && <span className="text-xs text-slate-500">{METHODS[p.paymentMethod]}</span>}</div>
+          <div className="flex flex-wrap items-center gap-2"><StatusChip status={p.status} /><PayChip status={p.paymentStatus} />{p.paymentMethod && <span className="text-xs text-slate-500">{METHODS[p.paymentMethod]}</span>}
+            <button type="button" data-testid="pur-pdf" className={`${btnGhost} ml-auto`} onClick={() => { try { downloadPurchasePdf(d); } catch (e) { setError(`Could not create the PDF: ${e.message}`); } }}><Download size={14} className="inline mr-1" />Download PDF</button></div>
           <div className="grid sm:grid-cols-3 gap-3 rounded-xl bg-slate-50 p-3 text-sm">
             <div><p className="m-0 text-[11px] text-slate-500">Supplier</p><p className="m-0 font-bold">{p.supplierName}</p><p className="m-0 text-xs text-slate-500">{[p.supplierPhone, p.supplierEmail].filter(Boolean).join(' · ')}</p>{p.supplierAddress && <p className="m-0 text-xs text-slate-500">{p.supplierAddress}</p>}</div>
             <div><p className="m-0 text-[11px] text-slate-500">Invoice no.</p><p className="m-0 font-bold">{p.invoiceNumber || '-'}</p></div>
@@ -185,6 +188,36 @@ export function History({ version, onChanged, listFn = adminPurchaseService.list
   const load = useCallback(() => { setError(''); return listFn({ ...f, search, page, limit: 20 }).then(setData).catch((e) => setError(e.message)); }, [f.status, f.paymentStatus, f.from, f.to, f.adminId, search, page, version, listFn]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [load]);
   const set = (p) => { setF({ ...f, ...p }); setPage(1); };
+  const [pdfBusy, setPdfBusy] = useState(false);
+  // PDF of every purchase the current filters match (not only the page on screen)
+  const exportPdf = async () => {
+    setPdfBusy(true); setError('');
+    try {
+      const all = [];
+      for (let pg = 1; pg <= 100; pg += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        const res = await listFn({ ...f, search, page: pg, limit: 100 });
+        all.push(...(res.purchases || []));
+        if (pg >= (res.pages || 1)) break;
+      }
+      const rec = all.filter((p) => p.status === 'RECORDED');
+      const money = (paise) => pdfMoney((Number(paise) || 0) / 100);
+      const adminName = (data?.admins || adminOptions).find((a) => a.id === f.adminId)?.name;
+      const used = Object.entries({ ...f, search, adminId: adminName || '' }).filter(([, v]) => v).map(([k, v]) => `${k === 'adminId' ? 'admin' : k === 'paymentStatus' ? 'payment' : k}: ${v}`).join(', ');
+      const units = rec.reduce((t, p) => t + (p.totalQuantity || 0), 0);
+      const grand = rec.reduce((t, p) => t + (p.finalPaise || 0), 0);
+      const admin = (p) => (showAdmin ? [p.adminName || ''] : []);
+      downloadTablePdf({
+        title: showAdmin ? 'Admin Purchases' : 'My Store Purchases',
+        subtitle: `${used ? `Filters: ${used}. ` : 'All purchases. '}Recorded purchases: ${rec.length}  |  Total items purchased: ${units}  |  Total amount: ${money(grand)}`,
+        columns: ['Date', 'Purchase ID', ...(showAdmin ? ['Admin'] : []), 'Supplier', 'Products', 'Qty', 'Amount', 'Payment', 'Status'],
+        rows: all.map((p) => [fmtDate(p.purchaseDate), p.purchaseId, ...admin(p), p.supplierName, p.productsText || '', String(p.totalQuantity ?? ''), money(p.finalPaise), p.paymentStatus, p.status]),
+        totals: ['Total (recorded)', '', ...(showAdmin ? [''] : []), '', '', String(units), money(grand), '', ''],
+        numericColumns: [showAdmin ? 5 : 4, showAdmin ? 6 : 5],
+        filename: `${showAdmin ? 'admin' : 'my'}-purchases-${new Date().toISOString().slice(0, 10)}.pdf`,
+      });
+    } catch (e) { setError(e.message || 'Could not create the PDF.'); } finally { setPdfBusy(false); }
+  };
   return (
     <div className="space-y-4" data-testid="history">
       <Card>
@@ -196,6 +229,7 @@ export function History({ version, onChanged, listFn = adminPurchaseService.list
           <label className="text-xs font-semibold text-slate-500">From<input data-testid="h-from" type="date" className={`${inputCls} mt-1`} value={f.from} onChange={(e) => set({ from: e.target.value })} /></label>
           <label className="text-xs font-semibold text-slate-500">To<input data-testid="h-to" type="date" className={`${inputCls} mt-1`} value={f.to} onChange={(e) => set({ to: e.target.value })} /></label>
           {extraFilters}
+          <button type="button" data-testid="h-export-pdf" disabled={pdfBusy || !data?.purchases?.length} onClick={exportPdf} className={`${btnGhost} disabled:opacity-50`}><Download size={14} className="inline mr-1" />{pdfBusy ? 'Preparing...' : 'Export PDF'}</button>
         </div>
       </Card>
       {error && <Notice type="error">{error}</Notice>}
@@ -306,16 +340,15 @@ const SellerPurchaseDetail = ({ id, onClose }) => {
   );
 };
 
-export function SellerPurchases({ presetSeller = '', onClearPreset }) {
+export function SellerPurchases({ showSummary = false }) {
   const [sellers, setSellers] = useState([]);
-  const [f, setF] = useState({ search: '', sellerId: presetSeller, paymentStatus: '', status: '', from: '', to: '' });
+  const [f, setF] = useState({ search: '', sellerId: '', paymentStatus: '', status: '', from: '', to: '' });
   const [page, setPage] = useState(1);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [open, setOpen] = useState(null);
   const search = useDebounced(f.search);
   useEffect(() => { adminPurchaseService.sellers().then((r) => setSellers(r.sellers)).catch(() => {}); }, []);
-  useEffect(() => { setF((x) => ({ ...x, sellerId: presetSeller })); setPage(1); }, [presetSeller]);
   useEffect(() => { setError(''); adminPurchaseService.sellerPurchases({ ...f, search, page, limit: 20 }).then(setData).catch((e) => setError(e.message)); }, [f.sellerId, f.paymentStatus, f.status, f.from, f.to, search, page]); // eslint-disable-line react-hooks/exhaustive-deps
   const set = (p) => { setF({ ...f, ...p }); setPage(1); };
   return (
@@ -324,7 +357,7 @@ export function SellerPurchases({ presetSeller = '', onClearPreset }) {
       <Card>
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-xs font-semibold text-slate-500 flex-1 min-w-[180px]">Search<input data-testid="sp-search" className={`${inputCls} mt-1`} placeholder="Seller name or purchase ID" value={f.search} onChange={(e) => set({ search: e.target.value })} /></label>
-          <label className="text-xs font-semibold text-slate-500">Seller<select data-testid="sp-seller" className={`${inputCls} mt-1`} value={f.sellerId} onChange={(e) => { set({ sellerId: e.target.value }); if (!e.target.value) onClearPreset?.(); }}><option value="">All my sellers</option>{sellers.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.storeName})</option>)}</select></label>
+          <label className="text-xs font-semibold text-slate-500">Seller<select data-testid="sp-seller" className={`${inputCls} mt-1`} value={f.sellerId} onChange={(e) => set({ sellerId: e.target.value })}><option value="">All my sellers</option>{sellers.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.storeName})</option>)}</select></label>
           <label className="text-xs font-semibold text-slate-500">Payment status<select data-testid="sp-pay" className={`${inputCls} mt-1`} value={f.paymentStatus} onChange={(e) => set({ paymentStatus: e.target.value })}><option value="">All</option><option value="NOT_RECORDED">Not recorded</option><option value="PAID">Paid</option><option value="PARTIAL">Partial</option><option value="UNPAID">Unpaid</option></select></label>
           <label className="text-xs font-semibold text-slate-500">Status<select data-testid="sp-status" className={`${inputCls} mt-1`} value={f.status} onChange={(e) => set({ status: e.target.value })}><option value="">All</option><option value="RECORDED">Recorded</option><option value="CANCELLED">Cancelled</option></select></label>
           <label className="text-xs font-semibold text-slate-500">From<input data-testid="sp-from" type="date" className={`${inputCls} mt-1`} value={f.from} onChange={(e) => set({ from: e.target.value })} /></label>
@@ -332,6 +365,11 @@ export function SellerPurchases({ presetSeller = '', onClearPreset }) {
         </div>
         <p className="m-0 mt-2 text-[11px] text-slate-400">Sellers do not enter a payment status when they record a purchase, so it shows as "Not recorded".</p>
       </Card>
+      <SellerWiseSummary
+        defaultOpen={showSummary}
+        filters={{ search, sellerId: f.sellerId, paymentStatus: f.paymentStatus, status: f.status, from: f.from, to: f.to }}
+        onOpenSeller={(id) => { set({ sellerId: id }); setTimeout(() => document.querySelector('[data-testid="sp-summary"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
+      />
       {error && <Notice type="error">{error}</Notice>}
       {!data && !error && <Spinner />}
       {data && (
@@ -368,33 +406,41 @@ export function SellerPurchases({ presetSeller = '', onClearPreset }) {
   );
 }
 
-// ───────────────────────── seller-wise summary ─────────────────────────
+// ───────────────────────── seller-wise summary (a section of the Associated Seller Purchases page) ─────────────────────────
 
-export function SellerWise({ onOpenSeller }) {
-  const [f, setF] = useState({ from: '', to: '' });
+/** Totals per seller, from the same records and the same filters as the list below it (the server uses one shared filter for both). */
+function SellerWiseSummary({ filters, onOpenSeller, defaultOpen }) {
+  const [open, setOpen] = useState(defaultOpen);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
-  useEffect(() => { setError(''); adminPurchaseService.sellerSummary(f).then(setData).catch((e) => setError(e.message)); }, [f]);
+  const key = JSON.stringify(filters);
+  useEffect(() => {
+    if (!open) return undefined;
+    let live = true;
+    setError('');
+    adminPurchaseService.sellerSummary(filters).then((d) => live && setData(d)).catch((e) => live && setError(e.message));
+    return () => { live = false; };
+  }, [open, key]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <div className="space-y-4" data-testid="bysellers">
-      <Card>
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="text-xs font-semibold text-slate-500">From<input data-testid="sw-from" type="date" className={`${inputCls} mt-1`} value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} /></label>
-          <label className="text-xs font-semibold text-slate-500">To<input data-testid="sw-to" type="date" className={`${inputCls} mt-1`} value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} /></label>
-          <span className="text-xs text-slate-500 inline-flex items-center gap-1"><Lock size={11} /> read only</span>
+    <Card>
+      <button type="button" data-testid="sw-toggle" aria-expanded={open} onClick={() => setOpen(!open)} className="w-full flex items-center justify-between bg-transparent border-0 cursor-pointer p-0 text-left">
+        <span className="text-base font-extrabold text-slate-900">Seller-wise Purchase Summary</span>
+        <span className="text-xs font-bold text-slate-500">{open ? 'Hide' : 'Show'}</span>
+      </button>
+      {open && (
+        <div className="mt-3" data-testid="bysellers">
+          {error && <Notice type="error">{error}</Notice>}
+          {!data && !error && <Spinner />}
+          {data && (data.sellers.length === 0 ? <Empty>No seller purchases for these filters.</Empty> : (
+            <>
+              <div className="overflow-x-auto"><table className="w-full text-sm" data-testid="sw-table"><thead><tr className={headCls}><TH>Seller</TH><TH>Store</TH><TH right>Total purchases</TH><TH right>Total units</TH><TH right>Total purchase amount</TH><TH>Last purchase</TH><TH right>Suppliers</TH><TH /></tr></thead>
+                <tbody className="divide-y divide-slate-100">{data.sellers.map((s) => <tr key={s.id} data-testid="sw-row" data-seller={s.name}><td className="px-3 py-3 font-bold">{s.name}</td><td className="px-3 py-3">{s.storeName}</td><td className="px-3 py-3 text-right" data-testid="sw-count">{s.purchases}</td><td className="px-3 py-3 text-right" data-testid="sw-qty">{s.quantity}</td><td className="px-3 py-3 text-right font-semibold" data-testid="sw-amount">{fmtMoney(s.amountPaise)}</td><td className="px-3 py-3">{fmtDate(s.lastPurchaseDate)}</td><td className="px-3 py-3 text-right">{s.suppliers}</td><td className="px-3 py-3 text-right"><button type="button" data-testid="sw-open" className={btnGhost} onClick={() => onOpenSeller(s.id)}>Purchase details</button></td></tr>)}</tbody></table></div>
+              <p className="m-0 mt-3 text-sm text-slate-600">All sellers shown together: <b data-testid="sw-total">{fmtMoney(data.totalAmountPaise)}</b></p>
+            </>
+          ))}
+          <p className="m-0 mt-2 text-[11px] text-slate-400">Counts recorded purchases only (cancelled ones are left out), using the search, seller, status and date filters above.</p>
         </div>
-      </Card>
-      {error && <Notice type="error">{error}</Notice>}
-      {!data && !error && <Spinner />}
-      {data && (
-        <Card>
-          {data.sellers.length === 0 ? <Empty>No seller purchases yet.</Empty> : (
-            <Table testId="sw-table"><thead><tr className={headCls}><TH>Seller</TH><TH>Store</TH><TH right>Purchases</TH><TH right>Units</TH><TH right>Total purchased</TH><TH>Last purchase</TH><TH right>Suppliers</TH><TH /></tr></thead>
-              <tbody className="divide-y divide-slate-100">{data.sellers.map((s) => <tr key={s.id} data-testid="sw-row" data-seller={s.name}><td className="px-3 py-3 font-bold">{s.name}</td><td className="px-3 py-3">{s.storeName}</td><td className="px-3 py-3 text-right">{s.purchases}</td><td className="px-3 py-3 text-right">{s.quantity}</td><td className="px-3 py-3 text-right font-semibold" data-testid="sw-amount">{fmtMoney(s.amountPaise)}</td><td className="px-3 py-3">{fmtDate(s.lastPurchaseDate)}</td><td className="px-3 py-3 text-right">{s.suppliers}</td><td className="px-3 py-3 text-right"><button type="button" data-testid="sw-open" className={btnGhost} onClick={() => onOpenSeller(s.id)}>Purchase details</button></td></tr>)}</tbody></Table>
-          )}
-        </Card>
       )}
-      {data && <p className="m-0 text-sm text-slate-600">All associated sellers together: <b data-testid="sw-total">{fmtMoney(data.totalAmountPaise)}</b></p>}
-    </div>
+    </Card>
   );
 }

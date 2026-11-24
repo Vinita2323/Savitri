@@ -57,6 +57,18 @@ const adminSchema = new mongoose.Schema(
       type: [String],
       default: undefined,
     },
+
+    // ── City Admin (an admin tied to exactly ONE brand / city). Unset on every other admin account. ──
+    adminType: { type: String, enum: ['CITY_ADMIN'], default: undefined },
+    brandId: { type: String, trim: true, default: undefined },
+    city: { type: String, trim: true, default: undefined }, // city of the brand at assignment time (validated against the Brand record)
+    cityId: { type: String, trim: true, default: undefined }, // normalised city key of the brand
+    username: { type: String, trim: true, lowercase: true, default: undefined },
+    permissions: { type: [String], default: undefined }, // areas of the panel this City Admin may use; enforced on the server
+    mustChangePassword: { type: Boolean, default: undefined },
+    lastLoginAt: { type: Date, default: undefined },
+    assignedBy: { id: { type: mongoose.Schema.Types.ObjectId, default: undefined }, name: { type: String, default: undefined } },
+    assignmentHistory: { type: [{ at: { type: Date, default: Date.now }, action: String, by: String, note: String }], default: undefined },
   },
   {
     timestamps: true,
@@ -74,6 +86,10 @@ adminSchema.pre('save', async function (next) {
 adminSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
+
+// One ACTIVE City Admin per brand; usernames are unique when present (autoIndex is off: see ensureCityAdminIndexes)
+adminSchema.index({ brandId: 1 }, { unique: true, partialFilterExpression: { adminType: 'CITY_ADMIN', status: 'active' } });
+adminSchema.index({ username: 1 }, { unique: true, sparse: true });
 
 const Admin = mongoose.model('Admin', adminSchema);
 export default Admin;

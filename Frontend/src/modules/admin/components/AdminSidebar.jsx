@@ -97,6 +97,11 @@ export const AdminSidebar = () => {
     localStorage.removeItem('savitri_admin_token');
     localStorage.removeItem('savitri_admin_data');
     localStorage.removeItem('savitri_admin_session');
+    // The admin pages fall back to a saved Super Admin login when no admin login exists, so a leftover Super Admin
+    // session would sign you straight back in. Logging out of the Admin Panel ends that browser session too.
+    localStorage.removeItem('savitri_super_admin_token');
+    localStorage.removeItem('savitri_super_admin_data');
+    localStorage.removeItem('savitri_super_admin_session');
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
     localStorage.removeItem('token');
@@ -312,7 +317,6 @@ export const AdminSidebar = () => {
             { id: 'purchase_history', label: 'Purchase History' },
             { id: 'purchase_stock', label: 'Stock Updates' },
             { id: 'purchase_sellers', label: 'Associated Seller Purchases' },
-            { id: 'purchase_by_seller', label: 'Seller-wise Purchases' },
           ]
         }
       ]

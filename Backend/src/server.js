@@ -62,6 +62,7 @@ import employeePortalRoutes from './routes/employeePortalRoutes.js';
 import employeeManagementRoutes from './routes/employeeManagementRoutes.js';
 import payrollRoutes from './routes/payrollRoutes.js';
 import adminPurchaseRoutes from './routes/adminPurchaseRoutes.js';
+import cityAdminAuthRoutes from './routes/cityAdminAuthRoutes.js';
 import employeeSelfieFileRoutes from './routes/employeeSelfieFileRoutes.js';
 import { startEmployeeScheduler } from './services/employeeScheduler.js';
 import bulkProductRoutes from './routes/bulkProductRoutes.js';
@@ -220,6 +221,7 @@ const registerRoutes = (prefix = '') => {
   app.use(`${prefix}/employee-management`, employeeManagementRoutes);
   app.use(`${prefix}/payroll`, payrollRoutes);
   app.use(`${prefix}/admin-purchases`, adminPurchaseRoutes);
+  app.use(`${prefix}/auth/city-admin`, cityAdminAuthRoutes);
   app.use(`${prefix}/bulk-products`, bulkProductRoutes);
   app.use(`${prefix}`, commissionRoutes);
 };

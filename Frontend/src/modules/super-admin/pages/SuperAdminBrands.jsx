@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import cityAdminService from '../../../services/cityAdminService';
+import { CityAdminStatusChip } from '../components/CityAdminSection';
 import {
   Building2,
   MapPin,
@@ -47,6 +49,9 @@ export const SuperAdminBrands = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedCity, setSelectedCity] = useState('ALL');
+  const [adminFilter, setAdminFilter] = useState('ALL'); // ALL | CONFIGURED | PENDING | INACTIVE
+  const [adminByBrand, setAdminByBrand] = useState({}); // brandId -> { adminStatus, admin }
+  const [adminCounts, setAdminCounts] = useState(null);
   const [statusTogglingId, setStatusTogglingId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState('');
@@ -88,6 +93,14 @@ export const SuperAdminBrands = () => {
     fetchBrands().finally(() => setLoading(false));
   }, [fetchBrands]);
 
+  // City Admin status of every brand (pending / configured / inactive)
+  useEffect(() => {
+    cityAdminService.brandsWithStatus().then((r) => {
+      setAdminByBrand(Object.fromEntries(r.brands.map((b) => [b.brandId, b])));
+      setAdminCounts(r.counts);
+    }).catch(() => {});
+  }, [brands]);
+
   // Extract unique cities
   const cities = useMemo(() => {
     const list = Array.from(new Set(brands.map((b) => b.city).filter(Boolean)));
@@ -99,6 +112,7 @@ export const SuperAdminBrands = () => {
     return brands.filter((b) => {
       if (selectedStatus !== 'ALL' && b.status !== selectedStatus) return false;
       if (selectedCity !== 'ALL' && b.city !== selectedCity) return false;
+      if (adminFilter !== 'ALL' && (adminByBrand[b.brandId || b.id]?.adminStatus || 'PENDING') !== adminFilter) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesName = (b.name || '').toLowerCase().includes(q);
@@ -109,7 +123,7 @@ export const SuperAdminBrands = () => {
       }
       return true;
     });
-  }, [brands, selectedStatus, selectedCity, searchQuery]);
+  }, [brands, selectedStatus, selectedCity, searchQuery, adminFilter, adminByBrand]);
 
   // Aggregate stats
   const stats = useMemo(() => {
@@ -259,6 +273,18 @@ export const SuperAdminBrands = () => {
             </select>
 
             <select
+              data-testid="admin-filter"
+              value={adminFilter}
+              onChange={(e) => setAdminFilter(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none"
+            >
+              <option value="ALL">All Brands (admin)</option>
+              <option value="CONFIGURED">Admin Configured{adminCounts ? ` (${adminCounts.CONFIGURED})` : ''}</option>
+              <option value="PENDING">Admin Pending{adminCounts ? ` (${adminCounts.PENDING})` : ''}</option>
+              <option value="INACTIVE">Admin Inactive{adminCounts ? ` (${adminCounts.INACTIVE})` : ''}</option>
+            </select>
+
+            <select
               value={selectedCity}
               onChange={(e) => setSelectedCity(e.target.value)}
               className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#79B433]"
@@ -346,6 +372,11 @@ export const SuperAdminBrands = () => {
                       </span>
                     </div>
 
+                    <div className="mt-2 flex items-center gap-2" data-testid="brand-admin-row" data-brand={brand.brandId || brand.id}>
+                      <CityAdminStatusChip s={adminByBrand[brand.brandId || brand.id]?.adminStatus || 'PENDING'} />
+                      {adminByBrand[brand.brandId || brand.id]?.admin && <span className="truncate text-[11px] text-slate-500">{adminByBrand[brand.brandId || brand.id].admin.name}</span>}
+                    </div>
+
                     {/* Category & City */}
                     <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
                       <span className="rounded-lg bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
@@ -408,6 +439,15 @@ export const SuperAdminBrands = () => {
                       >
                         <Edit3 size={12} />
                         <span>Edit</span>
+                      </Link>
+
+                      <Link
+                        to={`/super-admin/brands/edit/${brand.brandId || brand.id}#cityadmin`}
+                        data-testid="brand-admin-action"
+                        className="flex items-center gap-1 rounded-lg border border-[#79B433]/40 bg-[#79B433]/5 px-2.5 py-1 text-[11px] font-bold text-[#4d7a1c] no-underline hover:bg-[#79B433]/10"
+                      >
+                        <ShieldCheck size={12} />
+                        <span>{{ CONFIGURED: 'View Admin', INACTIVE: 'Edit Admin' }[adminByBrand[brand.brandId || brand.id]?.adminStatus] || 'Configure Admin'}</span>
                       </Link>
 
                       {(
