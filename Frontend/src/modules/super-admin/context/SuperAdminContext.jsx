@@ -246,10 +246,17 @@ export const SuperAdminProvider = ({ children }) => {
         }
       } catch (e) {
         if (!cancelled) {
-          setSessionValid(false);
-          setSuperAdminSessionValid?.(false);
-          localStorage.removeItem('savitri_super_admin_token');
-          localStorage.removeItem('savitri_super_admin_session');
+          // Only a real "not signed in" answer ends the session. A network error, a restarting server or a busy server must not log you out.
+          const status = e?.response?.status;
+          if (status === 401 || status === 403) {
+            setSessionValid(false);
+            setSuperAdminSessionValid?.(false);
+            localStorage.removeItem('savitri_super_admin_token');
+            localStorage.removeItem('savitri_super_admin_session');
+          } else {
+            setSessionValid(true);
+            setSuperAdminSessionValid?.(true);
+          }
         }
       } finally {
         if (!cancelled) setSessionChecking(false);

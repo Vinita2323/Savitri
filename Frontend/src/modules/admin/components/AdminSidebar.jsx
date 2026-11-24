@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/useAdmin';
+import { DOCUMENT_PAGES } from '../../../utils/documentPages';
 import { 
   LayoutDashboard, 
   FolderTree, 
@@ -318,6 +319,17 @@ export const AdminSidebar = () => {
             { id: 'purchase_stock', label: 'Stock Updates' },
             { id: 'purchase_sellers', label: 'Associated Seller Purchases' },
           ]
+        }
+      ]
+    },
+    {
+      title: 'MY DOCUMENTS',
+      items: [
+        {
+          id: 'my_documents',
+          label: 'My Documents',
+          icon: FileText,
+          submenu: DOCUMENT_PAGES.map((p) => ({ id: `documents_${p.slug}`, label: p.label })),
         }
       ]
     },

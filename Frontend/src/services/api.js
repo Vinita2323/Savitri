@@ -190,6 +190,12 @@ API.interceptors.response.use(
         }
       } else if (currentPath.startsWith('/super-admin')) {
         if (!currentPath.startsWith('/super-admin/login')) {
+          // One endpoint answering 401 is not proof that the login is gone (it may be a single failing call). Ask the server whether the
+          // Super Admin session itself is still valid and only sign out when it is not; otherwise just report that one failure.
+          const failedUrl = String(error.config?.url || '');
+          if (!error.config?._sessionProbe && !failedUrl.includes('/auth/super-admin/me')) {
+            return API.get('/auth/super-admin/me', { _sessionProbe: true }).then(() => Promise.reject(error), () => Promise.reject(error));
+          }
           localStorage.removeItem('savitri_super_admin_token');
           localStorage.removeItem('savitri_super_admin_data');
           localStorage.removeItem('savitri_super_admin_session');
