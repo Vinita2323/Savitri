@@ -59,6 +59,8 @@ const UserRoutes = () => {
         <Routes>
           {/* Public Browsing Routes (Accessible to Guests) */}
           <Route path="/" element={<Home />} />
+          {/* Direct link to the home page (the splash only shows on "/") */}
+          <Route path="/home" element={<Home />} />
           <Route path="/categories" element={<Categories />} />
           <Route path="/sellers" element={<AllSellers />} />
           <Route path="/store/:sellerId" element={<SellerStore />} />
