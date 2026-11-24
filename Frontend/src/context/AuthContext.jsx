@@ -163,10 +163,15 @@ export const AuthProvider = ({ children }) => {
           }
         } catch (e) {
           if (!cancelled) {
-            setSuperAdminSessionValid(false);
-            localStorage.removeItem('savitri_super_admin_session');
-            localStorage.removeItem('savitri_super_admin_token');
-            localStorage.removeItem('savitri_super_admin_data');
+            const status = e?.response?.status;
+            if (status === 401 || status === 403) {
+              setSuperAdminSessionValid(false);
+              localStorage.removeItem('savitri_super_admin_session');
+              localStorage.removeItem('savitri_super_admin_token');
+              localStorage.removeItem('savitri_super_admin_data');
+            } else {
+              setSuperAdminSessionValid(true); // a network error or a busy server is not a logout
+            }
           }
         }
       } else {

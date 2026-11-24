@@ -102,6 +102,7 @@ const EmployeeRulesPage = lazy(() => import('../employees/pages/EmployeeRulesPag
 const EmployeeSelfieMonitoringPage = lazy(() => import('../employees/pages/EmployeeSelfieMonitoringPage'));
 const EmployeePayrollPage = lazy(() => import('../employees/pages/EmployeePayrollPage'));
 const AdminPurchasePage = lazy(() => import('../purchases/AdminPurchasePage'));
+const AdminDocumentsPage = lazy(() => import('../pages/AdminDocumentsPage'));
 const EmployeeActivityPage = lazy(() => import('../employees/pages/EmployeeActivityPage'));
 
 export const AdminLayout = () => {
@@ -109,7 +110,7 @@ export const AdminLayout = () => {
 
   const renderActiveTabContent = (keyOverride) => {
     // The URL form is hyphenated ("/admin/employee-directory") while the tab keys use underscores.
-    const tabKey = keyOverride !== undefined ? keyOverride : (typeof activeTab === 'string' && activeTab.startsWith('employee') ? activeTab.replace(/-/g, '_') : activeTab);
+    const tabKey = keyOverride !== undefined ? keyOverride : (typeof activeTab === 'string' && (activeTab.startsWith('employee') || activeTab.startsWith('documents')) ? activeTab.replace(/-/g, '_') : activeTab);
     switch (tabKey) {
       case 'referral_dashboard':
       case 'referral-dashboard':
@@ -401,6 +402,16 @@ export const AdminLayout = () => {
       case 'employee_payroll':
       case 'employees/payroll':
         return <EmployeePayrollPage onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'documents_all':
+      case 'documents_identity':
+      case 'documents_address':
+      case 'documents_tax':
+      case 'documents_bank':
+      case 'documents_legal':
+      case 'documents_insurance':
+      case 'documents_emergency':
+      case 'documents_other':
+        return <AdminDocumentsPage slug={tabKey.replace('documents_', '')} />;
       case 'purchase_dashboard':
         return <AdminPurchasePage tab="dashboard" />;
       case 'purchase_new':
