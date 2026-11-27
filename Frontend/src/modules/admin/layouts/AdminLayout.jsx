@@ -4,6 +4,8 @@ import { AdminSidebar } from '../components/AdminSidebar';
 import { AdminHeader } from '../components/AdminHeader';
 import { AdminBrandGate } from '../components/AdminBrandGate';
 import PageSkeleton from '../../../components/PageSkeleton';
+import { NoAccess, ViewOnlyNote } from '../components/AdminAccessNotices';
+import { tabAllowed } from '../../../utils/adminPermissions';
 
 // Lazy-loaded Admin Subpages and Features
 const AdminDashboard = lazy(() => import('../pages/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
@@ -460,7 +462,14 @@ const AdminLayoutContent = () => {
             <DeliveryChallanProvider>
               <EmployeeProvider>
                 <Suspense fallback={<PageSkeleton />}>
-                  {renderActiveTabContent()}
+                  {tabAllowed(activeTab) ? (
+                    <>
+                      <ViewOnlyNote tab={activeTab} />
+                      {renderActiveTabContent()}
+                    </>
+                  ) : (
+                    <NoAccess onOpen={setActiveTab} />
+                  )}
                 </Suspense>
               </EmployeeProvider>
             </DeliveryChallanProvider>

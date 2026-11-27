@@ -140,7 +140,7 @@ export const PolicyManagement = () => {
           </p>
         </div>
 
-        <button
+        <button data-perm="content.edit"
           onClick={handleSave}
           disabled={saving || loading}
           className="px-5 py-2.5 bg-[#ff7526] hover:bg-[#e65507] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer border-none flex items-center gap-2 self-start sm:self-auto disabled:opacity-50"
@@ -226,7 +226,7 @@ export const PolicyManagement = () => {
                 <span className="text-xs font-extrabold text-slate-800">
                   Clauses & Sections ({policyData.sections.length})
                 </span>
-                <button
+                <button data-perm="content.edit"
                   type="button"
                   onClick={handleAddClause}
                   className="px-3 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#E6A800] text-xs font-bold border border-orange-200 cursor-pointer flex items-center gap-1.5"
@@ -249,7 +249,7 @@ export const PolicyManagement = () => {
                       placeholder="Clause heading (e.g. 1. Account Security)"
                       className="flex-1 text-xs font-bold text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-[#ff7526]"
                     />
-                    <button
+                    <button data-perm="content.edit"
                       type="button"
                       onClick={() => handleRemoveClause(idx)}
                       title="Delete clause"
@@ -278,7 +278,7 @@ export const PolicyManagement = () => {
 
             {/* Bottom Actions */}
             <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <button
+              <button data-perm="content.edit"
                 type="button"
                 onClick={handleAddClause}
                 className="w-full sm:w-auto px-4 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl cursor-pointer flex items-center justify-center gap-1.5"
@@ -287,7 +287,7 @@ export const PolicyManagement = () => {
                 <span>Add Another Clause</span>
               </button>
 
-              <button
+              <button data-perm="content.edit"
                 type="button"
                 onClick={handleSave}
                 disabled={saving || loading}

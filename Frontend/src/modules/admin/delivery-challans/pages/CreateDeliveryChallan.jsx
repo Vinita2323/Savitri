@@ -416,7 +416,7 @@ export const CreateDeliveryChallan = ({ onNavigate }) => {
 
           {currentStep === 5 && (
             <>
-              <button
+              <button data-perm="challans.create"
                 onClick={handleSaveDraft}
                 disabled={submitting}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-900 text-white transition shadow-xs cursor-pointer disabled:opacity-50"
@@ -425,7 +425,7 @@ export const CreateDeliveryChallan = ({ onNavigate }) => {
                 <span>Save as Draft</span>
               </button>
 
-              <button
+              <button data-perm="challans.approve"
                 onClick={() => {
                   if (validateForm(true)) {
                     setShowConfirmDispatchedModal(true);
@@ -1251,7 +1251,7 @@ export const CreateDeliveryChallan = ({ onNavigate }) => {
               </button>
 
               <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                <button
+                <button data-perm="challans.create"
                   type="button"
                   onClick={handleSaveDraft}
                   disabled={submitting}
@@ -1261,7 +1261,7 @@ export const CreateDeliveryChallan = ({ onNavigate }) => {
                   <span>{submitting ? 'Saving...' : 'Save as Draft'}</span>
                 </button>
 
-                <button
+                <button data-perm="challans.approve"
                   type="button"
                   onClick={() => {
                     if (validateForm(true)) {
@@ -1310,7 +1310,7 @@ export const CreateDeliveryChallan = ({ onNavigate }) => {
               >
                 Go Back
               </button>
-              <button
+              <button data-perm="challans.approve"
                 type="button"
                 onClick={handleFinalizeDispatch}
                 disabled={submitting}

@@ -813,6 +813,7 @@ export const updateAdminAccess = async (req, res) => {
     }
     const before = admin.authorizedBrands;
     if (admin.adminType === 'CITY_ADMIN') return fail(res, 400, 'A City Admin belongs to one brand. Manage it from that brand page.');
+    if (admin.permissionMode === 'PER_BRAND' && list.includes('*')) return fail(res, 400, 'This admin has per-brand permissions and cannot be given all brands at once. Assign brands in Admin Configuration.');
     if (admin.brandAccess === 'ASSIGNED' && !list.includes('*')) {
       // managed in Admin Configuration: same rules there (no accidental duplicates, history recorded)
       try {

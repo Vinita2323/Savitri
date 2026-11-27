@@ -148,7 +148,7 @@ const forbidBrand = (res, brand) => res.status(403).json({
 });
 
 // Lookup a brand by stable identifiers only (exact match, no user-controlled regex).
-const findBrandByParam = async (param) => {
+export const findBrandByParam = async (param) => {
   let brandDoc = null;
   if (/^[0-9a-fA-F]{24}$/.test(param)) brandDoc = await Brand.findById(param);
   if (!brandDoc) brandDoc = await Brand.findOne({ $or: [{ brandId: param }, { code: param.toUpperCase() }] });

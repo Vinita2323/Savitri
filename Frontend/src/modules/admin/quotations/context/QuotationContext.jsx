@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { adminCan } from '../../../../utils/adminPermissions';
 import API from '../../../../services/api';
 
 /**
@@ -30,6 +31,7 @@ export const QuotationProvider = ({ children, brandKey }) => {
 
   const refresh = useCallback(async () => {
     const mine = ++seq.current;
+    if (!adminCan('quotations.view')) { setLoading(false); return; }
     setLoading(true);
     setLoadError('');
     try {

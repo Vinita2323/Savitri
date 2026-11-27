@@ -81,9 +81,9 @@ export const EmployeeTaskReviewPage = ({ onNavigate }) => {
                       <p className="m-0 mt-1.5 text-slate-800 whitespace-pre-wrap break-words">{sub?.notes || t.completionNotes || 'No notes provided.'}</p>
                       {sub?.attachments?.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{sub.attachments.map((a, i) => <button key={i} type="button" data-testid="rv-file" onClick={() => setPreview({ files: sub.attachments, index: i })} className="inline-flex items-center gap-1.5 text-[14px] font-bold text-emerald-700 bg-white border border-slate-200 hover:border-emerald-400 rounded-full px-3 py-1 cursor-pointer"><Paperclip className="w-3 h-3" />{a.name}</button>)}</div>}
                       <div className="flex flex-wrap gap-2 mt-4">
-                        <button type="button" className={btnPrimary} onClick={() => { setDlg({ task: t, decision: 'approve' }); setNotes(''); }}>Approve</button>
+                        <button data-perm="tasks.approve" type="button" className={btnPrimary} onClick={() => { setDlg({ task: t, decision: 'approve' }); setNotes(''); }}>Approve</button>
                         <button type="button" className={btnGhost} onClick={() => { setDlg({ task: t, decision: 'changes' }); setNotes(''); }}>Request changes</button>
-                        <button type="button" className={`${btnGhost} !text-rose-600`} onClick={() => { setDlg({ task: t, decision: 'reject' }); setNotes(''); }}>Reject</button>
+                        <button data-perm="tasks.approve" type="button" className={`${btnGhost} !text-rose-600`} onClick={() => { setDlg({ task: t, decision: 'reject' }); setNotes(''); }}>Reject</button>
                       </div>
                     </div>
                   )}
@@ -93,8 +93,8 @@ export const EmployeeTaskReviewPage = ({ onNavigate }) => {
                       <p className="m-0 text-slate-800"><strong>{r.requestedByName}</strong> asks to extend the deadline to <strong>{fmtDate(r.requestedDueDate)}</strong></p>
                       <p className="m-0 mt-1 text-slate-600 break-words">"{r.reason}"</p>
                       <div className="flex gap-2 mt-3">
-                        <button type="button" className={btnPrimary} disabled={busy} onClick={() => run(() => employeeManagementService.decideExtension(t._id, r._id, 'approve'), 'Extension approved.')}>Approve</button>
-                        <button type="button" className={btnGhost} disabled={busy} onClick={() => run(() => employeeManagementService.decideExtension(t._id, r._id, 'reject'), 'Extension rejected.')}>Reject</button>
+                        <button data-perm="tasks.approve" type="button" className={btnPrimary} disabled={busy} onClick={() => run(() => employeeManagementService.decideExtension(t._id, r._id, 'approve'), 'Extension approved.')}>Approve</button>
+                        <button data-perm="tasks.approve" type="button" className={btnGhost} disabled={busy} onClick={() => run(() => employeeManagementService.decideExtension(t._id, r._id, 'reject'), 'Extension rejected.')}>Reject</button>
                       </div>
                     </div>
                   ))}
@@ -115,7 +115,7 @@ export const EmployeeTaskReviewPage = ({ onNavigate }) => {
             <textarea className={inputCls} rows={3} placeholder={dlg.decision === 'approve' ? 'Optional note for the employee' : 'Explain the decision (required)'} value={notes} onChange={(e) => setNotes(e.target.value)} autoFocus />
             <div className="flex justify-end gap-2 mt-5">
               <button type="button" className={btnGhost} onClick={() => setDlg(null)}>Cancel</button>
-              <button type="button" className={dlg.decision === 'reject' ? btnDanger : btnPrimary} disabled={busy || (dlg.decision !== 'approve' && !notes.trim())} onClick={() => run(() => employeeManagementService.reviewTask(dlg.task._id, dlg.decision, notes.trim()), 'Review saved.')}>Confirm</button>
+              <button data-perm="tasks.approve" type="button" className={dlg.decision === 'reject' ? btnDanger : btnPrimary} disabled={busy || (dlg.decision !== 'approve' && !notes.trim())} onClick={() => run(() => employeeManagementService.reviewTask(dlg.task._id, dlg.decision, notes.trim()), 'Review saved.')}>Confirm</button>
             </div>
           </div>
         </div>

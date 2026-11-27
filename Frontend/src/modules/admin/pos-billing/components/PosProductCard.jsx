@@ -1,9 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { getImageUrl, isPlaceholderImage } from '../../../../utils/imageUtils';
 import { usePos } from '../context/PosContext';
 import { Plus, Minus, Check, AlertCircle } from 'lucide-react';
 
 export const PosProductCard = ({ product }) => {
   const { cart, addToCart, updateQuantity } = usePos();
+  const [broken, setBroken] = useState(false);
+  const rawImage = product.image || product.mainImage;
+  // no stand-in photo: a product without its own image (or whose image cannot load) shows its initials
+  const image = !broken && rawImage && !isPlaceholderImage(rawImage) ? getImageUrl(rawImage, product.name) : '';
 
   const productId = product._id || product.id;
   const inCartItem = cart.find((it) => it.productId === productId);
@@ -51,14 +56,12 @@ export const PosProductCard = ({ product }) => {
         {/* Thumbnail and Title */}
         <div className="flex items-start gap-2.5">
           <div className="w-14 h-14 rounded-lg bg-gray-100 border border-gray-150 overflow-hidden shrink-0 flex items-center justify-center">
-            {product.image || product.mainImage ? (
+            {image ? (
               <img
-                src={product.image || product.mainImage}
+                src={image}
                 alt={product.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                }}
+                onError={() => setBroken(true)}
               />
             ) : (
               <span className="text-xs font-bold text-gray-400 uppercase">

@@ -246,7 +246,7 @@ export const EmployeeAttendancePage = ({ onNavigate }) => {
             </button>
 
             {/* Mark Attendance Button */}
-            <button
+            <button data-perm="attendance.edit"
               type="button"
               onClick={() => {
                 setMarkDate(selectedDate);
@@ -360,7 +360,7 @@ export const EmployeeAttendancePage = ({ onNavigate }) => {
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             {!rec.checkOut && rec.checkIn && (
-                              <button
+                              <button data-perm="attendance.create"
                                 type="button"
                                 onClick={() => handleCheckOut(rec.employeeId)}
                                 className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition-colors shadow-2xs"
@@ -370,7 +370,7 @@ export const EmployeeAttendancePage = ({ onNavigate }) => {
                               </button>
                             )}
 
-                            <button
+                            <button data-perm="attendance.edit"
                               type="button"
                               onClick={() => openCorrection(rec)}
                               className="p-1.5 text-slate-500 hover:text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors"
@@ -399,7 +399,7 @@ export const EmployeeAttendancePage = ({ onNavigate }) => {
                           </p>
                         </div>
                         <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                          <button
+                          <button data-perm="attendance.edit"
                             type="button"
                             onClick={() => {
                               setMarkDate(selectedDate);
@@ -556,7 +556,7 @@ export const EmployeeAttendancePage = ({ onNavigate }) => {
                 >
                   Cancel
                 </button>
-                <button
+                <button data-perm="attendance.edit"
                   type="submit"
                   className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-xs"
                 >
@@ -734,7 +734,7 @@ export const EmployeeAttendancePage = ({ onNavigate }) => {
                 >
                   Cancel
                 </button>
-                <button
+                <button data-perm="attendance.edit"
                   type="submit"
                   className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl"
                 >

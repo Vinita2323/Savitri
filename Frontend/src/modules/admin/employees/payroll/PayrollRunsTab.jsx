@@ -50,7 +50,7 @@ function Generate({ brandId, onDone }) {
           </div>
         )}
         {error && <Notice type="error">{error}</Notice>}
-        <button type="button" data-testid="gen-go" className={btnPrimary} disabled={busy || sel.size === 0} onClick={go}>{busy ? 'Calculating…' : `Calculate payroll for ${sel.size} employee(s)`}</button>
+        <button type="button" data-testid="gen-go" data-perm="payroll.create" className={btnPrimary} disabled={busy || sel.size === 0} onClick={go}>{busy ? 'Calculating…' : `Calculate payroll for ${sel.size} employee(s)`}</button>
         {result && (
           <div data-testid="gen-result" className="text-sm space-y-1">
             <Notice type={result.created ? 'success' : 'warning'}>{result.created} payroll(s) created, {result.skipped} skipped.</Notice>

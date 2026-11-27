@@ -372,19 +372,19 @@ const PayoutManagement = ({ recipientType }) => {
                             <Eye size={14} />
                           </button>
                           {payout.status === 'PENDING' && (
-                            <button onClick={() => openAction(payout, 'APPROVE')}
+                            <button data-perm="payouts.approve" onClick={() => openAction(payout, 'APPROVE')}
                               className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-[11px] font-bold rounded-lg transition-colors border-none cursor-pointer whitespace-nowrap">
                               Approve
                             </button>
                           )}
                           {['APPROVED', 'PROCESSING'].includes(payout.status) && (
-                            <button onClick={() => openAction(payout, 'PROCESS')}
+                            <button data-perm="payouts.manage" onClick={() => openAction(payout, 'PROCESS')}
                               className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-[11px] font-bold rounded-lg transition-colors border-none cursor-pointer whitespace-nowrap">
                               Process
                             </button>
                           )}
                           {['PENDING', 'APPROVED', 'PROCESSING'].includes(payout.status) && (
-                            <button onClick={() => openAction(payout, 'REJECT')}
+                            <button data-perm="payouts.reject" onClick={() => openAction(payout, 'REJECT')}
                               className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-500 text-[11px] font-bold rounded-lg transition-colors border-none cursor-pointer">
                               Reject
                             </button>
@@ -497,7 +497,7 @@ const PayoutManagement = ({ recipientType }) => {
             {actionError && <p className="text-xs text-red-500 bg-red-50 border border-red-100 px-3 py-2 rounded-xl">{actionError}</p>}
             <div className="flex gap-3 pt-1">
               <button onClick={closeModals} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold rounded-xl transition-colors border-none cursor-pointer">Cancel</button>
-              <button onClick={handleApprove} disabled={actionLoading}
+              <button data-perm="payouts.approve" onClick={handleApprove} disabled={actionLoading}
                 className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors border-none cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
                 {actionLoading && <Loader2 size={14} className="animate-spin" />}Approve Payout
               </button>
@@ -530,7 +530,7 @@ const PayoutManagement = ({ recipientType }) => {
             {actionError && <p className="text-xs text-red-500 bg-red-50 border border-red-100 px-3 py-2 rounded-xl">{actionError}</p>}
             <div className="flex gap-3 pt-1">
               <button onClick={closeModals} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold rounded-xl transition-colors border-none cursor-pointer">Cancel</button>
-              <button onClick={handleReject} disabled={actionLoading}
+              <button data-perm="payouts.reject" onClick={handleReject} disabled={actionLoading}
                 className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl transition-colors border-none cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
                 {actionLoading && <Loader2 size={14} className="animate-spin" />}Reject Payout
               </button>
@@ -573,7 +573,7 @@ const PayoutManagement = ({ recipientType }) => {
             {actionError && <p className="text-xs text-red-500 bg-red-50 border border-red-100 px-3 py-2 rounded-xl">{actionError}</p>}
             <div className="flex gap-3 pt-1">
               <button onClick={closeModals} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold rounded-xl transition-colors border-none cursor-pointer">Cancel</button>
-              <button onClick={handleProcess} disabled={actionLoading}
+              <button data-perm="payouts.manage" onClick={handleProcess} disabled={actionLoading}
                 className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors border-none cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
                 {actionLoading && <Loader2 size={14} className="animate-spin" />}Mark as Paid
               </button>
@@ -702,7 +702,7 @@ const RefundsList = () => {
                   <td className="px-4 py-4 text-center"><StatusBadge status={refund.status} styleMap={REFUND_STATUS_STYLES} /></td>
                   <td className="px-4 py-4 text-center">
                     {!['COMPLETED', 'REJECTED'].includes(refund.status) ? (
-                      <button onClick={() => openProcess(refund)}
+                      <button data-perm="payouts.manage" onClick={() => openProcess(refund)}
                         className="px-3 py-1 bg-[#1A2E0A] hover:bg-[#243D12] text-white text-[11px] font-bold rounded-lg transition-colors border-none cursor-pointer">
                         Process
                       </button>
@@ -761,7 +761,7 @@ const RefundsList = () => {
             {error && <p className="text-xs text-red-500 bg-red-50 border border-red-100 px-3 py-2 rounded-xl">{error}</p>}
             <div className="flex gap-3 pt-1">
               <button onClick={() => setSelectedRefund(null)} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold rounded-xl border-none cursor-pointer transition-colors">Cancel</button>
-              <button onClick={handleProcessSubmit} disabled={actionLoading}
+              <button data-perm="payouts.manage" onClick={handleProcessSubmit} disabled={actionLoading}
                 className="flex-1 py-2.5 bg-[#1A2E0A] hover:bg-[#243D12] text-white text-sm font-bold rounded-xl border-none cursor-pointer disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
                 {actionLoading && <Loader2 size={14} className="animate-spin" />}Update Refund
               </button>

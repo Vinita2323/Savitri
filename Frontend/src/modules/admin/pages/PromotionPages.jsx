@@ -63,7 +63,7 @@ export const PromotionDashboard = () => {
           <p className="text-xs text-slate-400 mt-1 max-w-xl">Configure, test, and broadcast visual promo elements across the Savitri User App homepage in real time.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => alert('Publishing Live Homepage CMS Changes...')} className="px-4 py-2.5 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl shadow-lg border-none cursor-pointer flex items-center gap-2 transition-all active:scale-95">
+          <button data-perm="promotions.edit" onClick={() => alert('Publishing Live Homepage CMS Changes...')} className="px-4 py-2.5 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl shadow-lg border-none cursor-pointer flex items-center gap-2 transition-all active:scale-95">
             <Send size={15} /> Broadcast Homepage
           </button>
         </div>
@@ -304,13 +304,13 @@ export const PromoHomeSection = () => {
           <p className="text-xs text-slate-500 mt-0.5">Drag, reorder, show/hide, and preview the exact User App Home Screen layout live</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setIsAddModalOpen(true)} className="px-3.5 py-2 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl transition-all border-none cursor-pointer flex items-center gap-1.5 shadow-sm">
+          <button data-perm="promotions.create" onClick={() => setIsAddModalOpen(true)} className="px-3.5 py-2 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl transition-all border-none cursor-pointer flex items-center gap-1.5 shadow-sm">
             <Plus size={14} /> Add Block
           </button>
-          <button onClick={() => alert('Draft Saved!')} className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-300 transition-all flex items-center gap-1.5 cursor-pointer">
+          <button data-perm="promotions.edit" onClick={() => alert('Draft Saved!')} className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-300 transition-all flex items-center gap-1.5 cursor-pointer">
             <Save size={14} /> Save Draft
           </button>
-          <button onClick={() => alert('Published to Live User App!')} className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all border-none cursor-pointer flex items-center gap-1.5 shadow-sm">
+          <button data-perm="promotions.edit" onClick={() => alert('Published to Live User App!')} className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all border-none cursor-pointer flex items-center gap-1.5 shadow-sm">
             <Send size={14} /> Publish Live
           </button>
         </div>
@@ -372,7 +372,7 @@ export const PromoHomeSection = () => {
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2">
-                <button 
+                <button data-perm="promotions.edit" 
                   onClick={() => handleToggleVisibility(sec.id)} 
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold border-none cursor-pointer transition-all flex items-center gap-1.5 ${
                     sec.isVisible ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
@@ -381,14 +381,14 @@ export const PromoHomeSection = () => {
                   {sec.isVisible ? <CheckCircle size={13} /> : <XCircle size={13} />}
                   {sec.isVisible ? 'Live' : 'Hidden'}
                 </button>
-                <button 
+                <button data-perm="promotions.create" 
                   onClick={() => handleDuplicate(sec)} 
                   className="p-2 hover:bg-slate-100 text-slate-600 rounded-xl border border-slate-200 cursor-pointer transition-colors" 
                   title="Duplicate Block"
                 >
                   <Copy size={13} />
                 </button>
-                <button 
+                <button data-perm="promotions.delete" 
                   onClick={() => handleDelete(sec.id)} 
                   className="p-2 hover:bg-rose-50 text-rose-600 rounded-xl border border-rose-200 cursor-pointer transition-colors" 
                   title="Delete Block"
@@ -492,7 +492,7 @@ export const PromoHomeSection = () => {
                 >
                   Cancel
                 </button>
-                <button 
+                <button data-perm="promotions.create" 
                   type="submit" 
                   className="flex-1 py-2.5 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl border-none cursor-pointer shadow-sm"
                 >
@@ -633,7 +633,7 @@ export const PromoCategoryProducts = () => {
           </div>
           <p className="text-xs text-slate-500 mt-0.5">Control which category appears at which position number on the User App homepage</p>
         </div>
-        <button 
+        <button data-perm="promotions.create" 
           onClick={handleOpenAddModal} 
           className="px-3.5 py-2 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-sm"
         >
@@ -732,14 +732,14 @@ export const PromoCategoryProducts = () => {
                     </td>
 
                     <td className="py-3.5 px-4 text-right space-x-2">
-                      <button 
+                      <button data-perm="promotions.edit" 
                         onClick={() => handleOpenEditModal(c)} 
                         className="p-1.5 bg-slate-100 hover:bg-[#ff661a] hover:text-white rounded-lg border-none cursor-pointer transition-colors"
                         title="Edit Category Details"
                       >
                         <Edit3 size={14} />
                       </button>
-                      <button 
+                      <button data-perm="promotions.delete" 
                         onClick={() => handleDeleteCategory(c.id)} 
                         className="p-1.5 bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 rounded-lg border-none cursor-pointer transition-colors"
                         title="Delete Category"
@@ -864,7 +864,7 @@ export const PromoBestseller = () => {
           <h2 className="text-xl font-bold text-slate-900">Bestseller Cards Management</h2>
           <p className="text-xs text-slate-500">Configure top selling featured product cards with special promo badges</p>
         </div>
-        <button onClick={() => alert('Add Bestseller Product')} className="px-3.5 py-2 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-sm">
+        <button data-perm="promotions.create" onClick={() => alert('Add Bestseller Product')} className="px-3.5 py-2 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-sm">
           <Plus size={15} /> Add Bestseller Item
         </button>
       </div>
@@ -886,7 +886,7 @@ export const PromoBestseller = () => {
             <div className="flex justify-between items-center text-[11px] text-slate-500 pt-2 border-t border-slate-100">
               <span>Sales: {b.salesCount}</span>
               <div className="flex gap-1">
-                <button onClick={() => alert('Edit Bestseller')} className="p-1 hover:bg-slate-100 rounded text-slate-700 border-none cursor-pointer"><Edit3 size={13} /></button>
+                <button data-perm="promotions.edit" onClick={() => alert('Edit Bestseller')} className="p-1 hover:bg-slate-100 rounded text-slate-700 border-none cursor-pointer"><Edit3 size={13} /></button>
                 <button onClick={() => setBestsellers(bestsellers.filter(item => item.id !== b.id))} className="p-1 hover:bg-rose-50 text-rose-600 rounded border-none cursor-pointer"><Trash2 size={13} /></button>
               </div>
             </div>
@@ -910,7 +910,7 @@ export const PromoStrip = () => {
           <h2 className="text-xl font-bold text-slate-900">Promo Strip Banners</h2>
           <p className="text-xs text-slate-500">Manage full-width promotional announcement banners and discount strips</p>
         </div>
-        <button onClick={() => alert('Create New Promo Strip')} className="px-3.5 py-2 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-sm">
+        <button data-perm="promotions.create" onClick={() => alert('Create New Promo Strip')} className="px-3.5 py-2 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-sm">
           <Plus size={15} /> Create Strip
         </button>
       </div>
@@ -947,7 +947,7 @@ export const PromoLowestPrices = () => {
           <h2 className="text-xl font-bold text-slate-900">Lowest Prices Guarantee Section</h2>
           <p className="text-xs text-slate-500">Configure products with price drop badges & automated deal matchers</p>
         </div>
-        <button onClick={() => alert('Add Product to Lowest Price Guarantee')} className="px-3.5 py-2 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-sm">
+        <button data-perm="promotions.create" onClick={() => alert('Add Product to Lowest Price Guarantee')} className="px-3.5 py-2 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-sm">
           <Plus size={15} /> Add Lowest Price Item
         </button>
       </div>
@@ -985,7 +985,7 @@ export const PromoShopByStore = () => {
           <h2 className="text-xl font-bold text-slate-900">Shop By Store Showcase</h2>
           <p className="text-xs text-slate-500">Feature top seller stores on user homepage slider</p>
         </div>
-        <button onClick={() => alert('Feature New Store')} className="px-3.5 py-2 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-sm">
+        <button data-perm="promotions.create" onClick={() => alert('Feature New Store')} className="px-3.5 py-2 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-sm">
           <Plus size={15} /> Add Featured Store
         </button>
       </div>
@@ -1147,7 +1147,7 @@ export const PromoHomeBanners = () => {
           <h2 className="text-xl font-bold text-slate-900">Home Banners CMS</h2>
           <p className="text-xs text-slate-500">Manage hero promotional banners dynamically visible on the User App Homepage</p>
         </div>
-        <button onClick={handleOpenAddModal} className="px-3.5 py-2 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-sm">
+        <button data-perm="promotions.create" onClick={handleOpenAddModal} className="px-3.5 py-2 bg-[#ff661a] hover:bg-[#e65200] text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-sm">
           <Plus size={15} /> Upload Banner
         </button>
       </div>
@@ -1181,8 +1181,8 @@ export const PromoHomeBanners = () => {
               <div className="flex justify-between items-center text-xs text-slate-500 pt-1">
                 <span>Route: <strong className="text-slate-800 font-mono">{b.redirectUrl || '/categories'}</strong></span>
                 <div className="flex gap-2">
-                  <button onClick={() => handleOpenEditModal(b)} className="px-2.5 py-1 bg-slate-100 hover:bg-[#ff661a] hover:text-white rounded-lg border-none cursor-pointer font-bold text-xs transition-colors">Edit</button>
-                  <button onClick={() => handleDeleteBanner(b._id || b.id)} className="px-2.5 py-1 bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 rounded-lg border-none cursor-pointer font-bold text-xs transition-colors">Delete</button>
+                  <button data-perm="promotions.edit" onClick={() => handleOpenEditModal(b)} className="px-2.5 py-1 bg-slate-100 hover:bg-[#ff661a] hover:text-white rounded-lg border-none cursor-pointer font-bold text-xs transition-colors">Edit</button>
+                  <button data-perm="promotions.delete" onClick={() => handleDeleteBanner(b._id || b.id)} className="px-2.5 py-1 bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 rounded-lg border-none cursor-pointer font-bold text-xs transition-colors">Delete</button>
                 </div>
               </div>
             </div>
@@ -1534,7 +1534,7 @@ export const PromoFlashSale = () => {
           <p className="text-sm text-orange-100 mt-1.5 max-w-xl font-normal">Configure countdown timers, discounts, and feature limited-time products directly on the Customer App Homepage.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button 
+          <button data-perm="products.edit" 
             onClick={handleSaveCampaign} 
             className="px-5 py-2.5 bg-white hover:bg-slate-100 text-slate-900 text-sm font-semibold rounded-xl shadow-md cursor-pointer flex items-center gap-2 transition-all active:scale-95 border-none"
           >
@@ -1640,7 +1640,7 @@ export const PromoFlashSale = () => {
             <h3 className="text-lg font-semibold text-slate-900">Featured Flash Sale Products</h3>
             <p className="text-sm font-normal text-slate-500 mt-0.5">Manage items currently listed under the Flash Deals section.</p>
           </div>
-          <button 
+          <button data-perm="products.create" 
             onClick={handleOpenAddModal}
             className="px-4 py-2.5 bg-[#79B433] hover:bg-[#e64d00] text-white text-sm font-semibold rounded-xl border-none cursor-pointer flex items-center gap-2 shadow-sm transition-all active:scale-95"
           >
@@ -1698,13 +1698,13 @@ export const PromoFlashSale = () => {
                   </td>
                   <td className="py-4 px-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button 
+                      <button data-perm="products.edit" 
                         onClick={() => handleOpenEditModal(p)}
                         className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 rounded-lg cursor-pointer transition-colors border-none bg-transparent"
                       >
                         <Edit3 size={17} />
                       </button>
-                      <button 
+                      <button data-perm="products.delete" 
                         onClick={() => handleDeleteProduct(p.id)}
                         className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors border-none bg-transparent"
                       >

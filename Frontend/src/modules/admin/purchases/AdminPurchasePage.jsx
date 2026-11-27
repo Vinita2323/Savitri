@@ -5,6 +5,7 @@ import PurchaseForm from './PurchaseForm';
 import { Dashboard, History, StockUpdates, SellerPurchases, PurchaseDetail } from './PurchaseViews';
 import { Notice } from '../../employee/components/ui';
 import { fmtMoney } from './purchaseUi';
+import { tabAllowed } from '../../../utils/adminPermissions';
 
 const KEYS = { dashboard: 'purchase_dashboard', new: 'purchase_new', history: 'purchase_history', stock: 'purchase_stock', sellers: 'purchase_sellers', bysellers: 'purchase_by_seller' };
 const MINE = [['dashboard', 'Purchase Dashboard'], ['new', 'Add New Purchase'], ['history', 'Purchase History'], ['stock', 'Stock Updates']];
@@ -14,7 +15,7 @@ const Nav = ({ tab, go, items, label, testId }) => (
   <div data-testid={testId}>
     <p className="m-0 mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-slate-400">{label}</p>
     <div className="flex flex-wrap gap-1.5">
-      {items.map(([k, l]) => (
+      {items.filter(([k]) => tabAllowed(KEYS[k])).map(([k, l]) => (
         <button key={k} type="button" data-testid={`pm-tab-${k}`} aria-pressed={tab === k} onClick={() => go(k)} className={`px-3.5 py-2 rounded-xl text-sm font-bold border cursor-pointer ${tab === k ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>{l}</button>
       ))}
     </div>

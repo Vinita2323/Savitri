@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, Check, ChevronDown, Copy, ListPlus, Paperclip, Plus, Search, Trash2, Users, X } from 'lucide-react';
 import employeeService from '../../../../services/employeeService';
+import { getAdminBrand } from '../../../../utils/adminBrand';
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
 const MAX_TASKS = 50;
@@ -15,8 +16,10 @@ const shortDate = (s) => (s ? new Date(`${s}T00:00:00`).toLocaleDateString('en-I
 
 // The people (and priority) used last time are remembered in this browser, so a second batch for the same person needs no re-selecting
 const MEMORY_KEY = 'savitri_new_tasks_defaults';
-const readMemory = () => { try { return JSON.parse(localStorage.getItem(MEMORY_KEY) || '{}') || {}; } catch { return {}; } };
-const writeMemory = (v) => { try { localStorage.setItem(MEMORY_KEY, JSON.stringify(v)); } catch { /* private mode: just skip */ } };
+// remembered separately for each brand, so one brand's people are never suggested in another
+const memoryKey = () => (getAdminBrand() ? `${MEMORY_KEY}_${getAdminBrand()}` : MEMORY_KEY);
+const readMemory = () => { try { return JSON.parse(localStorage.getItem(memoryKey()) || '{}') || {}; } catch { return {}; } };
+const writeMemory = (v) => { try { localStorage.setItem(memoryKey(), JSON.stringify(v)); } catch { /* private mode: just skip */ } };
 
 let seq = 0;
 const newRow = (title = '') => ({ key: ++seq, title, description: '', attachments: [], showMore: false, custom: null, error: '', uploading: false });

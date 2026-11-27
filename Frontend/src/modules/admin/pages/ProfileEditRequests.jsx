@@ -658,7 +658,7 @@ export const ProfileEditRequests = () => {
 
               {selectedRequest.status === 'pending' && (
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <button
+                  <button data-perm="profile_requests.reject"
                     type="button"
                     disabled={actionLoading}
                     onClick={handleReject}
@@ -668,7 +668,7 @@ export const ProfileEditRequests = () => {
                     <span>Reject Request</span>
                   </button>
 
-                  <button
+                  <button data-perm="profile_requests.approve"
                     type="button"
                     disabled={actionLoading}
                     onClick={handleApprove}

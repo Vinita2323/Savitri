@@ -83,8 +83,8 @@ export const EmployeeRegistrationsPage = ({ onNavigate }) => {
                             <button type="button" className={`${btnGhost} !px-3 !py-1.5 !text-xs`} onClick={() => setView(r)}><Eye className="w-3.5 h-3.5" /> View</button>
                             {r.registrationStatus === 'Pending' && (
                               <>
-                                <button type="button" className={`${btnPrimary} !px-3 !py-1.5 !text-xs`} disabled={busy} onClick={() => act(() => employeeManagementService.approveRegistration(r._id), `${r.fullName} approved.`)}><Check className="w-3.5 h-3.5" /> Approve</button>
-                                <button type="button" className={`${btnGhost} !px-3 !py-1.5 !text-xs !text-rose-600`} onClick={() => { setReject(r); setReason(''); }}><X className="w-3.5 h-3.5" /> Reject</button>
+                                <button data-perm="employees.approve" type="button" className={`${btnPrimary} !px-3 !py-1.5 !text-xs`} disabled={busy} onClick={() => act(() => employeeManagementService.approveRegistration(r._id), `${r.fullName} approved.`)}><Check className="w-3.5 h-3.5" /> Approve</button>
+                                <button data-perm="employees.reject" type="button" className={`${btnGhost} !px-3 !py-1.5 !text-xs !text-rose-600`} onClick={() => { setReject(r); setReason(''); }}><X className="w-3.5 h-3.5" /> Reject</button>
                               </>
                             )}
                           </div>
@@ -153,8 +153,8 @@ export const EmployeeRegistrationsPage = ({ onNavigate }) => {
             </div>
             {view.registrationStatus === 'Pending' && (
               <div className="flex justify-end gap-2 mt-6">
-                <button type="button" className={btnGhost} onClick={() => { setReject(view); setView(null); setReason(''); }}>Reject</button>
-                <button type="button" className={btnPrimary} disabled={busy} onClick={() => act(() => employeeManagementService.approveRegistration(view._id), `${view.fullName} approved.`)}>Approve</button>
+                <button data-perm="employees.reject" type="button" className={btnGhost} onClick={() => { setReject(view); setView(null); setReason(''); }}>Reject</button>
+                <button data-perm="employees.approve" type="button" className={btnPrimary} disabled={busy} onClick={() => act(() => employeeManagementService.approveRegistration(view._id), `${view.fullName} approved.`)}>Approve</button>
               </div>
             )}
           </div>
@@ -169,7 +169,7 @@ export const EmployeeRegistrationsPage = ({ onNavigate }) => {
             <textarea className={inputCls} rows={3} placeholder="Reason for rejection (required)" value={reason} onChange={(e) => setReason(e.target.value)} autoFocus />
             <div className="flex justify-end gap-2 mt-5">
               <button type="button" className={btnGhost} onClick={() => setReject(null)}>Cancel</button>
-              <button type="button" className={btnDanger} disabled={busy || !reason.trim()} onClick={() => act(() => employeeManagementService.rejectRegistration(reject._id, reason.trim()), `${reject.fullName} rejected.`)}>Reject registration</button>
+              <button data-perm="employees.reject" type="button" className={btnDanger} disabled={busy || !reason.trim()} onClick={() => act(() => employeeManagementService.rejectRegistration(reject._id, reason.trim()), `${reject.fullName} rejected.`)}>Reject registration</button>
             </div>
           </div>
         </div>

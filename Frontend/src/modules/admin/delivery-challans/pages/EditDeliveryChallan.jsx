@@ -189,7 +189,7 @@ export const EditDeliveryChallan = ({ onNavigate, challanData }) => {
             <span>Preview</span>
           </button>
 
-          <button
+          <button data-perm="challans.edit"
             onClick={() => handleSaveUpdate(false)}
             disabled={submitting}
             className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-900 text-white transition shadow-xs cursor-pointer disabled:opacity-50"
@@ -198,7 +198,7 @@ export const EditDeliveryChallan = ({ onNavigate, challanData }) => {
             <span>Save Draft Changes</span>
           </button>
 
-          <button
+          <button data-perm="challans.approve"
             onClick={() => handleSaveUpdate(true)}
             disabled={submitting}
             className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-[#1A2E0A] hover:bg-[#253f10] text-white transition shadow-md cursor-pointer disabled:opacity-50"

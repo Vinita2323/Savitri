@@ -84,7 +84,7 @@ export const QuotationRequests = ({ onNavigate }) => {
           </div>
         </div>
 
-        <button
+        <button data-perm="quotations.create"
           type="button"
           onClick={() => onNavigate('quotations/create')}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1A2E0A] hover:bg-[#2F5218] text-white text-xs font-bold transition-all cursor-pointer shadow-xs border-none"
@@ -247,7 +247,7 @@ export const QuotationRequests = ({ onNavigate }) => {
                         </button>
 
                         {req.status !== 'Quotation Created' && (
-                          <button
+                          <button data-perm="quotations.create"
                             type="button"
                             onClick={() => handleCreateQuotation(req)}
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#1A2E0A] hover:bg-[#2F5218] text-white text-xs font-bold transition-colors cursor-pointer border-none shadow-2xs whitespace-nowrap"
@@ -258,7 +258,7 @@ export const QuotationRequests = ({ onNavigate }) => {
                         )}
 
                         {req.status === 'Pending' && (
-                          <button
+                          <button data-perm="quotations.edit"
                             type="button"
                             onClick={() => updateRequestStatus(req.id, 'Under Review').catch((e) => alert(e.message))}
                             title="Mark as Under Review"
@@ -269,7 +269,7 @@ export const QuotationRequests = ({ onNavigate }) => {
                         )}
 
                         {req.status !== 'Rejected' && req.status !== 'Quotation Created' && (
-                          <button
+                          <button data-perm="quotations.reject"
                             type="button"
                             onClick={() => setRejectDialogRequest(req)}
                             title="Reject Request"
@@ -379,7 +379,7 @@ export const QuotationRequests = ({ onNavigate }) => {
                 Close
               </button>
               {activeRequestDetails.status !== 'Quotation Created' && (
-                <button
+                <button data-perm="quotations.create"
                   type="button"
                   onClick={() => {
                     const req = activeRequestDetails;
@@ -424,7 +424,7 @@ export const QuotationRequests = ({ onNavigate }) => {
               >
                 Cancel
               </button>
-              <button
+              <button data-perm="quotations.reject"
                 type="button"
                 onClick={handleConfirmReject}
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer border-none"

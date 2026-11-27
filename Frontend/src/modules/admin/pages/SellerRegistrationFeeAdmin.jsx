@@ -210,7 +210,7 @@ export const SellerRegistrationFeeAdmin = () => {
             Refresh
           </button>
 
-          <button
+          <button data-perm="settings.manage"
             onClick={() => {
               if (config) {
                 setEditForm({
@@ -265,7 +265,7 @@ export const SellerRegistrationFeeAdmin = () => {
             )}
             <div className="mt-2 flex items-center justify-between text-xs">
               <span className="text-slate-500 font-medium">Status:</span>
-              <button
+              <button data-perm="settings.manage"
                 onClick={handleToggleActive}
                 className={`font-bold inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] cursor-pointer border-none ${
                   config?.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
@@ -643,7 +643,7 @@ export const SellerRegistrationFeeAdmin = () => {
                 >
                   Cancel
                 </button>
-                <button
+                <button data-perm="settings.manage"
                   type="submit"
                   disabled={savingConfig}
                   className="px-4 py-2 bg-[#79B433] hover:bg-[#e64d00] text-white rounded-xl text-xs font-bold transition-colors cursor-pointer border-none disabled:opacity-50 flex items-center gap-1.5"

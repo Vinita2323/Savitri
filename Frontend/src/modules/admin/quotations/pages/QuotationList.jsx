@@ -218,7 +218,7 @@ export const QuotationList = ({ onNavigate }) => {
           </div>
         </div>
 
-        <button
+        <button data-perm="quotations.create"
           type="button"
           onClick={() => {
             setEditingQuotationId(null);
@@ -393,7 +393,7 @@ export const QuotationList = ({ onNavigate }) => {
 
                         {/* Edit Draft */}
                         {quote.status === 'Draft' && (
-                          <button
+                          <button data-perm="quotations.edit"
                             type="button"
                             onClick={() => handleEditDraft(quote)}
                             title="Edit Draft"
@@ -405,7 +405,7 @@ export const QuotationList = ({ onNavigate }) => {
 
                         {/* Send Quotation */}
                         {quote.status === 'Draft' && (
-                          <button
+                          <button data-perm="quotations.edit"
                             type="button"
                             onClick={() => setSendDialogQuote(quote)}
                             title="Send to Buyer"
@@ -416,7 +416,7 @@ export const QuotationList = ({ onNavigate }) => {
                         )}
 
                         {/* Duplicate */}
-                        <button
+                        <button data-perm="quotations.create"
                           type="button"
                           onClick={() => handleDuplicate(quote.id)}
                           title="Duplicate Quotation"
@@ -427,7 +427,7 @@ export const QuotationList = ({ onNavigate }) => {
 
                         {/* Delete Draft */}
                         {quote.status === 'Draft' && (
-                          <button
+                          <button data-perm="quotations.delete"
                             type="button"
                             onClick={() => setDeleteDialogQuote(quote)}
                             title="Delete Draft"
@@ -505,7 +505,7 @@ export const QuotationList = ({ onNavigate }) => {
               >
                 Cancel
               </button>
-              <button
+              <button data-perm="quotations.edit"
                 type="button"
                 onClick={handleConfirmSend}
                 className="px-4 py-2 rounded-xl bg-[#1A2E0A] hover:bg-[#2F5218] text-white text-xs font-bold cursor-pointer border-none"
@@ -543,7 +543,7 @@ export const QuotationList = ({ onNavigate }) => {
               >
                 Cancel
               </button>
-              <button
+              <button data-perm="quotations.delete"
                 type="button"
                 onClick={handleConfirmDelete}
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer border-none"

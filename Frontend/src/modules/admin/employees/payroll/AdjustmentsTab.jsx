@@ -46,7 +46,7 @@ export default function AdjustmentsTab({ brandId, version, onChanged }) {
         </div>
         {error && <div className="mt-3"><Notice type="error">{error}</Notice></div>}
         {msg && <div className="mt-3"><Notice type="success">{msg}</Notice></div>}
-        <button type="button" data-testid="adj-save" className={`${btnPrimary} mt-3`} onClick={save}>Save entry</button>
+        <button data-perm="payroll.edit" type="button" data-testid="adj-save" className={`${btnPrimary} mt-3`} onClick={save}>Save entry</button>
         <p className="m-0 mt-2 text-[11px] text-slate-400">Bonuses and deductions go into the next payroll that covers their date. Advances are recovered automatically, never taking net pay below zero.</p>
       </Card>
       <Card>
@@ -63,7 +63,7 @@ export default function AdjustmentsTab({ brandId, version, onChanged }) {
               <tbody className="divide-y divide-slate-100">
                 {data.adjustments.map((a) => (
                   <tr key={a.id} data-testid="adj-row" data-type={a.type}><td className="py-2">{a.date}</td><td>{a.employeeCode}</td><td>{a.typeLabel}</td><td className="text-right font-semibold">{fmtMoney(a.amountPaise)}</td><td className="text-right">{a.type === 'ADVANCE' ? fmtMoney(a.outstandingPaise) : '-'}</td><td>{a.status.toLowerCase()}</td><td className="text-slate-500">{a.description}</td>
-                    <td className="text-right">{['ACTIVE'].includes(a.status) && !(a.type === 'ADVANCE' && a.recoveredPaise > 0) && <button type="button" data-testid="adj-cancel" className={btnGhost} onClick={() => cancel(a.id)}>Cancel</button>}</td></tr>
+                    <td className="text-right">{['ACTIVE'].includes(a.status) && !(a.type === 'ADVANCE' && a.recoveredPaise > 0) && <button type="button" data-testid="adj-cancel" data-perm="payroll.edit" className={btnGhost} onClick={() => cancel(a.id)}>Cancel</button>}</td></tr>
                 ))}
               </tbody>
             </table>

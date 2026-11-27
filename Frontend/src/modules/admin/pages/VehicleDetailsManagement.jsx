@@ -324,7 +324,7 @@ export const VehicleDetailsManagement = () => {
             <span>Export</span>
           </button>
 
-          <button
+          <button data-perm="pricing.create"
             onClick={handleOpenCreate}
             className="px-4 py-2 bg-[#79B433] hover:bg-[#ea4e00] text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer transition-all border-none"
           >
@@ -479,7 +479,7 @@ export const VehicleDetailsManagement = () => {
               ? 'No vehicle specifications match your search or filter.'
               : 'There are currently no transport vehicles registered in the system.'}
           </p>
-          <button
+          <button data-perm="pricing.create"
             onClick={handleOpenCreate}
             className="mt-3.5 px-3.5 py-1.5 bg-[#79B433] hover:bg-[#ea4e00] text-white text-xs font-semibold rounded-lg border-none cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
           >
@@ -518,7 +518,7 @@ export const VehicleDetailsManagement = () => {
                     </div>
 
                     {/* Status Pill Toggle */}
-                    <button
+                    <button data-perm="pricing.edit"
                       onClick={() => handleToggleStatus(v)}
                       className={`px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 border cursor-pointer transition-colors ${
                         v.isActive
@@ -600,14 +600,14 @@ export const VehicleDetailsManagement = () => {
                 <div className="px-4 py-2.5 bg-slate-50/60 border-t border-slate-100 flex items-center justify-between gap-2">
                   <span className="text-[11px] text-slate-400 font-medium">Sort Order: #{v.sortOrder || 0}</span>
                   <div className="flex items-center gap-1.5">
-                    <button
+                    <button data-perm="pricing.edit"
                       onClick={() => handleOpenEdit(v)}
                       className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg flex items-center gap-1 shadow-2xs cursor-pointer transition-colors"
                     >
                       <Edit3 size={12} className="text-slate-500" />
                       <span>Edit</span>
                     </button>
-                    <button
+                    <button data-perm="pricing.delete"
                       onClick={() => handleDeleteVehicle(v)}
                       className="p-1 bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-600 rounded-lg shadow-2xs cursor-pointer transition-colors"
                       title="Delete Vehicle"
@@ -671,7 +671,7 @@ export const VehicleDetailsManagement = () => {
                       <td className="py-3 px-3.5 font-semibold text-slate-900">₹{v.perKmFare}/km</td>
                       <td className="py-3 px-3.5 font-semibold text-slate-900">₹{v.minimumFare}</td>
                       <td className="py-3 px-3.5 text-center">
-                        <button
+                        <button data-perm="pricing.edit"
                           onClick={() => handleToggleStatus(v)}
                           className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border cursor-pointer transition-colors ${
                             v.isActive
@@ -684,14 +684,14 @@ export const VehicleDetailsManagement = () => {
                       </td>
                       <td className="py-3 px-3.5 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <button
+                          <button data-perm="pricing.edit"
                             onClick={() => handleOpenEdit(v)}
                             className="p-1 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-md border-none bg-transparent cursor-pointer transition-colors"
                             title="Edit Vehicle"
                           >
                             <Edit3 size={13} />
                           </button>
-                          <button
+                          <button data-perm="pricing.delete"
                             onClick={() => handleDeleteVehicle(v)}
                             className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md border-none bg-transparent cursor-pointer transition-colors"
                             title="Delete Vehicle"

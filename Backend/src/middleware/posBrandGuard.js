@@ -13,7 +13,11 @@ const deny = (res, message) => res.status(403).json({ success: false, code: 'BRA
 
 export const posBrandGuard = async (req, res, next) => {
   try {
-    if (!req.restricted) return next();
+    if (!req.restricted) {
+      // a Super Admin (or all-brand admin) with one brand selected sees that brand's held bills and totals
+      if (req.scope && !req.scope.isAll) req.posSellerIds = await brandSellerIds(req);
+      return next();
+    }
     const sellerIds = await brandSellerIds(req);
     req.posSellerIds = sellerIds;
 

@@ -15,6 +15,7 @@ import { getEffectiveStock, syncRootStockFromVariants } from '../utils/productSt
 import { canAccessProduct, canAccessSellerId } from '../utils/accessControl.js';
 import { isStrictAdmin, assignedBrandIds } from '../utils/adminAccess.js';
 import { normalizeRole } from '../middleware/authMiddleware.js';
+import { isPlaceholderImage } from '../utils/productImage.js'; // the old stand-in photo is never stored or returned
 import { normalizeProductShipping } from '../utils/shippingValidation.js';
 
 // Fields only the platform (admin moderation or the bulk importer) may write
@@ -64,7 +65,7 @@ const saveBase64ImageLocally = (base64Str, subfolder = 'products') => {
 };
 
 const processImage = async (imgStr, folder = 'products') => {
-  if (!imgStr || typeof imgStr !== 'string' || !imgStr.trim()) {
+  if (!imgStr || typeof imgStr !== 'string' || !imgStr.trim() || isPlaceholderImage(imgStr)) {
     return '';
   }
   
@@ -93,7 +94,7 @@ const processImage = async (imgStr, folder = 'products') => {
 };
 
 const processImageWithCache = async (imgStr, folder = 'products', cache = new Map()) => {
-  if (!imgStr || typeof imgStr !== 'string' || !imgStr.trim()) {
+  if (!imgStr || typeof imgStr !== 'string' || !imgStr.trim() || isPlaceholderImage(imgStr)) {
     return '';
   }
   if (imgStr.startsWith('http://') || imgStr.startsWith('https://') || imgStr.startsWith('/uploads/')) {
@@ -275,6 +276,15 @@ export const createProduct = async (req, res) => {
   }
 };
 
+/** The brands an admin is limited to for this request, or null when not limited. Read from the account, not the request. */
+const limitedBrandIds = async (req) => {
+  if (req.adminAccess?.brandId) return [req.adminAccess.brandId];
+  const me = await Admin.findById(req.user.id).select('authorizedBrands brandAccess adminType').lean();
+  if (isStrictAdmin(me)) return assignedBrandIds(me); // strict: an empty list shows nothing
+  const list = me?.authorizedBrands;
+  return Array.isArray(list) && list.length > 0 && !list.includes('*') ? list : null;
+};
+
 // @desc    Get all products
 // @route   GET /api/products
 export const getProducts = async (req, res) => {
@@ -303,7 +313,19 @@ export const getProducts = async (req, res) => {
 
     let query = {};
 
+    // Brands this admin is limited to (null = not limited). With per-brand permissions it is the one checked brand.
+    const adminBrandIds = viewerRole === 'admin' ? await limitedBrandIds(req) : null;
+    // a limited admin naming a brand that is not theirs is refused, as on every other admin API
+    const brandHeader = String(req.headers['x-brand-id'] || '').trim();
+    if (isAdminOrInternal && adminBrandIds && brandHeader && brandHeader.toUpperCase() !== 'ALL' && !adminBrandIds.includes(brandHeader)) {
+      return res.status(403).json({ success: false, code: 'BRAND_FORBIDDEN', message: 'Forbidden: You are not authorized to access records for this brand.' });
+    }
+
     if (sellerId || seller) {
+      if (isAdminOrInternal && adminBrandIds) {
+        const own = await Seller.find({ brandId: { $in: adminBrandIds } }).select('_id').lean();
+        query.$and = [{ sellerId: { $in: own.map((x) => x._id) } }];
+      }
       if (!privileged) {
         const sQuery = sellerId && mongoose.Types.ObjectId.isValid(sellerId)
           ? { _id: sellerId }
@@ -343,18 +365,7 @@ export const getProducts = async (req, res) => {
       // Brand scope: a brand-restricted Admin only ever sees their brands' sellers; a Super Admin follows the brand selector.
       let allowedSellerIds = null; // null = every seller
       const intersect = (ids) => { const set = new Set(ids.map(String)); allowedSellerIds = allowedSellerIds === null ? [...set] : allowedSellerIds.filter((x) => set.has(x)); };
-      let brandIds = null;
-      if (viewerRole === 'admin') {
-        const me = await Admin.findById(req.user.id).select('authorizedBrands brandAccess adminType').lean();
-        const list = me?.authorizedBrands;
-        if (isStrictAdmin(me)) brandIds = assignedBrandIds(me); // strict: an empty list shows nothing
-        else if (Array.isArray(list) && list.length > 0 && !list.includes('*')) brandIds = list;
-      }
-      const brandHeader = String(req.headers['x-brand-id'] || '').trim();
-      // a brand-restricted admin naming a brand that is not theirs is refused, as on every other admin API
-      if (viewerRole === 'admin' && brandIds && brandHeader && brandHeader.toUpperCase() !== 'ALL' && !brandIds.includes(brandHeader)) {
-        return res.status(403).json({ success: false, code: 'BRAND_FORBIDDEN', message: 'Forbidden: You are not authorized to access records for this brand.' });
-      }
+      let brandIds = adminBrandIds;
       if (brandHeader && brandHeader.toUpperCase() !== 'ALL') brandIds = brandIds ? brandIds.filter((b) => b === brandHeader) : [brandHeader];
       if (brandIds) intersect((await Seller.find({ brandId: { $in: brandIds } }).select('_id').lean()).map((x) => x._id));
       if (isId(req.query.adminSellerId)) intersect([req.query.adminSellerId]);
@@ -497,6 +508,7 @@ export const getProducts = async (req, res) => {
     const normalizedProducts = visibleProducts.map((p) => ({
       ...p,
       stock: getEffectiveStock(p),
+      mainImage: isPlaceholderImage(p.mainImage) ? '' : p.mainImage,
     }));
 
     const responsePayload = {
@@ -551,7 +563,12 @@ export const getProductById = async (req, res) => {
 
     // staff / sellers (verified token) see everything they manage; everyone else gets the customer rules
     const role = normalizeRole(req.user?.role);
-    const isAdminOrInternal = role === 'admin' || role === 'super_admin' || (role === 'seller' && String(product.sellerId || '') === String(req.user.id));
+    let staffView = role === 'super_admin';
+    if (role === 'admin') {
+      const own = await limitedBrandIds(req);
+      staffView = own === null || Boolean(product.sellerId && await Seller.exists({ _id: product.sellerId, brandId: { $in: own } }));
+    }
+    const isAdminOrInternal = staffView || (role === 'seller' && String(product.sellerId || '') === String(req.user.id));
     if (!isAdminOrInternal) {
       if (product.status && product.status !== 'Published') {
         return res.status(404).json({
@@ -570,6 +587,7 @@ export const getProductById = async (req, res) => {
     }
 
     const out = { ...product, stock: getEffectiveStock(product) };
+    if (isPlaceholderImage(out.mainImage)) out.mainImage = '';
     if (!isAdminOrInternal) PRIVATE_PRODUCT_FIELDS.forEach((f) => delete out[f]);
     res.status(200).json({ success: true, product: out });
   } catch (error) {
@@ -616,7 +634,7 @@ export const updateProduct = async (req, res) => {
         return res.status(404).json({ success: false, message: 'Seller not found' });
       }
     }
-    if (updateData.mainImage) {
+    if (updateData.mainImage !== undefined) {
       updateData.mainImage = await processImage(updateData.mainImage, 'products/main');
     }
     if (Array.isArray(updateData.galleryImages)) {

@@ -54,6 +54,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import { authService } from '../../../services/authService';
+import { tabAllowed } from '../../../utils/adminPermissions';
 
 // Tab ids use underscores, URLs use hyphens (add_product vs /admin/add-product).
 const sameTab = (a, b) => String(a ?? '').replace(/-/g, '_') === String(b ?? '').replace(/-/g, '_');
@@ -426,8 +427,16 @@ export const AdminSidebar = () => {
     }
   ];
 
+  // only what this admin may open in the selected brand (everything for admins without per-brand permissions)
+  const allowedSections = sections.map(section => ({
+    ...section,
+    items: section.items
+      .map(item => (item.submenu ? { ...item, submenu: item.submenu.filter(sub => tabAllowed(sub.id)) } : item))
+      .filter(item => (item.submenu ? item.submenu.length > 0 : tabAllowed(item.id))),
+  }));
+
   // Filter sections by searchQuery
-  const filteredSections = sections.map(section => ({
+  const filteredSections = allowedSections.map(section => ({
     ...section,
     items: section.items.filter(item => {
       const matchLabel = item.label.toLowerCase().includes(searchQuery.toLowerCase());
@@ -484,7 +493,7 @@ export const AdminSidebar = () => {
         )}
 
         {/* Top Dashboard Button */}
-        <button
+        {tabAllowed('dashboard') && <button
           onClick={() => setActiveTab('dashboard')}
           className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all font-semibold text-sm border-none cursor-pointer ${
             activeTab === 'dashboard' 
@@ -497,7 +506,7 @@ export const AdminSidebar = () => {
             <LayoutDashboard size={19} className={activeTab === 'dashboard' ? 'text-[#F7941D]' : 'text-slate-300'} />
             {sidebarOpen && <span>Dashboard</span>}
           </div>
-        </button>
+        </button>}
 
         {/* Grouped Sections */}
         {filteredSections.map((sec, secIdx) => (

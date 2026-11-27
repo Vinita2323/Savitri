@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { adminCan, adminCanAny } from '../../../../utils/adminPermissions';
 import { employeeService } from '../../../../services/employeeService';
 import API from '../../../../services/api';
 import { getAdminBrand } from '../../../../utils/adminBrand';
@@ -180,15 +181,14 @@ export const EmployeeProvider = ({ children }) => {
     }
   }, [activeBrandId]);
 
-  // Initial load & when active brand changes
+  // Initial load & when active brand changes (only what this admin may see in the brand)
   useEffect(() => {
-    fetchEmployees();
-    fetchAttendance();
-    fetchTasks();
-    fetchLeaves();
-    fetchShifts();
-    fetchHolidays();
-    fetchDashboardMetrics();
+    if (adminCanAny(['employees.view', 'attendance.view', 'tasks.view', 'leaves.view', 'payroll.view'])) fetchEmployees();
+    if (adminCan('attendance.view')) fetchAttendance();
+    if (adminCan('tasks.view')) fetchTasks();
+    if (adminCan('leaves.view')) fetchLeaves();
+    if (adminCanAny(['attendance.view', 'employees.view'])) { fetchShifts(); fetchHolidays(); }
+    if (adminCan('employees.view')) fetchDashboardMetrics();
   }, [
     fetchEmployees,
     fetchAttendance,

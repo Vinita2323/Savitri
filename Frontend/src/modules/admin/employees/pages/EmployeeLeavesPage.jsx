@@ -141,7 +141,7 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
             </select>
           </div>
 
-          <button
+          <button data-perm="leaves.create"
             type="button"
             onClick={() => setIsSubmitModalOpen(true)}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-[14px] flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
@@ -228,7 +228,7 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
                       <td className="py-3 px-4 text-right">
                         {l.status === 'Pending' ? (
                           <div className="flex items-center justify-end gap-1.5">
-                            <button
+                            <button data-perm="leaves.approve"
                               type="button"
                               onClick={() => {
                                 setReviewingLeave(l);
@@ -238,7 +238,7 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
                             >
                               Approve
                             </button>
-                            <button
+                            <button data-perm="leaves.reject"
                               type="button"
                               onClick={() => {
                                 setReviewingLeave(l);
@@ -372,7 +372,7 @@ export const EmployeeLeavesPage = ({ onNavigate }) => {
                 >
                   Cancel
                 </button>
-                <button
+                <button data-perm="leaves.create"
                   type="submit"
                   className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl"
                 >

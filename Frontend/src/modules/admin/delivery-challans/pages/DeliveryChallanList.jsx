@@ -165,7 +165,7 @@ export const DeliveryChallanList = ({ onNavigate }) => {
             <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
           </button>
 
-          <button
+          <button data-perm="challans.create"
             onClick={() => navigateTo('delivery_challans/create')}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#1A2E0A] hover:bg-[#253f10] text-white text-sm font-semibold rounded-xl shadow-md transition cursor-pointer border-none"
           >
@@ -338,7 +338,7 @@ export const DeliveryChallanList = ({ onNavigate }) => {
                   : 'You have not issued any delivery challans yet. Create your first delivery challan for an eligible customer order.'}
               </p>
             </div>
-            <button
+            <button data-perm="challans.create"
               onClick={() => navigateTo('delivery_challans/create')}
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1A2E0A] text-white text-xs font-bold rounded-xl shadow-md hover:bg-[#2A4515] transition cursor-pointer"
             >
@@ -483,7 +483,7 @@ export const DeliveryChallanList = ({ onNavigate }) => {
 
                           {/* Edit Draft */}
                           {isDraft && (
-                            <button
+                            <button data-perm="challans.edit"
                               onClick={() => navigateTo('delivery_challans/edit', ch)}
                               title="Edit Draft Challan"
                               className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
@@ -494,7 +494,7 @@ export const DeliveryChallanList = ({ onNavigate }) => {
 
                           {/* Cancel Challan */}
                           {!isCancelled && !isDelivered && (
-                            <button
+                            <button data-perm="challans.edit"
                               onClick={() => openCancelModal(ch)}
                               title="Cancel Challan"
                               className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition cursor-pointer"
@@ -594,7 +594,7 @@ export const DeliveryChallanList = ({ onNavigate }) => {
               >
                 Go Back
               </button>
-              <button
+              <button data-perm="challans.edit"
                 onClick={confirmCancel}
                 disabled={isSubmittingCancel}
                 className="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-xs transition cursor-pointer disabled:opacity-50"

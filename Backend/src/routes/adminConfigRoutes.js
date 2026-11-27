@@ -2,6 +2,7 @@ import express from 'express';
 import { protect } from '../middleware/authMiddleware.js';
 import { simpleRateLimit } from '../middleware/simpleRateLimit.js';
 import * as service from '../services/adminAccountService.js';
+import { ACTIONS, MODULES, ROLE_PRESETS } from '../utils/permissionCatalog.js';
 
 /** Admin Configuration: Super Admin only. Mounted at /api/super-admin/admin-config (not tied to the selected brand). */
 const router = express.Router();
@@ -19,6 +20,8 @@ const handle = (fn, status = 200) => async (req, res, next) => {
 const writes = simpleRateLimit({ windowMs: 60_000, max: 60 });
 
 router.get('/overview', handle(() => service.overview()));
+router.get('/permission-catalog', handle(() => ({ actions: ACTIONS, modules: MODULES, presets: ROLE_PRESETS })));
+router.get('/permission-history', handle((req) => service.permissionHistory(req.query)));
 router.get('/history', handle((req) => service.history(req.query)));
 router.get('/admins', handle((req) => service.listAdmins(req.query)));
 router.get('/admins/:id', handle(async (req) => ({ admin: await service.getAdmin(req.params.id) })));

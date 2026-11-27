@@ -374,7 +374,7 @@ export const CommissionManagement = () => {
 
             <div className="flex items-center gap-2">
               {!editingSeller ? (
-                <button
+                <button data-perm="super.only"
                   onClick={() => {
                     setSellerRateInput(String(currentSellerRate));
                     setEditingSeller(true);
@@ -397,7 +397,7 @@ export const CommissionManagement = () => {
                   >
                     Cancel
                   </button>
-                  <button
+                  <button data-perm="super.only"
                     onClick={() => handleSaveRates('seller')}
                     disabled={savingSettings}
                     className="flex-1 py-2.5 bg-[#79B433] hover:bg-[#e64d00] text-white font-black text-xs rounded-xl border-none cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
@@ -485,7 +485,7 @@ export const CommissionManagement = () => {
 
             <div className="flex items-center gap-2">
               {!editingCaptain ? (
-                <button
+                <button data-perm="super.only"
                   onClick={() => {
                     setCaptainRateInput(String(currentCaptainRate));
                     setEditingCaptain(true);
@@ -508,7 +508,7 @@ export const CommissionManagement = () => {
                   >
                     Cancel
                   </button>
-                  <button
+                  <button data-perm="super.only"
                     onClick={() => handleSaveRates('captain')}
                     disabled={savingSettings}
                     className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl border-none cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
@@ -587,7 +587,7 @@ export const CommissionManagement = () => {
           
           <div className="flex items-center gap-2">
             {!editingDelivery ? (
-              <button
+              <button data-perm="super.only"
                 onClick={() => {
                   setDeliveryChargeInput(String(currentDeliveryCharge));
                   setFreeDeliveryMinInput(String(currentFreeDeliveryMinOrder));
@@ -618,7 +618,7 @@ export const CommissionManagement = () => {
                 >
                   Cancel
                 </button>
-                <button
+                <button data-perm="super.only"
                   onClick={handleSaveDeliverySettings}
                   disabled={savingSettings}
                   className="px-4 py-2 bg-[#79B433] hover:bg-[#e64d00] text-white font-black text-xs rounded-xl border-none cursor-pointer transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50"

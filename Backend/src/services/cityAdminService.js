@@ -3,6 +3,7 @@ import Admin from '../models/Admin.model.js';
 import Brand from '../models/Brand.model.js';
 import { normalizeCity } from '../utils/cityNormalization.js';
 import { ALL_PERMISSION_KEYS, cleanPermissions } from '../utils/cityAdminAccess.js';
+import { revokeBrandAccess } from './adminBrandAccessService.js';
 
 /**
  * City Admin = an Admin account (role "admin") tied to exactly ONE brand. Brand and city are always read from the Brand
@@ -207,6 +208,8 @@ export const reassign = async ({ brand, body, actor }) => {
     // a City Admin holds exactly one brand: brands held through Admin Configuration are released
     next.brandAccess = undefined;
     next.exclusiveBrands = undefined;
+    next.permissionMode = undefined; // City Admins use their own permission list
+    await revokeBrandAccess({ adminIds: [next._id], actor: { id: actor?.id, name: actor?.name || '' } });
     revokeSessions(next);
     addHistory(next, 'ASSIGNED', actor, `Assigned to ${brand.name}`);
     await next.save();

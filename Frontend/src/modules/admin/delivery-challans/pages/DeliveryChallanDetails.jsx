@@ -251,7 +251,7 @@ export const DeliveryChallanDetails = ({ onNavigate, challanData }) => {
           {/* Draft Actions */}
           {isDraft && (
             <>
-              <button
+              <button data-perm="challans.edit"
                 onClick={() => onNavigate && onNavigate('delivery_challans/edit', challan)}
                 className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition cursor-pointer"
               >
@@ -259,7 +259,7 @@ export const DeliveryChallanDetails = ({ onNavigate, challanData }) => {
                 <span>Edit Draft</span>
               </button>
 
-              <button
+              <button data-perm="challans.approve"
                 onClick={handleFinalize}
                 disabled={actionLoading}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-[#1A2E0A] hover:bg-[#253f10] text-white transition shadow-md cursor-pointer disabled:opacity-50"
@@ -272,7 +272,7 @@ export const DeliveryChallanDetails = ({ onNavigate, challanData }) => {
 
           {/* Dispatched Actions -> Mark Delivered */}
           {isDispatched && (
-            <button
+            <button data-perm="challans.edit"
               onClick={() => {
                 setDeliveryTargetStatus('Delivered');
                 setShowDeliveryModal(true);
@@ -286,7 +286,7 @@ export const DeliveryChallanDetails = ({ onNavigate, challanData }) => {
 
           {/* Cancel Action */}
           {!isDelivered && !isCancelled && (
-            <button
+            <button data-perm="challans.edit"
               onClick={() => setShowCancelModal(true)}
               className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 transition cursor-pointer"
             >
@@ -637,7 +637,7 @@ export const DeliveryChallanDetails = ({ onNavigate, challanData }) => {
               >
                 Cancel
               </button>
-              <button
+              <button data-perm="challans.edit"
                 type="button"
                 onClick={handleConfirmDelivery}
                 disabled={actionLoading}
@@ -690,7 +690,7 @@ export const DeliveryChallanDetails = ({ onNavigate, challanData }) => {
               >
                 Go Back
               </button>
-              <button
+              <button data-perm="challans.edit"
                 type="button"
                 onClick={handleConfirmCancel}
                 disabled={actionLoading}

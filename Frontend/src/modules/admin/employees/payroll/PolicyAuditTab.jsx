@@ -40,7 +40,7 @@ export default function PolicyAuditTab({ brandId, isSuper }) {
             <Check testId="pol-self" disabled={!can} label="An Admin may approve a payroll they submitted themselves" hint="Off keeps two people involved (maker and checker)." checked={pol.allowSelfApproval} onChange={(v) => setPol({ ...pol, allowSelfApproval: v })} />
             <Check testId="pol-pay" disabled={!can} label="Admins can record salary payments" hint="Reversing a payment is always Super Admin only." checked={pol.adminCanRecordPayments} onChange={(v) => setPol({ ...pol, adminCanRecordPayments: v })} />
             <Check testId="pol-ot" disabled={!can} label="Pay all detected overtime automatically" hint="Off: only the overtime minutes an admin approves are paid." checked={pol.overtimeApproval === 'AUTO'} onChange={(v) => setPol({ ...pol, overtimeApproval: v ? 'AUTO' : 'MANUAL' })} />
-            {can && <button type="button" data-testid="pol-save" className={btnPrimary} onClick={save}>Save policy</button>}
+            {can && <button data-perm="super.only" type="button" data-testid="pol-save" className={btnPrimary} onClick={save}>Save policy</button>}
           </div>
         )}
       </Card>

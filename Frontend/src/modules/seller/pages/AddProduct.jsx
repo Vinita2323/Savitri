@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { categoryService, productService, authService, bannerService } from '../../../services/authService';
-import { compressAndResizeImage } from '../../../utils/imageUtils';
+import { compressAndResizeImage, isPlaceholderImage } from '../../../utils/imageUtils';
 import ProductVariantBuilder from '../components/ProductVariantBuilder';
 
 const AddProduct = () => {
@@ -58,7 +58,7 @@ const AddProduct = () => {
     isReturnable: true,
     returnWindow: '7',
     returnPolicy: '7 Days Returnable / Replacement',
-    mainImage: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&q=80',
+    mainImage: '',
     mainImageFile: null,
     galleryImages: [],
     hasVariants: false,
@@ -138,7 +138,7 @@ const AddProduct = () => {
             isReturnable: prod.isReturnable !== undefined ? Boolean(prod.isReturnable) : true,
             returnWindow: String(prod.returnWindow || '7'),
             returnPolicy: prod.returnPolicy || '7 Days Returnable / Replacement',
-            mainImage: prod.mainImage || prod.image || 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&q=80',
+            mainImage: [prod.mainImage, prod.image].find((x) => x && !isPlaceholderImage(x)) || '',
             mainImageFile: null,
             galleryImages: Array.isArray(prod.galleryImages) ? prod.galleryImages : [],
             hasVariants: Boolean(prod.hasVariants || (Array.isArray(prod.variants) && prod.variants.length > 0)),
@@ -378,11 +378,12 @@ const AddProduct = () => {
     setIsSubmitting(true);
     try {
       let cleanMainImage = formData.mainImage;
+      // a picture that is too large is left out rather than replaced by a stand-in photo
       if (typeof cleanMainImage === 'string' && cleanMainImage.startsWith('data:image/') && cleanMainImage.length > 500000) {
-        cleanMainImage = 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&q=80';
+        cleanMainImage = '';
       }
-      if (!cleanMainImage) {
-        cleanMainImage = 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&q=80';
+      if (!cleanMainImage || isPlaceholderImage(cleanMainImage)) {
+        cleanMainImage = '';
       }
 
       const finalSalePrice = Number(formData.salePrice !== '' && !isNaN(formData.salePrice) ? formData.salePrice : 0);
@@ -475,7 +476,7 @@ const AddProduct = () => {
           seller: formData.seller || defaultSellerName,
           category: formData.category,
           subCategory: formData.subCategory,
-          image: createdProd?.mainImage || formData.mainImage || 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&q=80',
+          image: createdProd?.mainImage || formData.mainImage || '',
           galleryImages: createdProd?.galleryImages || formData.galleryImages || [],
           variation: finalVariation,
           stock: finalStock,

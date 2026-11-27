@@ -13,6 +13,9 @@ export const PosProvider = ({ children }) => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  // why the product list is empty: '' = nothing matches; otherwise the problem to show (no store, server error)
+  const [productsError, setProductsError] = useState('');
+  const [storesLoaded, setStoresLoaded] = useState(false);
 
   // Sale Type: COUNTER_SALE (walk-in) or DELIVERY_ORDER
   const [saleType, setSaleType] = useState(SALE_TYPES.COUNTER_SALE);
@@ -68,7 +71,11 @@ export const PosProvider = ({ children }) => {
           setSelectedStore(storeList[0]);
         }
       } catch (err) {
-        console.error('Error fetching stores:', err);
+        setStores([]);
+        setProductsError(err.message);
+        showAlert(err.message, 'error');
+      } finally {
+        setStoresLoaded(true);
       }
 
       try {
@@ -83,7 +90,13 @@ export const PosProvider = ({ children }) => {
 
   // 2. Fetch Products whenever Store, Category, or Search Query changes
   const loadProducts = useCallback(async () => {
+    // products always belong to a store: without one there is nothing to list (never demo items)
+    if (!selectedStore) {
+      setProducts([]);
+      return;
+    }
     setIsLoadingProducts(true);
+    setProductsError('');
     try {
       const data = await posService.getProducts({
         search: searchQuery,
@@ -95,7 +108,8 @@ export const PosProvider = ({ children }) => {
         setCategories(data.categories);
       }
     } catch (err) {
-      console.error('Error loading products:', err);
+      setProducts([]);
+      setProductsError(err.message);
     } finally {
       setIsLoadingProducts(false);
     }
@@ -406,7 +420,7 @@ export const PosProvider = ({ children }) => {
       );
       if (notify) showAlert('Held bill removed.', 'info');
     } catch (err) {
-      console.error(err);
+      showAlert(err.message, 'error');
     }
   };
 
@@ -596,6 +610,9 @@ export const PosProvider = ({ children }) => {
     setSearchQuery,
     isLoadingProducts,
     loadProducts,
+    productsError,
+    storesLoaded,
+    stores,
 
     // Sale type & Customer
     saleType,

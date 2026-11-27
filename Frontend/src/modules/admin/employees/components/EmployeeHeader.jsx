@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useEmployee } from '../context/EmployeeContext';
+import { tabAllowed } from '../../../../utils/adminPermissions';
 import {
   LayoutDashboard,
   Users,
@@ -103,7 +104,7 @@ export const EmployeeHeader = ({ activeTabName = 'dashboard', onNavigate }) => {
 
       {/* Navigation Submenu Tabs */}
       <div className="px-6 flex items-center gap-2 overflow-x-auto scrollbar-none">
-        {navLinks.map((tab) => {
+        {navLinks.filter((tab) => tabAllowed(`employee_${tab.id}`)).map((tab) => {
           const Icon = tab.icon;
           // Support both react-router NavLink and onNavigate callback (for AdminLayout)
           if (onNavigate) {

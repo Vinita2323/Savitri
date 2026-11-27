@@ -129,7 +129,7 @@ const PlanFormModal = ({ plan, onSave, onClose, accentColor }) => {
             {error && <p className="text-red-600 text-sm font-medium bg-red-50 p-3 rounded-xl">{error}</p>}
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={onClose} className="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl cursor-pointer border-none hover:bg-slate-200 transition-colors">Cancel</button>
-              <button type="submit" disabled={saving} className="flex-1 py-3 text-white font-bold rounded-xl cursor-pointer border-none transition-colors disabled:opacity-60" style={{ background: accentColor }}>{saving ? 'Saving...' : plan ? 'Update Plan' : 'Create Plan'}</button>
+              <button data-perm="settings.manage" type="submit" disabled={saving} className="flex-1 py-3 text-white font-bold rounded-xl cursor-pointer border-none transition-colors disabled:opacity-60" style={{ background: accentColor }}>{saving ? 'Saving...' : plan ? 'Update Plan' : 'Create Plan'}</button>
             </div>
           </form>
         </div>
@@ -164,7 +164,7 @@ const ConfirmPaymentModal = ({ sub, onConfirm, onClose, accentColor }) => {
         </div>
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl cursor-pointer border-none hover:bg-slate-200 transition-colors">Cancel</button>
-          <button onClick={async () => { setConfirming(true); await onConfirm(sub._id, note); setConfirming(false); onClose(); }} disabled={confirming} className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl cursor-pointer border-none transition-colors disabled:opacity-60">
+          <button data-perm="super.only" onClick={async () => { setConfirming(true); await onConfirm(sub._id, note); setConfirming(false); onClose(); }} disabled={confirming} className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl cursor-pointer border-none transition-colors disabled:opacity-60">
             {confirming ? 'Activating...' : '✓ Confirm & Activate'}
           </button>
         </div>
@@ -212,11 +212,11 @@ const PlansTable = ({ plans, onEdit, onDelete, onToggle, accentColor, loading })
               <td className="px-4 py-3 text-slate-500 font-medium">{plan.displayOrder}</td>
               <td className="px-4 py-3">
                 <div className="flex items-center gap-1.5">
-                  <button onClick={() => onToggle(plan)} title={plan.status === 'active' ? 'Deactivate' : 'Activate'} className="p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer border-none bg-transparent text-slate-500 transition-colors">
+                  <button data-perm="settings.manage" onClick={() => onToggle(plan)} title={plan.status === 'active' ? 'Deactivate' : 'Activate'} className="p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer border-none bg-transparent text-slate-500 transition-colors">
                     {plan.status === 'active' ? <ToggleRight size={18} className="text-emerald-500" /> : <ToggleLeft size={18} />}
                   </button>
-                  <button onClick={() => onEdit(plan)} className="p-1.5 rounded-lg hover:bg-blue-50 cursor-pointer border-none bg-transparent text-slate-500 hover:text-blue-500 transition-colors"><Pencil size={15} /></button>
-                  <button onClick={() => onDelete(plan)} className="p-1.5 rounded-lg hover:bg-red-50 cursor-pointer border-none bg-transparent text-slate-500 hover:text-red-500 transition-colors"><Trash2 size={15} /></button>
+                  <button data-perm="settings.manage" onClick={() => onEdit(plan)} className="p-1.5 rounded-lg hover:bg-blue-50 cursor-pointer border-none bg-transparent text-slate-500 hover:text-blue-500 transition-colors"><Pencil size={15} /></button>
+                  <button data-perm="settings.manage" onClick={() => onDelete(plan)} className="p-1.5 rounded-lg hover:bg-red-50 cursor-pointer border-none bg-transparent text-slate-500 hover:text-red-500 transition-colors"><Trash2 size={15} /></button>
                 </div>
               </td>
             </tr>
@@ -275,7 +275,7 @@ const SubscriptionsTable = ({ subs, onConfirm, loading, role }) => {
               <td className="px-4 py-3 font-mono text-xs text-slate-400 max-w-xs truncate">{sub.paymentReference || sub.transactionId}</td>
               <td className="px-4 py-3">
                 {sub.membershipStatus === 'pending_payment' && (
-                  <button onClick={() => onConfirm(sub)} className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg cursor-pointer border-none transition-colors whitespace-nowrap">
+                  <button data-perm="super.only" onClick={() => onConfirm(sub)} className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg cursor-pointer border-none transition-colors whitespace-nowrap">
                     ✓ Confirm
                   </button>
                 )}
@@ -362,7 +362,7 @@ const MembershipPlanManager = ({ role }) => {
           <h2 className="text-xl font-bold text-slate-900">{title}</h2>
           <p className="text-xs text-slate-500">Create and manage {role} membership plans, pricing, and benefits</p>
         </div>
-        <button onClick={() => { setEditPlan(null); setShowForm(true); }} className="px-4 py-2.5 text-white text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer border-none transition-colors" style={{ background: accentColor }}>
+        <button data-perm="settings.manage" onClick={() => { setEditPlan(null); setShowForm(true); }} className="px-4 py-2.5 text-white text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer border-none transition-colors" style={{ background: accentColor }}>
           <Plus size={15} /> New Plan
         </button>
       </div>

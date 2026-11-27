@@ -5,24 +5,29 @@ import API from '../../../services/api';
 import { authService } from '../../../services/authService';
 import { useAuth } from '../../../context/AuthContext';
 import { getAdminBrand, setAdminBrand, ADMIN_BRAND_CHECK_EVENT } from '../../../utils/adminBrand';
+import { setAdminPermissions, resetAdminPermissions, hiddenControlsCss } from '../../../utils/adminPermissions';
 
 const AdminBrandContext = createContext({ restricted: false, brands: [], selected: '' });
 
 /**
  * Wraps the Admin panel. For an admin limited to some brands it makes sure one of THEIR brands is selected before any page
- * loads data; every other admin is not affected.
+ * loads data, and loads what may be done in that brand; every other admin is not affected.
  */
 export const AdminBrandGate = ({ children }) => {
   const [state, setState] = useState({ loading: true, restricted: false, brands: [], selected: '' });
-  const shown = useRef(null); // the brand the pages on screen were loaded for
+  const shown = useRef(null); // the brand and permissions the pages on screen were loaded for
+  const busy = useRef(false);
   const { logout } = useAuth();
   const navigate = useNavigate();
 
   const load = useCallback(async () => {
+    if (busy.current) return; // several refused calls at once need one check only
+    busy.current = true;
     try {
       const { data } = await API.get('/admin/my-brands');
       if (!data?.restricted) {
         setAdminBrand('');
+        resetAdminPermissions();
         setState({ loading: false, restricted: false, brands: [], selected: '' });
         return;
       }
@@ -30,14 +35,24 @@ export const AdminBrandGate = ({ children }) => {
       const stored = getAdminBrand();
       const selected = brands.some((b) => b.brandId === stored) ? stored : brands[0]?.brandId || '';
       setAdminBrand(selected);
-      // the brand being shown was taken away while the panel was open: start again on a brand that is still assigned
-      if (shown.current && selected && shown.current !== selected) { window.location.reload(); return; }
-      shown.current = selected;
-      setState({ loading: false, restricted: true, brands, selected });
+      const current = brands.find((b) => b.brandId === selected);
+      const access = data.enforced
+        ? { enforced: true, configured: Boolean(current?.configured), permissions: current?.permissions || {} }
+        : { enforced: false, configured: true, permissions: {} };
+      // the brand being shown, or what may be done in it, changed while the panel was open: start again with clean pages
+      const signature = JSON.stringify([selected, access]);
+      if (shown.current && selected && shown.current !== signature) { window.location.reload(); return; }
+      shown.current = signature;
+      setAdminPermissions(access);
+      setState({ loading: false, restricted: true, brands, selected, css: hiddenControlsCss(data.allActions) });
     } catch {
       setState((s) => ({ ...s, loading: false })); // pages show their own errors; the server enforces access either way
+    } finally {
+      busy.current = false;
     }
   }, []);
+
+  useEffect(() => resetAdminPermissions, []); // leaving the Admin panel: other panels are not limited by this
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -64,7 +79,12 @@ export const AdminBrandGate = ({ children }) => {
     );
   }
 
-  return <AdminBrandContext.Provider value={state}>{children}</AdminBrandContext.Provider>;
+  return (
+    <AdminBrandContext.Provider value={state}>
+      {state.css ? <style data-testid="admin-permission-css">{state.css}</style> : null}
+      {children}
+    </AdminBrandContext.Provider>
+  );
 };
 
 /** Header control: which of the admin's brands the panel is showing. Hidden for admins who are not limited to brands. */

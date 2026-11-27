@@ -448,7 +448,7 @@ export const CreateQuotation = ({ onNavigate }) => {
             <Save size={14} />
             <span>Save as Draft</span>
           </button>
-          <button
+          <button data-perm="quotations.edit"
             type="button"
             onClick={handleInitiateSend}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1A2E0A] hover:bg-[#2F5218] text-white text-xs font-bold transition-all cursor-pointer border-none shadow-xs"
@@ -1080,7 +1080,7 @@ export const CreateQuotation = ({ onNavigate }) => {
               <Save size={15} />
               <span>Save as Draft</span>
             </button>
-            <button
+            <button data-perm="quotations.edit"
               type="button"
               onClick={handleInitiateSend}
               className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#1A2E0A] hover:bg-[#2F5218] text-white text-xs font-bold transition-colors cursor-pointer border-none shadow-xs"
@@ -1120,7 +1120,7 @@ export const CreateQuotation = ({ onNavigate }) => {
               >
                 Back to Editing
               </button>
-              <button
+              <button data-perm="quotations.edit"
                 type="button"
                 onClick={handleConfirmSend}
                 className="px-4 py-2 rounded-xl bg-[#1A2E0A] hover:bg-[#2F5218] text-white text-xs font-bold cursor-pointer border-none"

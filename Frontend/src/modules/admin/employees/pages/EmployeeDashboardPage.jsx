@@ -363,14 +363,14 @@ export const EmployeeDashboardPage = ({ onNavigate }) => {
                         "{l.reason}"
                       </p>
                       <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-200/60">
-                        <button
+                        <button data-perm="leaves.reject"
                           type="button"
                           onClick={() => handleReviewLeave(l._id, 'Rejected', 'Declined by Admin')}
                           className="px-2.5 py-1 text-[11px] font-bold text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
                         >
                           Reject
                         </button>
-                        <button
+                        <button data-perm="leaves.approve"
                           type="button"
                           onClick={() => handleReviewLeave(l._id, 'Approved', 'Approved')}
                           className="px-3 py-1 text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-2xs transition-colors"

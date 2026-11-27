@@ -161,8 +161,8 @@ API.interceptors.response.use(
   (response) => (isStaleBrandResponse(response.config) ? new Promise(() => {}) : response),
   (error) => {
     if (isStaleBrandResponse(error?.config)) return new Promise(() => {});
-    // the selected brand is no longer assigned to this admin: let the Admin panel pick one that still is
-    if (error.response?.status === 403 && ['BRAND_FORBIDDEN', 'NO_BRANDS'].includes(error.response?.data?.code) && typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+    // the selected brand or a permission may have been taken away: let the Admin panel load what is still allowed
+    if (error.response?.status === 403 && ['BRAND_FORBIDDEN', 'NO_BRANDS', 'PERMISSION_DENIED'].includes(error.response?.data?.code) && typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
       window.dispatchEvent(new CustomEvent(ADMIN_BRAND_CHECK_EVENT));
     }
     // A Super Admin page that was answered with a non-Super-Admin login (for example a City Admin login left in this browser

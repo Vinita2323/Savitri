@@ -640,7 +640,7 @@ export const PricingChargesManagement = ({ initialTab = 'transport' }) => {
                 </p>
               </div>
 
-              <button
+              <button data-perm="pricing.create"
                 onClick={() =>
                   setVehicleModal({
                     open: true,
@@ -696,7 +696,7 @@ export const PricingChargesManagement = ({ initialTab = 'transport' }) => {
                           </div>
                         </div>
 
-                        <button
+                        <button data-perm="pricing.edit"
                           onClick={() => handleToggleVehicleActive(vehicle)}
                           className={`text-xs px-2.5 py-1 rounded-full border font-medium cursor-pointer transition-colors ${
                             vehicle.isActive
@@ -811,7 +811,7 @@ export const PricingChargesManagement = ({ initialTab = 'transport' }) => {
                           >
                             Cancel
                           </button>
-                          <button
+                          <button data-perm="pricing.edit"
                             onClick={() => handleSaveVehicleDirect(vehicle._id)}
                             disabled={isSavingVehicle}
                             className="flex-1 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium border-none cursor-pointer flex items-center justify-center gap-1 shadow-2xs disabled:opacity-50"
@@ -822,14 +822,14 @@ export const PricingChargesManagement = ({ initialTab = 'transport' }) => {
                         </>
                       ) : (
                         <>
-                          <button
+                          <button data-perm="pricing.edit"
                             onClick={() => handleStartEditVehicle(vehicle)}
                             className="flex-1 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-xs font-medium border-none cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
                           >
                             <Edit3 size={13} className="text-[#F7941D]" />
                             <span>Edit Rates</span>
                           </button>
-                          <button
+                          <button data-perm="pricing.edit"
                             onClick={() =>
                               setVehicleModal({
                                 open: true,
@@ -887,7 +887,7 @@ export const PricingChargesManagement = ({ initialTab = 'transport' }) => {
                   >
                     Cancel
                   </button>
-                  <button
+                  <button data-perm="pricing.edit"
                     onClick={handleSaveActiveTransportDirect}
                     disabled={isSavingActiveTransport}
                     className="flex items-center gap-2 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium border-none cursor-pointer shadow-sm disabled:opacity-50"
@@ -897,7 +897,7 @@ export const PricingChargesManagement = ({ initialTab = 'transport' }) => {
                   </button>
                 </div>
               ) : (
-                <button
+                <button data-perm="pricing.edit"
                   onClick={() => {
                     initActiveTransportDraft(transportActive);
                     setIsEditingActiveTransport(true);
@@ -1242,7 +1242,7 @@ export const PricingChargesManagement = ({ initialTab = 'transport' }) => {
                     >
                       Cancel
                     </button>
-                    <button
+                    <button data-perm="pricing.edit"
                       onClick={handleSaveActiveDeliveryDirect}
                       disabled={isSavingActiveDelivery}
                       className="flex items-center gap-2 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium border-none cursor-pointer shadow-sm transition-all disabled:opacity-50"
@@ -1252,7 +1252,7 @@ export const PricingChargesManagement = ({ initialTab = 'transport' }) => {
                     </button>
                   </>
                 ) : (
-                  <button
+                  <button data-perm="pricing.edit"
                     onClick={() => {
                       initActiveDeliveryDraft(deliveryActive);
                       setIsEditingActiveDelivery(true);
@@ -1723,7 +1723,7 @@ export const PricingChargesManagement = ({ initialTab = 'transport' }) => {
                       {/* Actions */}
                       <div className="flex items-center gap-1.5 self-end sm:self-center">
                         {!isActive && (
-                          <button
+                          <button data-perm="pricing.edit"
                             onClick={async () => {
                               try {
                                 const res = await pricingService.activateDeliveryPricing(cfg._id);
@@ -1742,7 +1742,7 @@ export const PricingChargesManagement = ({ initialTab = 'transport' }) => {
                           </button>
                         )}
                         {!isActive && (
-                          <button
+                          <button data-perm="pricing.delete"
                             onClick={() =>
                               setDeleteConfirm({
                                 open: true,
@@ -2039,7 +2039,7 @@ export const PricingChargesManagement = ({ initialTab = 'transport' }) => {
               >
                 Cancel
               </button>
-              <button
+              <button data-perm="pricing.delete"
                 onClick={async () => {
                   if (deleteConfirm.type === 'delivery') {
                     await pricingService.deleteDeliveryPricing(deleteConfirm.id);

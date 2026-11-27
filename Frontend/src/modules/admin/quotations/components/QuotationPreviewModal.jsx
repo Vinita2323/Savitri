@@ -140,7 +140,7 @@ export const QuotationPreviewModal = ({
               <span className="hidden sm:inline">Print</span>
             </button>
 
-            <button
+            <button data-perm="quotations.export"
               type="button"
               onClick={handleDownloadPdf}
               disabled={isDownloadingPdf}
@@ -480,14 +480,14 @@ export const QuotationPreviewModal = ({
 
             {quotation.status === 'Draft' && (
               <>
-                <button
+                <button data-perm="quotations.edit"
                   type="button"
                   onClick={() => onEdit && onEdit(quotation.id)}
                   className="px-3.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
                 >
                   Edit Draft
                 </button>
-                <button
+                <button data-perm="quotations.edit"
                   type="button"
                   onClick={() => onSend && onSend(quotation.id)}
                   className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#1A2E0A] hover:bg-[#2F5218] text-white text-xs font-bold transition-colors cursor-pointer border-none"
@@ -607,7 +607,7 @@ export const QuotationPreviewModal = ({
                 >
                   Cancel
                 </button>
-                <button
+                <button data-perm="quotations.edit"
                   type="button"
                   onClick={handleSendEmail}
                   disabled={emailSending || !emailRecipient.trim()}

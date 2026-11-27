@@ -60,6 +60,9 @@ const adminSchema = new mongoose.Schema(
 
     // 'ASSIGNED' = managed in Admin Configuration: only the listed brands, and an empty list means no brand (never "all").
     brandAccess: { type: String, enum: ['ASSIGNED'], default: undefined },
+    // 'PER_BRAND' = what this admin may do is set separately for each brand (AdminBrandAccess); a brand without a record
+    // allows nothing. Unset on older accounts, which keep full access inside their brands.
+    permissionMode: { type: String, enum: ['PER_BRAND'], default: undefined },
     // The brands this admin holds exclusively (not shared). A unique index stops two admins taking the same brand at once.
     exclusiveBrands: { type: [String], default: undefined },
 

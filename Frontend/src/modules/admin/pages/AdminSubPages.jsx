@@ -5,7 +5,7 @@ import { categoryService, bannerService, productService, walletService, captainS
 import { faqService } from '../../../services/faqService';
 import { supportService } from '../../../services/supportService';
 import { mockUsers, mockSellers, mockCaptains, mockCategories, mockProducts, mockOrders, mockDeliveries, mockPayments, mockCoupons, mockNotifications, mockRoles, mockFaqs } from '../mock/adminMockData';
-import { getImageUrl, handleImageError, getInitialSvgDataUrl, compressAndResizeImage, uploadFileViaApi } from '../../../utils/imageUtils';
+import { getImageUrl, handleImageError, getInitialSvgDataUrl, compressAndResizeImage, uploadFileViaApi, isPlaceholderImage } from '../../../utils/imageUtils';
 import { 
   Search, 
   Download, 
@@ -63,6 +63,8 @@ import ProductVariantBuilder from '../../seller/components/ProductVariantBuilder
 import { useDebounce } from '../../../hooks/useDebounce';
 import YourDocuments from '../../../components/YourDocuments';
 import MyBrandsCard from '../components/MyBrandsCard';
+import { getAdminBrand } from '../../../utils/adminBrand';
+import { adminCanAny } from '../../../utils/adminPermissions';
 
 /* =========================================================================
    1. USER MANAGEMENT PAGE (USERS, USER ORDERS & RETURN ORDERS TABS)
@@ -619,7 +621,7 @@ export const UserManagement = () => {
                           </button>
 
                           {u.isBlocked ? (
-                            <button
+                            <button data-perm="customers.edit"
                               onClick={() => openBlockModal(u)}
                               className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-lg transition-colors border border-emerald-200 hover:border-emerald-600 cursor-pointer text-[11px] font-bold inline-flex items-center gap-1"
                               title="Unblock Customer Account"
@@ -628,7 +630,7 @@ export const UserManagement = () => {
                               <span>Unblock</span>
                             </button>
                           ) : (
-                            <button
+                            <button data-perm="customers.edit"
                               onClick={() => openBlockModal(u)}
                               className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg transition-colors border border-rose-200 hover:border-rose-600 cursor-pointer text-[11px] font-bold inline-flex items-center gap-1"
                               title="Block Customer Account"
@@ -746,7 +748,7 @@ export const UserManagement = () => {
 
                         {/* Actions */}
                         <td className="py-3.5 px-4 align-middle text-center">
-                          <button
+                          <button data-perm="returns.approve"
                             onClick={() => {
                               setSelectedReturnOrder(ro);
                               setReturnStatusInput(ro.returnStatus || 'Approved');
@@ -895,7 +897,7 @@ export const UserManagement = () => {
 
               <div>
                 {selectedUser.isBlocked ? (
-                  <button
+                  <button data-perm="customers.edit"
                     onClick={() => openBlockModal(selectedUser)}
                     className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs border-none cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-xs"
                   >
@@ -903,7 +905,7 @@ export const UserManagement = () => {
                     <span>Unblock Customer Account</span>
                   </button>
                 ) : (
-                  <button
+                  <button data-perm="customers.edit"
                     onClick={() => openBlockModal(selectedUser)}
                     className="w-full py-2.5 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-xl font-bold text-xs border border-rose-200 hover:border-rose-600 cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-xs"
                   >
@@ -1077,7 +1079,7 @@ export const UserManagement = () => {
               >
                 Cancel
               </button>
-              <button
+              <button data-perm="customers.edit"
                 type="button"
                 onClick={handleConfirmToggleBlock}
                 disabled={submittingBlock || (!blockingUser.isBlocked && !blockReasonInput.trim())}
@@ -1154,7 +1156,7 @@ export const UserManagement = () => {
               >
                 Cancel
               </button>
-              <button
+              <button data-perm="returns.approve"
                 disabled={updatingReturn}
                 onClick={handleUpdateReturnStatus}
                 className="px-4 py-2 bg-[#79B433] hover:bg-[#e04b00] disabled:opacity-50 text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5"
@@ -1592,7 +1594,7 @@ export const SellerManagement = () => {
                             <Eye size={13} /> View
                           </button>
                           {seller.status !== 'Approved' && (
-                            <button 
+                            <button data-perm="sellers.approve" 
                               onClick={async () => {
                                 try {
                                   const data = await adminService.toggleSellerStatus(seller.id, 'approved');
@@ -1612,7 +1614,7 @@ export const SellerManagement = () => {
                             </button>
                           )}
                           {seller.status !== 'Rejected' && (
-                            <button 
+                            <button data-perm="sellers.reject" 
                               onClick={async () => {
                                 try {
                                   const data = await adminService.toggleSellerStatus(seller.id, 'rejected');
@@ -1627,14 +1629,14 @@ export const SellerManagement = () => {
                               ✕
                             </button>
                           )}
-                          <button 
+                          <button data-perm="sellers.edit" 
                             onClick={() => openEditModal(seller)}
                             className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg border border-blue-200 cursor-pointer transition-colors"
                             title="Edit Seller Details"
                           >
                             <Edit3 size={13} />
                           </button>
-                          <button 
+                          <button data-perm="sellers.delete" 
                             onClick={() => handleDeleteSeller(seller.id)}
                             className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-200 cursor-pointer transition-colors"
                             title="Delete Seller"
@@ -1777,7 +1779,7 @@ export const SellerManagement = () => {
 
                 <div className="flex items-center gap-2">
                   {editingSellerModal.status !== 'Approved' && (
-                    <button 
+                    <button data-perm="sellers.approve" 
                       onClick={async () => {
                         try {
                           const data = await adminService.toggleSellerStatus(editingSellerModal.id, 'approved');
@@ -1797,7 +1799,7 @@ export const SellerManagement = () => {
                     </button>
                   )}
                   {editingSellerModal.status !== 'Rejected' && (
-                    <button 
+                    <button data-perm="sellers.reject" 
                       onClick={async () => {
                         try {
                           const data = await adminService.toggleSellerStatus(editingSellerModal.id, 'rejected');
@@ -1817,7 +1819,7 @@ export const SellerManagement = () => {
                     </button>
                   )}
                   {editingSellerModal.status !== 'Suspended' && (
-                    <button 
+                    <button data-perm="sellers.reject" 
                       onClick={async () => {
                         try {
                           const data = await adminService.toggleSellerStatus(editingSellerModal.id, 'suspended');
@@ -1924,7 +1926,7 @@ export const SellerManagement = () => {
                       </span>
                     </div>
                     {isSellerEditMode && (
-                      <button
+                      <button data-perm="commissions.manage"
                         type="button"
                         onClick={async () => {
                           if (!window.confirm('Reset this seller to the global default commission?')) return;
@@ -1968,7 +1970,7 @@ export const SellerManagement = () => {
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-bold text-slate-800 m-0">Address Information</h4>
                   {isSellerEditMode && (
-                    <button 
+                    <button data-perm="sellers.edit" 
                       type="button"
                       onClick={() => alert('Address information updated')}
                       className="px-3.5 py-1.5 bg-[#1A2E0A] hover:bg-[#003837] text-white font-bold rounded-xl border-none cursor-pointer"
@@ -2047,7 +2049,7 @@ export const SellerManagement = () => {
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 outline-none"
                     />
                   </div>
-                  <button 
+                  <button data-perm="sellers.edit" 
                     type="button"
                     onClick={() => alert('Service radius updated')}
                     className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl border-none cursor-pointer"
@@ -2255,7 +2257,7 @@ export const SellerManagement = () => {
                 {isSellerEditMode ? 'Cancel' : 'Close'}
               </button>
               {!isSellerEditMode ? (
-                <button
+                <button data-perm="sellers.edit"
                   type="button"
                   onClick={() => setSellerModalMode('edit')}
                   className="px-5 py-2 bg-[#79B433] hover:bg-[#689A2B] text-white text-xs font-bold rounded-xl border-none cursor-pointer transition-colors flex items-center gap-1.5"
@@ -2263,7 +2265,7 @@ export const SellerManagement = () => {
                   <Edit3 size={13} /> Edit Seller
                 </button>
               ) : (
-                <button
+                <button data-perm="sellers.edit"
                   type="button"
                   onClick={async () => {
                     try {
@@ -2748,7 +2750,7 @@ export const CaptainManagement = () => {
 
                           {/* Approve Button */}
                           {captain.status !== 'Approved' && (
-                            <button 
+                            <button data-perm="captains.approve" 
                               onClick={() => handleToggleCaptainStatus(captain._id, 'approved')}
                               className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer transition-colors text-[10px] font-bold flex items-center gap-1"
                               title="Approve Captain"
@@ -2760,7 +2762,7 @@ export const CaptainManagement = () => {
 
                           {/* Reject Button */}
                           {captain.status !== 'Rejected' && (
-                            <button 
+                            <button data-perm="captains.reject" 
                               onClick={() => handleToggleCaptainStatus(captain._id, 'rejected')}
                               className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer transition-colors text-[10px] font-bold flex items-center gap-1"
                               title="Reject Captain"
@@ -2772,7 +2774,7 @@ export const CaptainManagement = () => {
 
                           {/* Suspend Button */}
                           {captain.status !== 'Suspended' && (
-                            <button 
+                            <button data-perm="captains.reject" 
                               onClick={() => handleToggleCaptainStatus(captain._id, 'suspended')}
                               className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 cursor-pointer transition-colors text-[10px] font-bold flex items-center gap-1"
                               title="Suspend Captain"
@@ -2782,7 +2784,7 @@ export const CaptainManagement = () => {
                           )}
 
                           {/* Edit Icon */}
-                          <button
+                          <button data-perm="captains.edit"
                             onClick={() => setEditingCaptain(captain)}
                             className="p-1 rounded-md text-blue-600 hover:bg-blue-50 border-none bg-transparent cursor-pointer transition-colors"
                             title="Edit Captain Details"
@@ -2791,7 +2793,7 @@ export const CaptainManagement = () => {
                           </button>
 
                           {/* Delete Icon */}
-                          <button
+                          <button data-perm="captains.delete"
                             onClick={() => handleDelete(captain._id)}
                             className="p-1 rounded-md text-rose-600 hover:bg-rose-50 border-none bg-transparent cursor-pointer transition-colors"
                             title="Delete Captain"
@@ -2899,7 +2901,7 @@ export const CaptainManagement = () => {
 
               <div className="flex items-center gap-2">
                 {selectedCaptain.status !== 'Approved' && (
-                  <button 
+                  <button data-perm="captains.approve" 
                     onClick={() => {
                       handleToggleCaptainStatus(selectedCaptain._id, 'approved');
                       setSelectedCaptain(null);
@@ -2911,7 +2913,7 @@ export const CaptainManagement = () => {
                 )}
 
                 {selectedCaptain.status !== 'Rejected' && (
-                  <button 
+                  <button data-perm="captains.reject" 
                     onClick={() => {
                       handleToggleCaptainStatus(selectedCaptain._id, 'rejected');
                       setSelectedCaptain(null);
@@ -2923,7 +2925,7 @@ export const CaptainManagement = () => {
                 )}
 
                 {selectedCaptain.status !== 'Suspended' && (
-                  <button 
+                  <button data-perm="captains.reject" 
                     onClick={() => {
                       handleToggleCaptainStatus(selectedCaptain._id, 'suspended');
                       setSelectedCaptain(null);
@@ -3405,7 +3407,7 @@ export const CaptainManagement = () => {
               >
                 Cancel
               </button>
-              <button
+              <button data-perm="captains.edit"
                 onClick={async () => {
                   try {
                     const response = await adminService.updateCaptainDetails(editingCaptain.id, {
@@ -3601,7 +3603,7 @@ export const BrandManagement = () => {
 
             {/* Submit Button */}
             <div className="flex items-center gap-2 pt-2">
-              <button 
+              <button data-perm="super.only" 
                 type="submit"
                 className="w-full py-2.5 bg-[#79B433] hover:bg-[#689A2B] text-white text-xs font-bold rounded-xl border-none cursor-pointer shadow-xs transition-all active:scale-98"
               >
@@ -3703,14 +3705,14 @@ export const BrandManagement = () => {
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center justify-center gap-2">
-                            <button 
+                            <button data-perm="super.only" 
                               onClick={() => handleEdit(brand)}
                               className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg border border-blue-200 cursor-pointer transition-colors"
                               title="Edit Brand"
                             >
                               <Edit3 size={13} />
                             </button>
-                            <button 
+                            <button data-perm="super.only" 
                               onClick={() => handleDelete(brand.id)}
                               className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-200 cursor-pointer transition-colors"
                               title="Delete Brand"
@@ -4132,14 +4134,14 @@ export const CategoryManagement = ({ initialSubcategoriesOnly = false }) => {
             <div className="flex flex-wrap items-center gap-3">
               {/* Add Category / Subcategory Button depending on mode */}
               {activeCategoryTab === 'subcategories' ? (
-                <button 
+                <button data-perm="categories.create" 
                   onClick={() => openAddSubcategoryModal(treeData[0] || { id: 'cat-1', name: 'General Category' })}
                   className="px-4 py-2 bg-[#79B433] hover:bg-[#689A2B] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 border-none cursor-pointer shadow-xs transition-all active:scale-95"
                 >
                   <Plus size={15} /> Add Subcategory
                 </button>
               ) : (
-                <button 
+                <button data-perm="categories.create" 
                   onClick={openAddCategoryModal}
                   className="px-4 py-2 bg-[#79B433] hover:bg-[#689A2B] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 border-none cursor-pointer shadow-xs transition-all active:scale-95"
                 >
@@ -4271,20 +4273,20 @@ export const CategoryManagement = ({ initialSubcategoriesOnly = false }) => {
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-                        <button 
+                        <button data-perm="categories.create" 
                           onClick={() => openAddNestedSubcategoryModal(sub)}
                           className="px-3.5 py-1.5 bg-[#79B433] hover:bg-[#689A2B] text-white text-xs font-bold rounded-lg flex items-center gap-1 border-none cursor-pointer shadow-2xs transition-transform active:scale-95"
                         >
                           <Plus size={13} /> Add Sub-subcategory
                         </button>
-                        <button
+                        <button data-perm="categories.edit"
                           onClick={() => openEditCategoryModal(sub)}
                           className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg flex items-center gap-1 border border-blue-200 cursor-pointer transition-colors"
                           title="Edit Subcategory"
                         >
                           <Pencil size={13} /> Edit
                         </button>
-                        <button 
+                        <button data-perm="categories.edit" 
                           onClick={() => handleToggleStatus(sub.id, sub.status)}
                           className={`px-3 py-1.5 text-xs font-bold rounded-lg border-none cursor-pointer transition-colors ${
                             sub.status === 'Active' ? 'bg-amber-100 hover:bg-amber-200 text-amber-800' : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800'
@@ -4292,7 +4294,7 @@ export const CategoryManagement = ({ initialSubcategoriesOnly = false }) => {
                         >
                           {sub.status === 'Active' ? 'Deactivate' : 'Activate'}
                         </button>
-                        <button 
+                        <button data-perm="categories.delete" 
                           onClick={() => handleDeleteItem(sub)}
                           className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border-none cursor-pointer transition-colors"
                           title="Delete Subcategory"
@@ -4327,11 +4329,11 @@ export const CategoryManagement = ({ initialSubcategoriesOnly = false }) => {
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
-                              <button onClick={() => openEditCategoryModal({ ...child, parentName: sub.name, parentId: sub.id })} className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold rounded-md border border-blue-200 cursor-pointer flex items-center gap-1">
+                              <button data-perm="categories.edit" onClick={() => openEditCategoryModal({ ...child, parentName: sub.name, parentId: sub.id })} className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold rounded-md border border-blue-200 cursor-pointer flex items-center gap-1">
                                 <Pencil size={12} /> Edit
                               </button>
-                              <button onClick={() => handleToggleStatus(child.id, child.status)} className="p-1.5 bg-amber-500/20 text-amber-700 hover:bg-amber-500/30 rounded-md border-none cursor-pointer text-xs font-bold px-2">×</button>
-                              <button onClick={() => handleDeleteItem(child)} className="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-md border-none cursor-pointer" title="Delete"><Trash2 size={13} /></button>
+                              <button data-perm="categories.edit" onClick={() => handleToggleStatus(child.id, child.status)} className="p-1.5 bg-amber-500/20 text-amber-700 hover:bg-amber-500/30 rounded-md border-none cursor-pointer text-xs font-bold px-2">×</button>
+                              <button data-perm="categories.delete" onClick={() => handleDeleteItem(child)} className="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-md border-none cursor-pointer" title="Delete"><Trash2 size={13} /></button>
                             </div>
                           </div>
                         ))}
@@ -4370,16 +4372,16 @@ export const CategoryManagement = ({ initialSubcategoriesOnly = false }) => {
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-                        <button onClick={() => openAddSubcategoryModal(cat)} className="px-3.5 py-1.5 bg-[#79B433] hover:bg-[#689A2B] text-white text-xs font-bold rounded-lg flex items-center gap-1 border-none cursor-pointer shadow-2xs transition-transform active:scale-95">
+                        <button data-perm="categories.create" onClick={() => openAddSubcategoryModal(cat)} className="px-3.5 py-1.5 bg-[#79B433] hover:bg-[#689A2B] text-white text-xs font-bold rounded-lg flex items-center gap-1 border-none cursor-pointer shadow-2xs transition-transform active:scale-95">
                           <Plus size={13} /> Add Subcategory
                         </button>
-                        <button onClick={() => openEditCategoryModal(cat)} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg flex items-center gap-1 border border-blue-200 cursor-pointer transition-colors" title="Edit Category">
+                        <button data-perm="categories.edit" onClick={() => openEditCategoryModal(cat)} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg flex items-center gap-1 border border-blue-200 cursor-pointer transition-colors" title="Edit Category">
                           <Pencil size={13} /> Edit
                         </button>
-                        <button onClick={() => handleToggleStatus(cat.id, cat.status)} className={`px-3 py-1.5 text-xs font-bold rounded-lg border-none cursor-pointer transition-colors ${cat.status === 'Active' ? 'bg-amber-100 hover:bg-amber-200 text-amber-800' : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800'}`}>
+                        <button data-perm="categories.edit" onClick={() => handleToggleStatus(cat.id, cat.status)} className={`px-3 py-1.5 text-xs font-bold rounded-lg border-none cursor-pointer transition-colors ${cat.status === 'Active' ? 'bg-amber-100 hover:bg-amber-200 text-amber-800' : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800'}`}>
                           {cat.status === 'Active' ? 'Deactivate' : 'Activate'}
                         </button>
-                        <button onClick={() => handleDeleteItem(cat)} className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border-none cursor-pointer transition-colors"><Trash2 size={14} /></button>
+                        <button data-perm="categories.delete" onClick={() => handleDeleteItem(cat)} className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border-none cursor-pointer transition-colors"><Trash2 size={14} /></button>
                       </div>
                     </div>
                     {expanded[cat.id] && cat.subcategories && cat.subcategories.length > 0 && (
@@ -4409,11 +4411,11 @@ export const CategoryManagement = ({ initialSubcategoriesOnly = false }) => {
                                 </div>
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0">
-                                <button onClick={() => openEditCategoryModal({ ...sub, parentName: cat.name, parentId: cat.id })} className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold rounded-md border border-blue-200 cursor-pointer flex items-center gap-1">
+                                <button data-perm="categories.edit" onClick={() => openEditCategoryModal({ ...sub, parentName: cat.name, parentId: cat.id })} className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold rounded-md border border-blue-200 cursor-pointer flex items-center gap-1">
                                   <Pencil size={12} /> Edit
                                 </button>
-                                <button onClick={() => handleToggleStatus(sub.id, sub.status)} className="p-1.5 bg-amber-500/20 text-amber-700 hover:bg-amber-500/30 rounded-md border-none cursor-pointer text-xs font-bold px-2">×</button>
-                                <button onClick={() => handleDeleteItem(sub)} className="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-md border-none cursor-pointer" title="Delete"><Trash2 size={13} /></button>
+                                <button data-perm="categories.edit" onClick={() => handleToggleStatus(sub.id, sub.status)} className="p-1.5 bg-amber-500/20 text-amber-700 hover:bg-amber-500/30 rounded-md border-none cursor-pointer text-xs font-bold px-2">×</button>
+                                <button data-perm="categories.delete" onClick={() => handleDeleteItem(sub)} className="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-md border-none cursor-pointer" title="Delete"><Trash2 size={13} /></button>
                               </div>
                             </div>
                           </div>
@@ -4450,10 +4452,10 @@ export const CategoryManagement = ({ initialSubcategoriesOnly = false }) => {
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => openEditCategoryModal(c)} className="text-xs text-blue-600 font-semibold hover:underline border-none bg-transparent cursor-pointer flex items-center gap-1">
+                          <button data-perm="categories.edit" onClick={() => openEditCategoryModal(c)} className="text-xs text-blue-600 font-semibold hover:underline border-none bg-transparent cursor-pointer flex items-center gap-1">
                             <Pencil size={12} /> Edit
                           </button>
-                          <button onClick={() => handleDeleteItem(c)} className="text-xs text-rose-600 font-semibold hover:underline border-none bg-transparent cursor-pointer">
+                          <button data-perm="categories.delete" onClick={() => handleDeleteItem(c)} className="text-xs text-rose-600 font-semibold hover:underline border-none bg-transparent cursor-pointer">
                             Delete
                           </button>
                         </div>
@@ -4493,7 +4495,7 @@ export const CategoryManagement = ({ initialSubcategoriesOnly = false }) => {
                 >
                   Cancel
                 </button>
-                <button
+                <button data-perm="categories.delete"
                   type="button"
                   disabled={deletingCategory}
                   onClick={confirmDeleteCategory}
@@ -4663,7 +4665,8 @@ export const ProductManagement = () => {
       console.warn('Error fetching products from API:', err.message);
     }
 
-    const localSaved = JSON.parse(localStorage.getItem('savitri_custom_products') || '[]');
+    // products kept only in this browser belong to no brand: an admin working in a selected brand never sees them
+    const localSaved = getAdminBrand() ? [] : JSON.parse(localStorage.getItem('savitri_custom_products') || '[]');
 
     // 1. Convert API products from MongoDB as primary source of truth
     const combined = apiProducts.map(ap => ({
@@ -4675,7 +4678,7 @@ export const ProductManagement = () => {
       category: ap.category || 'Groceries & Grains',
       subCategory: ap.subCategory,
       brand: ap.brand,
-      image: ap.mainImage || 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100&auto=format&fit=crop&q=80',
+      image: getImageUrl(ap.mainImage, ap.name), // no image: the product's initials, never a stand-in photo
       galleryImages: ap.galleryImages || [],
       variation: ap.unit || `${ap.unitValue || 1} ${ap.unitType || 'kg'}`,
       unitValue: ap.unitValue,
@@ -4808,7 +4811,7 @@ export const ProductManagement = () => {
             Dashboard / <span className="text-[#F7941D] font-semibold">Stock Management</span>
           </div>
         </div>
-        <button 
+        <button data-perm="products.create" 
           onClick={() => { setEditingProductData(null); setActiveTab('add_product'); }}
           className="px-4 py-2.5 bg-[#79B433] hover:bg-[#689A2B] text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
         >
@@ -4968,14 +4971,14 @@ export const ProductManagement = () => {
                           >
                             <Eye size={13} />
                           </button>
-                          <button 
+                          <button data-perm="products.edit" 
                             onClick={() => handleEditProduct(prod)}
                             className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg border border-blue-200 cursor-pointer transition-colors"
                             title="Edit Stock"
                           >
                             <Edit3 size={13} />
                           </button>
-                          <button 
+                          <button data-perm="products.delete" 
                             onClick={() => handleDeleteProduct(prod.id)}
                             className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-200 cursor-pointer transition-colors"
                             title="Delete Stock Item"
@@ -5205,7 +5208,7 @@ export const OrderManagement = () => {
 
   useEffect(() => {
     fetchOrders();
-    fetchCaptainsList();
+    if (adminCanAny(['orders.edit', 'captains.view'])) fetchCaptainsList(); // the list is only used to assign a captain
   }, []);
 
   // Map activeTab sub-item to status filter
@@ -5644,7 +5647,7 @@ export const OrderManagement = () => {
                           )}
                         </div>
                       ) : (
-                        <button
+                        <button data-perm="orders.edit"
                           onClick={() => {
                             setAssignModalOrder(o);
                             setSelectedCaptainId('');
@@ -5676,7 +5679,7 @@ export const OrderManagement = () => {
                           <Eye size={13} />
                         </button>
 
-                        <button
+                        <button data-perm="orders.edit"
                           onClick={() => {
                             setStatusModalOrder(o);
                             setNewOrderStatus(o.status);
@@ -5895,7 +5898,7 @@ export const OrderManagement = () => {
                   )}
                 </div>
                 {selectedOrder.captain === 'Unassigned' && (
-                  <button
+                  <button data-perm="orders.edit"
                     onClick={() => {
                       setIsDetailsModalOpen(false);
                       setAssignModalOrder(selectedOrder);
@@ -5985,7 +5988,7 @@ export const OrderManagement = () => {
               >
                 Cancel
               </button>
-              <button
+              <button data-perm="orders.edit"
                 disabled={actionLoading || !selectedCaptainId}
                 onClick={handleAssignCaptain}
                 className="px-4 py-2 bg-[#79B433] hover:bg-[#e04b00] disabled:opacity-50 text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5"
@@ -6041,7 +6044,7 @@ export const OrderManagement = () => {
               >
                 Cancel
               </button>
-              <button
+              <button data-perm="orders.edit"
                 disabled={actionLoading}
                 onClick={handleUpdateOrderStatus}
                 className="px-4 py-2 bg-[#79B433] hover:bg-[#e04b00] disabled:opacity-50 text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5"
@@ -8363,7 +8366,7 @@ export const FaqManagement = () => {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <button 
+          <button data-perm="content.edit" 
             onClick={() => setIsSupportFormOpen(prev => !prev)}
             className={`px-3.5 py-2 text-[13.5px] font-black rounded-xl border-2 cursor-pointer flex items-center gap-2 transition-all ${
               isSupportFormOpen 
@@ -8383,7 +8386,7 @@ export const FaqManagement = () => {
             <RefreshCw size={15} className={loading ? 'animate-spin text-slate-700' : 'text-slate-700'} /> Refresh
           </button>
           
-          <button 
+          <button data-perm="content.create" 
             onClick={() => {
               if (editingFaqId) handleCancelEdit();
               setIsFormOpen(prev => !prev);
@@ -8619,7 +8622,7 @@ export const FaqManagement = () => {
             </div>
 
             <div className="flex items-center justify-end pt-2 border-t border-slate-100">
-              <button
+              <button data-perm="content.edit"
                 type="submit"
                 disabled={savingSupport}
                 className="px-6 py-2.5 bg-[#79B433] hover:bg-[#689A2B] active:scale-98 text-white text-[14px] font-black rounded-xl transition-all border-none cursor-pointer shadow-md flex items-center gap-2 disabled:opacity-60"
@@ -8955,14 +8958,14 @@ export const FaqManagement = () => {
 
                       <td className="py-2.5 px-3.5 text-center">
                         <div className="flex items-center justify-center gap-1.5">
-                          <button 
+                          <button data-perm="content.edit" 
                             onClick={() => handleEditClick(faq)}
                             className="p-1.5 bg-slate-100 hover:bg-[#79B433] hover:text-white text-slate-600 rounded-lg transition-colors border-none cursor-pointer"
                             title="Edit Question"
                           >
                             <Pencil size={15} />
                           </button>
-                          <button 
+                          <button data-perm="content.delete" 
                             onClick={() => handleDeleteClick(faq)}
                             className="p-1.5 bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 rounded-lg transition-colors border-none cursor-pointer"
                             title="Delete Question"
@@ -9212,7 +9215,7 @@ export const SettingManagement = () => {
               {saveMessage}
             </div>
           )}
-          <button
+          <button data-perm="settings.manage"
             onClick={handleSaveSettings}
             disabled={saving}
             className="ml-auto px-5 py-2.5 bg-[#79B433] hover:bg-[#689A2B] text-white text-xs font-bold rounded-xl cursor-pointer border-none disabled:opacity-60 transition-colors"
@@ -9284,7 +9287,7 @@ export const TaxManagement = () => {
               Configure global tax slabs, GST percentages, and HSN code rules
             </p>
           </div>
-          <button 
+          <button data-perm="settings.manage" 
             onClick={() => setIsModalOpen(true)}
             className="px-4 py-2 bg-[#79B433] hover:bg-[#689A2B] text-white text-xs font-bold rounded-xl border-none transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 shrink-0"
           >
@@ -9331,7 +9334,7 @@ export const TaxManagement = () => {
                     <td className="py-3.5 px-4 text-slate-500 font-medium">{tax.type}</td>
                     <td className="py-3.5 px-4"><StatusBadge status={tax.status} /></td>
                     <td className="py-3.5 px-4 text-right">
-                      <button 
+                      <button data-perm="settings.manage" 
                         onClick={() => setTaxes(taxes.filter(t => t.id !== tax.id))}
                         className="text-rose-600 hover:text-rose-800 text-xs font-bold cursor-pointer border-none bg-transparent"
                       >
@@ -9391,7 +9394,7 @@ export const TaxManagement = () => {
                 >
                   Cancel
                 </button>
-                <button 
+                <button data-perm="settings.manage" 
                   type="submit"
                   className="px-4 py-2 bg-[#79B433] text-white text-xs font-bold rounded-xl border-none cursor-pointer shadow-md"
                 >
@@ -10190,7 +10193,7 @@ export const SellersOverview = () => {
             </button>
 
             {selectedSeller.status !== 'Approved' && (
-              <button 
+              <button data-perm="sellers.approve" 
                 onClick={() => handleToggleStatus(selectedSeller.id, 'approved')}
                 disabled={actionLoading}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 disabled:opacity-50"
@@ -10200,7 +10203,7 @@ export const SellersOverview = () => {
             )}
 
             {selectedSeller.status !== 'Rejected' && (
-              <button 
+              <button data-perm="sellers.reject" 
                 onClick={() => handleToggleStatus(selectedSeller.id, 'rejected')}
                 disabled={actionLoading}
                 className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 disabled:opacity-50"
@@ -10210,7 +10213,7 @@ export const SellersOverview = () => {
             )}
 
             {selectedSeller.status !== 'Suspended' && (
-              <button 
+              <button data-perm="sellers.reject" 
                 onClick={() => handleToggleStatus(selectedSeller.id, 'suspended')}
                 disabled={actionLoading}
                 className="px-3.5 py-2 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 disabled:opacity-50"
@@ -10220,7 +10223,7 @@ export const SellersOverview = () => {
             )}
 
             {selectedSeller.status !== 'Pending' && selectedSeller.status !== 'Under Review' && (
-              <button 
+              <button data-perm="sellers.edit" 
                 onClick={() => handleToggleStatus(selectedSeller.id, 'under_review')}
                 disabled={actionLoading}
                 className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-xl border border-amber-300 cursor-pointer flex items-center gap-1.5 transition-all"
@@ -10711,7 +10714,7 @@ export const SellersOverview = () => {
               <Package size={18} className="text-[#F7941D]" /> Store Products & Inventory ({productsLoading ? '…' : (selectedSeller.products?.length || 0)})
             </h3>
 
-            <button 
+            <button data-perm="products.create" 
               onClick={() => setIsAddProductModalOpen(true)}
               className="px-4 py-2 bg-[#79B433] hover:bg-[#689A2B] text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 shrink-0"
             >
@@ -10739,7 +10742,7 @@ export const SellersOverview = () => {
                   <div key={product.id} className="group bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden relative hover:shadow-md transition-all">
                     {/* Action Icons Overlay */}
                     <div className="absolute top-2 right-2 flex flex-col gap-1 z-10 opacity-90">
-                      <button 
+                      <button data-perm="products.delete" 
                         onClick={() => handleDeleteProduct(product.id)}
                         className="w-7 h-7 rounded-full bg-white text-rose-600 border border-slate-200 shadow-2xs flex items-center justify-center cursor-pointer hover:bg-rose-50"
                         title="Delete Product"
@@ -10878,7 +10881,7 @@ export const SellersOverview = () => {
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button data-perm="products.create" 
                     type="submit"
                     className="px-6 py-2.5 bg-[#79B433] hover:bg-[#689A2B] text-white text-xs font-bold rounded-xl border-none cursor-pointer shadow-2xs transition-all active:scale-95"
                   >
@@ -11161,7 +11164,7 @@ export const SellersOverview = () => {
                           </button>
 
                           {seller.status !== 'Approved' && (
-                            <button
+                            <button data-perm="sellers.approve"
                               onClick={() => handleToggleStatus(seller.id, 'approved')}
                               disabled={actionLoading}
                               className="p-1.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-lg text-xs font-bold cursor-pointer transition-all border border-emerald-200"
@@ -11172,7 +11175,7 @@ export const SellersOverview = () => {
                           )}
 
                           {seller.status !== 'Rejected' && (
-                            <button
+                            <button data-perm="sellers.reject"
                               onClick={() => handleToggleStatus(seller.id, 'rejected')}
                               disabled={actionLoading}
                               className="p-1.5 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-xs font-bold cursor-pointer transition-all border border-rose-200"
@@ -11231,7 +11234,7 @@ export const AddProductPage = () => {
     isReturnable: editingProductData.isReturnable !== undefined ? editingProductData.isReturnable : true,
     returnWindow: String(editingProductData.returnWindow || '7'),
     returnPolicy: editingProductData.returnPolicy || '7 Days Returnable / Replacement',
-    mainImage: editingProductData.image || editingProductData.mainImage || 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&q=80',
+    mainImage: [editingProductData.image, editingProductData.mainImage].find((x) => x && !isPlaceholderImage(x)) || '',
     mainImageFile: null,
     galleryImages: editingProductData.galleryImages || [],
     hasVariants: Boolean(editingProductData.hasVariants || (Array.isArray(editingProductData.variants) && editingProductData.variants.length > 0)),
@@ -11259,7 +11262,7 @@ export const AddProductPage = () => {
     isReturnable: true,
     returnWindow: '7',
     returnPolicy: '7 Days Returnable / Replacement',
-    mainImage: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&q=80',
+    mainImage: '',
     mainImageFile: null,
     galleryImages: [],
     hasVariants: false,
@@ -11545,7 +11548,7 @@ export const AddProductPage = () => {
         seller: formData.seller || 'Savitri Official Store',
         category: formData.category,
         subCategory: formData.subCategory,
-        image: formData.mainImage || 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&q=80',
+        image: formData.mainImage || '',
         galleryImages: formData.galleryImages || [],
         variation: finalVariation,
         stock: Number(formData.stock || 0),
@@ -12142,8 +12145,9 @@ export const AddProductPage = () => {
 
         {/* Add Product Submit Button at the Very End */}
         <div className="pt-4 flex justify-end">
-          <button 
-            type="submit" 
+          <button
+            type="submit"
+            data-perm={editingProductData ? 'products.edit' : 'products.create'}
             disabled={isSubmitting}
             className="w-full sm:w-auto px-8 py-3.5 bg-[#79B433] hover:bg-[#689A2B] text-white text-base font-semibold rounded-xl border-none cursor-pointer shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
           >

@@ -32,25 +32,6 @@ const fallbackCategories = [
   { name: 'Personal Care', image: personalCareImg }
 ];
 
-const defaultSubCategoryMap = {
-  'Grains & Flours': [
-    { _id: 'sub_atta', name: 'Ata', image: grainsImg },
-    { _id: 'sub_dal', name: 'Dal types', image: grainsImg },
-    { _id: 'sub_rice', name: 'Rice & Rice Products', image: grainsImg }
-  ],
-  'Oil & Ghee': [
-    { _id: 'sub_oil', name: 'Edible Oils', image: oilGheeImg },
-    { _id: 'sub_ghee', name: 'Ghee & Vanaspati', image: oilGheeImg }
-  ],
-  'Spices & Masala': [
-    { _id: 'sub_spices', name: 'Whole Spices', image: masalaImg },
-    { _id: 'sub_powder', name: 'Powdered Spices', image: masalaImg }
-  ],
-  'Sugar & Sweeteners': [
-    { _id: 'sub_sugar', name: 'Sugar & Salt', image: sugarImg }
-  ]
-};
-
 // The last product list for each category is kept for the session. Coming back from a product page shows it at once
 // (already scrolled to where the shopper was) and refreshes it quietly in the background.
 const productCacheKey = (cat, sub) => `savitri_cat_products:${cat || 'All'}|${sub || ''}`;
@@ -327,47 +308,30 @@ const Categories = () => {
     );
   }, [products, debouncedSearchTerm]);
 
-  // Dynamically compute subcategories for activeCategory
+  // Subcategories of the active category: only the ones created in Category management (never made-up defaults).
+  // Inactive subcategories are not offered to shoppers.
   const availableSubCategories = useMemo(() => {
     if (activeCategory === 'All') return [];
 
-    const activeCatObj = sidebarCategories.find(c => 
-      c.name.toLowerCase().trim() === activeCategory.toLowerCase().trim() || 
+    const activeCatObj = sidebarCategories.find(c =>
+      c.name.toLowerCase().trim() === activeCategory.toLowerCase().trim() ||
       c._id === activeCategory
     );
     const catId = activeCatObj ? (activeCatObj._id || activeCatObj.id) : null;
+    if (!catId) return [];
 
-    // 1. Check parent-child subcategories from allCategories
-    let subs = catId 
-      ? allCategories.filter(c => c.parent && (String(c.parent) === String(catId) || String(c.parent._id || '') === String(catId)))
-      : [];
-
-    // 2. Also extract distinct subcategories from loaded products
-    const productSubNames = new Set(
-      products
-        .map(p => (p.subCategory || '').trim())
-        .filter(s => s && s.toLowerCase() !== 'none' && s.toLowerCase() !== 'all')
+    return allCategories.filter(c =>
+      c.parent &&
+      (String(c.parent) === String(catId) || String(c.parent._id || '') === String(catId)) &&
+      String(c.status || 'Active').toLowerCase() !== 'inactive'
     );
+  }, [activeCategory, sidebarCategories, allCategories]);
 
-    // Merge distinct names
-    const mergedList = [...subs];
-    productSubNames.forEach(subName => {
-      if (!mergedList.some(s => s.name.toLowerCase().trim() === subName.toLowerCase().trim())) {
-        mergedList.push({
-          _id: `dyn_${subName}`,
-          name: subName,
-          image: null
-        });
-      }
-    });
-
-    // 3. Fallback map if still empty
-    if (mergedList.length === 0 && defaultSubCategoryMap[activeCategory]) {
-      return defaultSubCategoryMap[activeCategory];
-    }
-
-    return mergedList;
-  }, [activeCategory, sidebarCategories, allCategories, products]);
+  // A subcategory remembered from an earlier visit that no longer exists would hide every product with no way to clear it
+  useEffect(() => {
+    if (loadingCategories || !activeSubCategory) return;
+    if (!availableSubCategories.some(s => s.name === activeSubCategory)) setActiveSubCategory(null);
+  }, [loadingCategories, activeSubCategory, availableSubCategories]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="w-full h-[100dvh] md:h-auto md:min-h-screen bg-[#fdfaf6] font-sans text-slate-800 relative shadow-[0_0_20px_rgba(0,0,0,0.05)] md:shadow-none flex flex-col overflow-hidden md:overflow-visible px-0 md:px-5 md:py-6">

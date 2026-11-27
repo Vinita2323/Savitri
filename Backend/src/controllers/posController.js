@@ -8,6 +8,7 @@ import Order from '../models/Order.model.js';
 import SellerNotification from '../models/SellerNotification.model.js';
 import DeliveryPricing from '../models/DeliveryPricing.model.js';
 import { sellerScopeFilter } from '../middleware/scopeMiddleware.js';
+import { isPlaceholderImage } from '../utils/productImage.js';
 
 // Helper: Atomic inventory stock adjuster (reuses existing project pattern)
 const adjustPosStock = async (items, direction = -1) => {
@@ -93,19 +94,7 @@ export const getPosStores = async (req, res) => {
       type: 'Seller Warehouse',
     }));
 
-    // Add Central / Default Fulfillment store if list is empty
-    if (formatted.length === 0 && !req.restricted) {
-      formatted.push({
-        id: 'store_central',
-        storeName: 'Savitri Central Fulfillment Hub',
-        phone: '9876543210',
-        city: 'Indore',
-        address: 'Plot 42, Logistics Park, Ring Road',
-        pincode: '452001',
-        type: 'Central Warehouse',
-      });
-    }
-
+    // only real stores: a brand without one gets an empty list (the screen says so), never a made-up store
     return res.status(200).json({ success: true, stores: formatted });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -123,23 +112,25 @@ export const getPosProducts = async (req, res) => {
       query.category = category;
     }
 
-    if (storeId && mongoose.Types.ObjectId.isValid(storeId)) {
-      query.$or = [{ sellerId: storeId }, { seller: storeId }];
+    // Products of one real store, or (no store named) of the selected brand's stores. A store id that is not a real store is
+    // refused: it used to match nothing and silently list every brand's products.
+    if (storeId) {
+      if (!mongoose.Types.ObjectId.isValid(storeId)) {
+        return res.status(400).json({ success: false, message: 'Select a valid store to see its products.' });
+      }
+      if (req.posSellerIds && !req.posSellerIds.some((x) => String(x) === String(storeId))) {
+        return res.status(403).json({ success: false, code: 'BRAND_FORBIDDEN', message: 'That store is not part of the selected brand.' });
+      }
+      query.$and = [{ $or: [{ sellerId: storeId }, { seller: storeId }] }];
+    } else if (req.posSellerIds) {
+      query.$and = [{ sellerId: { $in: req.posSellerIds } }];
     }
 
     if (search && search.trim()) {
-      const term = search.trim();
-      const regex = new RegExp(term, 'i');
-      query.$or = [
-        { name: regex },
-        { sku: regex },
-        { brand: regex },
-        { category: regex },
-        { 'variants.sku': regex },
-      ];
+      // the search narrows the store's products; it never widens the list to other stores
+      const regex = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      (query.$and ||= []).push({ $or: [{ name: regex }, { sku: regex }, { brand: regex }, { category: regex }, { 'variants.sku': regex }] });
     }
-
-    if (req.restricted) query.$and = [{ sellerId: { $in: req.posSellerIds } }];
 
     const total = await Product.countDocuments(query);
     const products = await Product.find(query)
@@ -173,7 +164,7 @@ export const getPosProducts = async (req, res) => {
           unit: p.unit || '1 pc',
           hsnCode: p.hsnCode || '',
           taxRate: taxNum,
-          image: p.mainImage || '',
+          image: isPlaceholderImage(p.mainImage) ? '' : p.mainImage || '',
           hasVariants: Boolean(p.hasVariants && p.variants?.length > 0),
           variants: p.variants || [],
         };
@@ -739,7 +730,7 @@ export const getHeldBills = async (req, res) => {
   try {
     const bills = await PosSale.find({
       status: { $in: ['HELD', 'DRAFT'] },
-      ...(req.restricted ? { 'store.storeId': { $in: req.posSellerIds } } : {}),
+      ...(req.posSellerIds ? { 'store.storeId': { $in: req.posSellerIds } } : {}),
     })
       .sort({ updatedAt: -1 })
       .lean();
@@ -754,8 +745,8 @@ export const getHeldBills = async (req, res) => {
 export const deleteHeldBill = async (req, res) => {
   try {
     const { id } = req.params;
-    const removed = await PosSale.deleteOne({ _id: id, status: { $in: ['HELD', 'DRAFT'] }, ...(req.restricted ? { 'store.storeId': { $in: req.posSellerIds } } : {}) });
-    if (req.restricted && !removed.deletedCount) return res.status(404).json({ success: false, message: 'Held bill not found.' });
+    const removed = await PosSale.deleteOne({ _id: id, status: { $in: ['HELD', 'DRAFT'] }, ...(req.posSellerIds ? { 'store.storeId': { $in: req.posSellerIds } } : {}) });
+    if (req.posSellerIds && !removed.deletedCount) return res.status(404).json({ success: false, message: 'Held bill not found.' });
     return res.status(200).json({ success: true, message: 'Held bill removed.' });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -857,7 +848,7 @@ export const getPosDashboardSummary = async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const own = req.restricted ? { 'store.storeId': { $in: req.posSellerIds.map((x) => new mongoose.Types.ObjectId(String(x))) } } : {};
+    const own = req.posSellerIds ? { 'store.storeId': { $in: req.posSellerIds.map((x) => new mongoose.Types.ObjectId(String(x))) } } : {};
 
     const [todayCompleted, allCompletedCounter, allDeliveryOrders, pendingPayments, heldBillsCount] = await Promise.all([
       // Today's completed sales

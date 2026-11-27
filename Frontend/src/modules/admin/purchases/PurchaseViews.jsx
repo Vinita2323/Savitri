@@ -121,7 +121,7 @@ export function PurchaseDetail({ id, onClose, onChanged, fetcher = adminPurchase
       {p && (
         <div className="space-y-5 mt-3" data-testid="pur-detail">
           <div className="flex flex-wrap items-center gap-2"><StatusChip status={p.status} /><PayChip status={p.paymentStatus} />{p.paymentMethod && <span className="text-xs text-slate-500">{METHODS[p.paymentMethod]}</span>}
-            <button type="button" data-testid="pur-pdf" className={`${btnGhost} ml-auto`} onClick={() => { try { downloadPurchasePdf(d); } catch (e) { setError(`Could not create the PDF: ${e.message}`); } }}><Download size={14} className="inline mr-1" />Download PDF</button></div>
+            <button data-perm="purchases.export" type="button" data-testid="pur-pdf" className={`${btnGhost} ml-auto`} onClick={() => { try { downloadPurchasePdf(d); } catch (e) { setError(`Could not create the PDF: ${e.message}`); } }}><Download size={14} className="inline mr-1" />Download PDF</button></div>
           <div className="grid sm:grid-cols-3 gap-3 rounded-xl bg-slate-50 p-3 text-sm">
             <div><p className="m-0 text-[11px] text-slate-500">Supplier</p><p className="m-0 font-bold">{p.supplierName}</p><p className="m-0 text-xs text-slate-500">{[p.supplierPhone, p.supplierEmail].filter(Boolean).join(' · ')}</p>{p.supplierAddress && <p className="m-0 text-xs text-slate-500">{p.supplierAddress}</p>}</div>
             <div><p className="m-0 text-[11px] text-slate-500">Invoice no.</p><p className="m-0 font-bold">{p.invoiceNumber || '-'}</p></div>
@@ -151,7 +151,7 @@ export function PurchaseDetail({ id, onClose, onChanged, fetcher = adminPurchase
             </div>
           )}
           {p.status === 'CANCELLED' && <Notice type="warning">Cancelled {fmtDateTime(p.cancelledAt)} by {p.cancelledBy}: {p.cancelReason}. The stock was taken back out.</Notice>}
-          {canCancel && p.status === 'RECORDED' && <button type="button" data-testid="pur-cancel" className={btnDanger} onClick={() => { setError(''); setAsk(true); }}>Cancel purchase and reverse stock</button>}
+          {canCancel && p.status === 'RECORDED' && <button data-perm="purchases.edit" type="button" data-testid="pur-cancel" className={btnDanger} onClick={() => { setError(''); setAsk(true); }}>Cancel purchase and reverse stock</button>}
           {d.movements?.length > 0 && (
             <div>
               <p className="m-0 mb-2 text-xs font-extrabold uppercase tracking-wide text-slate-500">Stock movements (permanent record)</p>
@@ -166,7 +166,7 @@ export function PurchaseDetail({ id, onClose, onChanged, fetcher = adminPurchase
         </div>
       )}
       {ask && (
-        <Modal title="Cancel this purchase?" onClose={() => setAsk(false)} testId="pur-ask" footer={<><button type="button" className={btnGhost} onClick={() => setAsk(false)}>Keep it</button><button type="button" data-testid="pur-ask-ok" className={btnPrimary} disabled={busy} onClick={cancel}>Cancel purchase</button></>}>
+        <Modal title="Cancel this purchase?" onClose={() => setAsk(false)} testId="pur-ask" footer={<><button data-perm="purchases.edit" type="button" className={btnGhost} onClick={() => setAsk(false)}>Keep it</button><button data-perm="purchases.edit" type="button" data-testid="pur-ask-ok" className={btnPrimary} disabled={busy} onClick={cancel}>Cancel purchase</button></>}>
           <p className="m-0 mb-3 text-sm text-slate-600">The stock this purchase added will be taken back. This only works if that stock has not been sold or removed.</p>
           <Labeled label="Reason (kept in the history)"><textarea data-testid="pur-ask-text" rows={3} className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} /></Labeled>
         </Modal>
@@ -229,7 +229,7 @@ export function History({ version, onChanged, listFn = adminPurchaseService.list
           <label className="text-xs font-semibold text-slate-500">From<input data-testid="h-from" type="date" className={`${inputCls} mt-1`} value={f.from} onChange={(e) => set({ from: e.target.value })} /></label>
           <label className="text-xs font-semibold text-slate-500">To<input data-testid="h-to" type="date" className={`${inputCls} mt-1`} value={f.to} onChange={(e) => set({ to: e.target.value })} /></label>
           {extraFilters}
-          <button type="button" data-testid="h-export-pdf" disabled={pdfBusy || !data?.purchases?.length} onClick={exportPdf} className={`${btnGhost} disabled:opacity-50`}><Download size={14} className="inline mr-1" />{pdfBusy ? 'Preparing...' : 'Export PDF'}</button>
+          <button data-perm="purchases.export" type="button" data-testid="h-export-pdf" disabled={pdfBusy || !data?.purchases?.length} onClick={exportPdf} className={`${btnGhost} disabled:opacity-50`}><Download size={14} className="inline mr-1" />{pdfBusy ? 'Preparing...' : 'Export PDF'}</button>
         </div>
       </Card>
       {error && <Notice type="error">{error}</Notice>}

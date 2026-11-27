@@ -76,7 +76,7 @@ export const ClosedQuotations = ({ onNavigate }) => {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
+          <button data-perm="quotations.create"
             type="button"
             onClick={() => onNavigate('quotations/create')}
             className="px-4 py-2 rounded-xl bg-[#1A2E0A] hover:bg-[#2F5218] text-white text-xs font-bold transition-all cursor-pointer border-none shadow-2xs"
@@ -214,7 +214,7 @@ export const ClosedQuotations = ({ onNavigate }) => {
                           <Eye size={15} />
                         </button>
 
-                        <button
+                        <button data-perm="quotations.create"
                           type="button"
                           onClick={() => handleDuplicate(quote.id)}
                           title="Re-open as Fresh Draft"

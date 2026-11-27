@@ -120,8 +120,8 @@ export default function CatalogControlPage() {
                         {p.adminBlocked && p.blockedReason && <span className="text-xs text-rose-600 max-w-[180px] break-words">{p.blockedReason}</span>}
                       </div></td>
                       <td className="px-4 py-3"><div className="flex flex-wrap justify-end gap-1.5">
-                        {hidden ? <button type="button" className={btnGhost} disabled={busyId === p._id} onClick={() => act(p, 'activate')}><CheckCircle2 className="w-3.5 h-3.5" /> Activate</button> : <button type="button" className={btnGhost} disabled={busyId === p._id} onClick={() => act(p, 'deactivate')}><EyeOff className="w-3.5 h-3.5" /> Deactivate</button>}
-                        {p.adminBlocked ? <button type="button" className={btnGhost} disabled={busyId === p._id} onClick={() => act(p, 'unblock')}><ShieldCheck className="w-3.5 h-3.5" /> Unblock</button> : <button type="button" className={`${btnGhost} !text-rose-600`} disabled={busyId === p._id} onClick={() => { setBlocking(p); setReason(''); }}><Ban className="w-3.5 h-3.5" /> Block</button>}
+                        {hidden ? <button data-perm="products.manage" type="button" className={btnGhost} disabled={busyId === p._id} onClick={() => act(p, 'activate')}><CheckCircle2 className="w-3.5 h-3.5" /> Activate</button> : <button data-perm="products.manage" type="button" className={btnGhost} disabled={busyId === p._id} onClick={() => act(p, 'deactivate')}><EyeOff className="w-3.5 h-3.5" /> Deactivate</button>}
+                        {p.adminBlocked ? <button data-perm="products.manage" type="button" className={btnGhost} disabled={busyId === p._id} onClick={() => act(p, 'unblock')}><ShieldCheck className="w-3.5 h-3.5" /> Unblock</button> : <button data-perm="products.manage" type="button" className={`${btnGhost} !text-rose-600`} disabled={busyId === p._id} onClick={() => { setBlocking(p); setReason(''); }}><Ban className="w-3.5 h-3.5" /> Block</button>}
                       </div></td>
                     </tr>
                   );
@@ -164,7 +164,7 @@ export default function CatalogControlPage() {
             <div className="flex items-start justify-between gap-3"><h2 className="text-lg font-extrabold text-slate-900 m-0">Block this product?</h2><button type="button" className="bg-transparent border-none cursor-pointer" onClick={() => setBlocking(null)}><X className="w-5 h-5 text-slate-500" /></button></div>
             <p className="text-[15px] text-slate-600 mt-2 mb-4 break-words">“{blocking.name}” will disappear from the customer app and cannot be ordered. The seller cannot undo this.</p>
             <textarea className={inputCls} rows={3} placeholder="Reason (required, shown to admins)" value={reason} onChange={(e) => setReason(e.target.value)} autoFocus />
-            <div className="flex justify-end gap-2 mt-5"><button type="button" className={btnGhost} onClick={() => setBlocking(null)}>Cancel</button><button type="button" className="px-4 py-2 text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg cursor-pointer border-none disabled:opacity-60" disabled={!reason.trim() || busyId === blocking._id} onClick={() => act(blocking, 'block', reason.trim())}>Block product</button></div>
+            <div className="flex justify-end gap-2 mt-5"><button data-perm="products.manage" type="button" className={btnGhost} onClick={() => setBlocking(null)}>Cancel</button><button data-perm="products.manage" type="button" className="px-4 py-2 text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg cursor-pointer border-none disabled:opacity-60" disabled={!reason.trim() || busyId === blocking._id} onClick={() => act(blocking, 'block', reason.trim())}>Block product</button></div>
           </div>
         </div>
       )}

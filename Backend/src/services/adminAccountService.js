@@ -7,6 +7,8 @@
  *  - A brand held by another admin is taken only when the request says so: transfer (the other admin loses it) or share.
  *  - `exclusiveBrands` has a unique index, so two simultaneous requests cannot give one brand to two admins by accident.
  *  - Access is read from the database on every request, so a change applies to the very next click of both admins.
+ *  - What an admin may DO in each brand is stored per brand (AdminBrandAccess). Accounts created here always use it, so a
+ *    new brand allows nothing until it is configured. Older accounts switch over when permissions are first saved for them.
  *  - Assignments never create, change or delete business records.
  */
 import mongoose from 'mongoose';
@@ -15,6 +17,12 @@ import Brand from '../models/Brand.model.js';
 import AdminAssignmentLog from '../models/AdminAssignmentLog.model.js';
 import { assignedBrandIds, isStrictAdmin } from '../utils/adminAccess.js';
 import { generateTemporaryPassword, passwordOk } from './cityAdminService.js';
+import AdminPermissionLog from '../models/AdminPermissionLog.model.js';
+import { ROLE_KEYS, MODULES, matrixError } from '../utils/permissionCatalog.js';
+
+/** Every action of every module: what an older admin account can do in its brands today. */
+const fullMatrix = () => Object.fromEntries(MODULES.map((m) => [m.key, [...m.actions]]));
+import { saveBrandAccess, revokeBrandAccess, accessSummaries, NOT_CONFIGURED } from './adminBrandAccessService.js';
 
 export class AdminConfigError extends Error {
   constructor(status, message, extra = {}) { super(message); this.status = status; this.extra = extra; }
@@ -22,7 +30,7 @@ export class AdminConfigError extends Error {
 const fail = (status, message, extra) => { throw new AdminConfigError(status, message, extra); };
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const FIELDS = 'name email mobile status role adminType brandAccess authorizedBrands exclusiveBrands createdAt';
+const FIELDS = 'name email mobile status role adminType brandAccess permissionMode authorizedBrands exclusiveBrands createdAt';
 const REGULAR = { role: 'admin', adminType: { $ne: 'CITY_ADMIN' } };
 
 let indexReady = null;
@@ -46,12 +54,20 @@ const person = (a) => ({ id: a?._id || null, name: a?.name || '', email: a?.emai
 
 const allBrands = () => Brand.find({}).select('brandId name code city state status').sort({ name: 1 }).lean();
 
-const shape = (a, brandMap, holders) => {
+const perBrand = (a) => a.permissionMode === 'PER_BRAND';
+
+const shape = (a, brandMap, holders, summaries = new Map()) => {
   const ids = accessOf(a) === 'ALL' ? [] : assignedBrandIds(a).filter((id) => brandMap.has(id));
+  const brands = ids.map((id) => ({
+    ...brandMap.get(id), shared: (holders.get(id) || []).length > 1,
+    permissions: (perBrand(a) && summaries.get(`${a._id}|${id}`)) || NOT_CONFIGURED,
+  }));
   return {
     id: String(a._id), name: a.name || '', email: a.email, mobile: a.mobile || '', status: isActive(a) ? 'active' : a.status,
     access: accessOf(a), brandCount: ids.length, createdAt: a.createdAt,
-    brands: ids.map((id) => ({ ...brandMap.get(id), shared: (holders.get(id) || []).length > 1 })),
+    permissionMode: perBrand(a) ? 'PER_BRAND' : 'FULL',
+    unconfiguredBrands: perBrand(a) ? brands.filter((b) => !b.permissions.configured).length : 0,
+    brands,
   };
 };
 
@@ -95,8 +111,9 @@ export const overview = async () => {
 export const listAdmins = async ({ search = '', status = '', brandId = '', page = 1, limit = 10 } = {}) => {
   const s = await snapshot();
   const q = String(search).trim().toLowerCase().slice(0, 80);
+  const summaries = await accessSummaries(s.regular.map((a) => a._id));
   const rows = s.regular
-    .map((a) => shape(a, s.brandMap, s.holders))
+    .map((a) => shape(a, s.brandMap, s.holders, summaries))
     .filter((a) => (!q || [a.name, a.email, a.mobile].some((v) => String(v).toLowerCase().includes(q)))
       && (!status || (status === 'active' ? a.status === 'active' : a.status !== 'active'))
       && (!brandId || a.brands.some((b) => b.brandId === brandId)));
@@ -116,7 +133,7 @@ const findRegular = async (id) => {
 export const getAdmin = async (id) => {
   const admin = await findRegular(id);
   const s = await snapshot();
-  return shape(admin.toObject(), s.brandMap, s.holders);
+  return shape(admin.toObject(), s.brandMap, s.holders, await accessSummaries([admin._id]));
 };
 
 const readDetails = async (body, current = null) => {
@@ -193,6 +210,32 @@ const plan = async (adminId, currentIds, currentExclusive, body) => {
   return { brandIds, exclusive, added, removed, moves, shared: added.filter((id) => share.has(id) && (s.holders.get(id) || []).some((h) => h.adminId !== String(adminId || ''))), snapshot: s };
 };
 
+/** The permissions sent with a save: [{ brandId, roleProfile, permissions }], each for one of the admin's brands. */
+const readAccess = (value, brandIds) => {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > 1000) fail(400, 'access must be a list with one entry per brand.');
+  const seen = new Set();
+  return value.map((entry) => {
+    const brandId = typeof entry?.brandId === 'string' ? entry.brandId.trim() : '';
+    if (!brandId || !brandIds.includes(brandId)) fail(400, 'Permissions can only be set for a brand that is assigned to this admin.');
+    if (seen.has(brandId)) fail(400, 'Each brand may appear only once in the permissions.');
+    seen.add(brandId);
+    const roleProfile = String(entry.roleProfile || 'CUSTOM');
+    if (!ROLE_KEYS.includes(roleProfile)) fail(400, 'Unknown role preset.');
+    const problem = matrixError(entry.permissions);
+    if (problem) fail(400, problem);
+    return { brandId, roleProfile, permissions: entry.permissions };
+  });
+};
+
+const writeAccess = async (admin, entries, brandMap, actor) => {
+  let changes = 0;
+  for (const entry of entries) {
+    if (await saveBrandAccess({ admin, ...entry, brandName: brandMap.get(entry.brandId)?.name, actor })) changes += 1;
+  }
+  return changes;
+};
+
 const apply = async (admin, p, actor) => {
   await ensureAdminConfigIndexes();
   const touched = new Map(); // previous holders, to put back if the final write fails
@@ -220,6 +263,12 @@ const apply = async (admin, p, actor) => {
     throw e;
   }
 
+  // permissions go with the assignment: whoever loses a brand loses its permissions, and a newly added brand starts empty
+  const names = new Map([...p.snapshot.brandMap].map(([id, b]) => [id, b.name]));
+  for (const move of p.moves) await revokeBrandAccess({ adminIds: move.from.map((h) => h.adminId), brandIds: [move.brandId], actor, brandNames: names });
+  const dropped = [...p.removed, ...p.added];
+  if (dropped.length) await revokeBrandAccess({ adminIds: [admin._id], brandIds: dropped, actor, brandNames: names });
+
   const name = (id) => p.snapshot.brandMap.get(id)?.name || id;
   const entry = (brandId, action, previousAdmin, newAdmin) => ({ brandId, brandName: name(brandId), action, previousAdmin, newAdmin, changedBy: actor });
   const rows = [];
@@ -243,16 +292,19 @@ export const createAdmin = async (body = {}, actor) => {
   const status = readStatus(body.status, 'active');
   const { password, generated } = readPassword(body);
   const p = await plan(null, [], [], body); // conflicts are reported before anything is created
+  const entries = readAccess(body.access, p.brandIds);
   let admin;
   try {
-    admin = await Admin.create({ ...details, password, role: 'admin', status, brandAccess: 'ASSIGNED', authorizedBrands: [] });
+    admin = await Admin.create({ ...details, password, role: 'admin', status, brandAccess: 'ASSIGNED', permissionMode: 'PER_BRAND', authorizedBrands: [] });
   } catch (e) {
     if (e?.code === 11000) fail(409, 'An admin account with this email already exists.');
     throw e;
   }
   try {
     await apply(admin, p, actor);
+    await writeAccess(admin, entries, p.snapshot.brandMap, actor);
   } catch (e) {
+    await revokeBrandAccess({ adminIds: [admin._id], actor }).catch(() => {});
     await Admin.deleteOne({ _id: admin._id });
     throw e;
   }
@@ -277,8 +329,38 @@ export const setBrands = async (id, body = {}, actor) => {
   }
   const current = accessOf(admin) === 'ALL' ? [] : assignedBrandIds(admin);
   const p = await plan(admin._id, current, admin.exclusiveBrands || [], body);
+  const entries = readAccess(body.access, p.brandIds);
+  // An older account has full access in its brands until permissions are first saved for it. It is switched over without
+  // losing anything: every brand that was not configured in this save keeps full access (as its own record, editable later).
+  const switching = !perBrand(admin) && entries.length > 0;
+  if (switching) {
+    for (const brandId of p.brandIds) {
+      if (!entries.some((e) => e.brandId === brandId)) entries.push({ brandId, roleProfile: 'CUSTOM', permissions: fullMatrix() });
+    }
+  }
   const changes = await apply(admin, p, actor);
-  return { admin: await getAdmin(id), changes };
+  const permissionChanges = await writeAccess(admin, entries, p.snapshot.brandMap, actor);
+  // last, so there is no moment where the new rules apply before the records exist
+  if (switching) await Admin.updateOne({ _id: admin._id }, { $set: { permissionMode: 'PER_BRAND' } });
+  return { admin: await getAdmin(id), changes, permissionChanges };
+};
+
+export const permissionHistory = async ({ adminId = '', brandId = '', page = 1, limit = 20 } = {}) => {
+  const filter = {};
+  if (mongoose.Types.ObjectId.isValid(String(adminId))) filter.adminId = String(adminId);
+  if (brandId) filter.brandId = String(brandId);
+  const size = Math.min(100, Math.max(1, Number(limit) || 20));
+  const current = Math.max(1, Number(page) || 1);
+  const [total, rows] = await Promise.all([
+    AdminPermissionLog.countDocuments(filter),
+    AdminPermissionLog.find(filter).sort({ createdAt: -1, _id: -1 }).skip((current - 1) * size).limit(size).lean(),
+  ]);
+  // revocations only carry the admin's id: add the name for display
+  const names = new Map((await Admin.find({ _id: { $in: rows.map((r) => r.adminId) } }).select('name email').lean()).map((a) => [String(a._id), a]));
+  return {
+    history: rows.map((r) => ({ ...r, admin: { id: r.adminId, name: r.admin?.name || names.get(String(r.adminId))?.name || '', email: r.admin?.email || names.get(String(r.adminId))?.email || '' } })),
+    total, page: current, pages: Math.max(1, Math.ceil(total / size)),
+  };
 };
 
 export const setStatus = async (id, value) => {

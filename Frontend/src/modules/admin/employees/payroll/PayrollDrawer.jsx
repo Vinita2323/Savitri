@@ -51,7 +51,7 @@ export default function PayrollDrawer({ id, brandId, isSuper, onClose, onChanged
           <StatusPill status={p.status} />
           {p.locked && <span className="text-xs font-bold text-slate-500" data-testid="pr-locked">Attendance locked</span>}
           <span className="flex-1" />
-          {['APPROVED', 'PARTIALLY_PAID', 'PAID'].includes(p.status) && <button type="button" data-testid="pr-slip" className={btnGhost} onClick={() => run(() => payrollService.downloadSlip(brandId, p.id), 'Salary slip downloaded.')}><Download className="w-4 h-4 inline mr-1" />Salary slip (PDF)</button>}
+          {['APPROVED', 'PARTIALLY_PAID', 'PAID'].includes(p.status) && <button data-perm="payroll.export" type="button" data-testid="pr-slip" className={btnGhost} onClick={() => run(() => payrollService.downloadSlip(brandId, p.id), 'Salary slip downloaded.')}><Download className="w-4 h-4 inline mr-1" />Salary slip (PDF)</button>}
         </div>
         {error && <Notice type="error">{error}</Notice>}
         {msg && <Notice type="success">{msg}</Notice>}
@@ -74,7 +74,7 @@ export default function PayrollDrawer({ id, brandId, isSuper, onClose, onChanged
                     <tr key={i.id} data-testid="pr-line" data-code={i.code}>
                       <td className="px-3 py-2">{i.label}{qtyText(i) && <span className="block text-[11px] text-slate-400">{qtyText(i)}</span>}</td>
                       <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{fmtMoney(i.amountPaise)}</td>
-                      {editable && i.source === 'ADJUSTMENT' && <td className="pr-2"><button type="button" data-testid="pr-remove-adj" className="text-xs text-rose-600 bg-transparent border-0 cursor-pointer" disabled={busy} onClick={() => run(() => payrollService.removeAdjustment(brandId, p.id, i.refId), 'Entry removed.')}>Remove</button></td>}
+                      {editable && i.source === 'ADJUSTMENT' && <td className="pr-2"><button data-perm="payroll.edit" type="button" data-testid="pr-remove-adj" className="text-xs text-rose-600 bg-transparent border-0 cursor-pointer" disabled={busy} onClick={() => run(() => payrollService.removeAdjustment(brandId, p.id, i.refId), 'Entry removed.')}>Remove</button></td>}
                     </tr>
                   ))}
                   <tr className="bg-slate-50 font-bold"><td className="px-3 py-2">Total</td><td className="px-3 py-2 text-right">{fmtMoney(total)}</td>{editable && <td />}</tr>
@@ -96,23 +96,23 @@ export default function PayrollDrawer({ id, brandId, isSuper, onClose, onChanged
             {p.overtimeCandidateMinutes > 0 && (
               <div className="flex flex-wrap items-end gap-3">
                 <Labeled label={`Overtime worked: ${fmtMinutes(p.overtimeCandidateMinutes)}. Minutes to approve`}><input data-testid="pr-ot" type="number" min="0" max={p.overtimeCandidateMinutes} className={`${inputCls} w-36`} value={ot} onChange={(e) => setOt(e.target.value)} /></Labeled>
-                <button type="button" data-testid="pr-ot-save" className={btnGhost} disabled={busy} onClick={() => run(() => payrollService.setOvertime(brandId, p.id, Number(ot)), 'Overtime saved.')}>Approve overtime</button>
+                <button data-perm="payroll.edit" type="button" data-testid="pr-ot-save" className={btnGhost} disabled={busy} onClick={() => run(() => payrollService.setOvertime(brandId, p.id, Number(ot)), 'Overtime saved.')}>Approve overtime</button>
               </div>
             )}
             <div className="grid sm:grid-cols-4 gap-2 items-end">
               <Labeled label="Add"><select data-testid="pr-adj-type" className={inputCls} value={adj.type} onChange={(e) => setAdj({ ...adj, type: e.target.value })}><option value="BONUS">Bonus</option><option value="INCENTIVE">Incentive</option><option value="DEDUCTION">Other deduction</option></select></Labeled>
               <Labeled label="Amount (₹)"><input data-testid="pr-adj-amount" inputMode="decimal" className={inputCls} value={adj.amount} onChange={(e) => setAdj({ ...adj, amount: e.target.value })} /></Labeled>
               <Labeled label="Reason (audited)"><input data-testid="pr-adj-desc" className={inputCls} value={adj.description} onChange={(e) => setAdj({ ...adj, description: e.target.value })} /></Labeled>
-              <button type="button" data-testid="pr-adj-add" className={btnGhost} disabled={busy} onClick={() => run(async () => { const r = await payrollService.addAdjustment(brandId, p.id, adj); setAdj({ ...adj, amount: '', description: '' }); return r; }, 'Entry added.')}>Add to payroll</button>
+              <button data-perm="payroll.edit" type="button" data-testid="pr-adj-add" className={btnGhost} disabled={busy} onClick={() => run(async () => { const r = await payrollService.addAdjustment(brandId, p.id, adj); setAdj({ ...adj, amount: '', description: '' }); return r; }, 'Entry added.')}>Add to payroll</button>
             </div>
-            <button type="button" data-testid="pr-recalc" className={btnGhost} disabled={busy} onClick={() => run(() => payrollService.recalculate(brandId, p.id), 'Recalculated from the latest attendance.')}>Recalculate from attendance</button>
+            <button data-perm="payroll.edit" type="button" data-testid="pr-recalc" className={btnGhost} disabled={busy} onClick={() => run(() => payrollService.recalculate(brandId, p.id), 'Recalculated from the latest attendance.')}>Recalculate from attendance</button>
           </div>
         )}
 
         <div className="flex flex-wrap gap-2" data-testid="pr-actions">
-          {p.status === 'CALCULATED' && <button type="button" data-testid="pr-submit" className={btnPrimary} disabled={busy} onClick={() => run(() => payrollService.submit(brandId, p.id), 'Submitted for approval.')}>Submit for approval</button>}
-          {canApprove && <button type="button" data-testid="pr-approve" className={btnPrimary} disabled={busy} onClick={() => run(() => payrollService.approve(brandId, p.id), 'Approved. Attendance for this period is locked.')}>Approve payroll</button>}
-          {p.status === 'PENDING_APPROVAL' && (isSuper || p.policy?.adminCanApprove) && <button type="button" data-testid="pr-reject" className={btnGhost} disabled={busy} onClick={() => setAsk({ kind: 'reject' })}>Send back</button>}
+          {p.status === 'CALCULATED' && <button data-perm="payroll.edit" type="button" data-testid="pr-submit" className={btnPrimary} disabled={busy} onClick={() => run(() => payrollService.submit(brandId, p.id), 'Submitted for approval.')}>Submit for approval</button>}
+          {canApprove && <button data-perm="payroll.approve" type="button" data-testid="pr-approve" className={btnPrimary} disabled={busy} onClick={() => run(() => payrollService.approve(brandId, p.id), 'Approved. Attendance for this period is locked.')}>Approve payroll</button>}
+          {p.status === 'PENDING_APPROVAL' && (isSuper || p.policy?.adminCanApprove) && <button data-perm="payroll.reject" type="button" data-testid="pr-reject" className={btnGhost} disabled={busy} onClick={() => setAsk({ kind: 'reject' })}>Send back</button>}
           {p.status === 'PENDING_APPROVAL' && !canApprove && <span className="text-xs text-slate-500 self-center" data-testid="pr-needs-super">Waiting for a Super Admin to approve.</span>}
           {p.status !== 'CANCELLED' && p.status !== 'PAID' && (editable || p.status === 'PENDING_APPROVAL' || isSuper) && <button type="button" data-testid="pr-cancel" className={btnDanger} disabled={busy} onClick={() => setAsk({ kind: 'cancel' })}>Cancel payroll</button>}
         </div>
@@ -126,7 +126,7 @@ export default function PayrollDrawer({ id, brandId, isSuper, onClose, onChanged
                 <Labeled label="Method"><select data-testid="pay-method" className={inputCls} value={pay.method} onChange={(e) => setPay({ ...pay, method: e.target.value })}>{Object.entries(METHOD_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Labeled>
                 <Labeled label="Reference / UTR"><input data-testid="pay-ref" className={inputCls} value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} /></Labeled>
                 <Labeled label="Paid on"><input data-testid="pay-date" type="date" max={today()} className={inputCls} value={pay.paidOn} onChange={(e) => setPay({ ...pay, paidOn: e.target.value })} /></Labeled>
-                <button type="button" data-testid="pay-record" className={btnPrimary} disabled={busy} onClick={() => run(async () => { const r = await payrollService.pay(brandId, p.id, { ...pay, idempotencyKey: `${p.id}-${pay.amount}-${pay.reference}-${Date.now()}`.slice(0, 80) }); setPay({ ...pay, amount: '', reference: '', remarks: '' }); return { payroll: r.payroll }; }, 'Payment recorded.')}>Record payment</button>
+                <button data-perm="payroll.manage" type="button" data-testid="pay-record" className={btnPrimary} disabled={busy} onClick={() => run(async () => { const r = await payrollService.pay(brandId, p.id, { ...pay, idempotencyKey: `${p.id}-${pay.amount}-${pay.reference}-${Date.now()}`.slice(0, 80) }); setPay({ ...pay, amount: '', reference: '', remarks: '' }); return { payroll: r.payroll }; }, 'Payment recorded.')}>Record payment</button>
                 <Labeled className="sm:col-span-5" label="Remarks (optional)"><input data-testid="pay-remarks" className={inputCls} value={pay.remarks} onChange={(e) => setPay({ ...pay, remarks: e.target.value })} /></Labeled>
               </div>
             )}
@@ -138,7 +138,7 @@ export default function PayrollDrawer({ id, brandId, isSuper, onClose, onChanged
                   {p.payments.map((x) => (
                     <tr key={x.id} data-testid="pay-row" data-status={x.status} className={x.status === 'REVERSED' ? 'text-slate-400 line-through' : ''}>
                       <td className="py-1.5">{x.paidOn}</td><td>{METHOD_LABEL[x.method]}</td><td>{x.reference || '-'}</td><td className="text-right font-semibold">{fmtMoney(x.amountPaise)}</td><td>{x.recordedBy?.name}</td>
-                      <td className="text-right">{isSuper && x.status === 'RECORDED' && <button type="button" data-testid="pay-reverse" className="text-xs text-rose-600 bg-transparent border-0 cursor-pointer" onClick={() => setAsk({ kind: 'reverse', paymentId: x.id })}>Reverse</button>}</td>
+                      <td className="text-right">{isSuper && x.status === 'RECORDED' && <button data-perm="super.only" type="button" data-testid="pay-reverse" className="text-xs text-rose-600 bg-transparent border-0 cursor-pointer" onClick={() => setAsk({ kind: 'reverse', paymentId: x.id })}>Reverse</button>}</td>
                     </tr>
                   ))}
                 </tbody>

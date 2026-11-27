@@ -4,6 +4,7 @@ import { useAdmin } from '../context/useAdmin';
 import { AdminBrandSwitcher } from './AdminBrandGate';
 import { useAuth } from '../../../context/AuthContext';
 import { authService } from '../../../services/authService';
+import { tabAllowed } from '../../../utils/adminPermissions';
 import { X, Menu, Settings, Bell, User, LogOut } from 'lucide-react';
 
 export const AdminHeader = () => {
@@ -24,7 +25,7 @@ export const AdminHeader = () => {
     { id: 'orders', label: 'Orders' },
     { id: 'users', label: 'Manage Customer' },
     { id: 'cash_collection', label: 'Collect Cash' },
-  ];
+  ].filter((link) => tabAllowed(link.id));
 
   return (
     <header className="h-16 sm:h-20 bg-white border-b border-slate-200/80 px-3 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-xs font-sans relative">

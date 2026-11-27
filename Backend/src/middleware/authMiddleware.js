@@ -5,6 +5,7 @@ import { extractBearerOrCookieToken } from '../utils/adminAuthCookie.js';
 import { getJwtSecret, JWT_ALGORITHMS } from '../utils/jwtConfig.js';
 import { permissionForPath } from '../utils/cityAdminAccess.js';
 import { assignedBrandIds } from '../utils/adminAccess.js';
+import { usesBrandPermissions, checkAdminRequest, pinToBrand } from './adminPermissionGate.js';
 
 /** 'super-admin' / 'Super_Admin' -> 'super_admin' so route declarations cannot drift from token roles. */
 export const normalizeRole = (role) => String(role || '').trim().toLowerCase().replace(/-/g, '_');
@@ -31,6 +32,7 @@ export const protect = (...requiredRoles) => {
       const decoded = jwt.verify(token, getJwtSecret(), { algorithms: JWT_ALGORITHMS });
       let tokenRole = normalizeRole(decoded.role);
       let effective = { ...decoded, role: tokenRole };
+      let account = null;
 
       // Admin / Super Admin: the account must still exist, be active, hold the same role and
       // not have been revoked. Role, brand access and status are always read from MongoDB,
@@ -38,7 +40,7 @@ export const protect = (...requiredRoles) => {
       if (ADMIN_ROLES.has(tokenRole)) {
         const adminId = decoded.id || decoded._id;
         const admin = adminId
-          ? await Admin.findById(adminId).select('role status tokenVersion authorizedBrands brandAccess email name adminType permissions mustChangePassword').lean().catch(() => null)
+          ? await Admin.findById(adminId).select('role status tokenVersion authorizedBrands brandAccess email name adminType permissions mustChangePassword permissionMode').lean().catch(() => null)
           : null;
 
         if (!admin) {
@@ -54,6 +56,7 @@ export const protect = (...requiredRoles) => {
           return res.status(401).json({ success: false, message: 'Not authorized, session has been revoked' });
         }
 
+        account = admin;
         effective = {
           ...decoded,
           role: normalizeRole(admin.role),
@@ -62,6 +65,7 @@ export const protect = (...requiredRoles) => {
           authorizedBrands: Array.isArray(admin.authorizedBrands) ? admin.authorizedBrands : undefined,
           adminType: admin.adminType,
           brandAccess: admin.brandAccess,
+          permissionMode: admin.permissionMode,
         };
         // Managed admin with nothing assigned: no business data at all (also not the pages that are not tied to a brand)
         if (admin.brandAccess === 'ASSIGNED' && assignedBrandIds(admin).length === 0 && !NO_BRAND_PATHS.test(String(req.originalUrl || '').split('?')[0])) {
@@ -88,6 +92,14 @@ export const protect = (...requiredRoles) => {
             message: `Forbidden: Access restricted to ${roles.join(' or ')}`,
           });
         }
+      }
+
+      // Admin with per-brand permissions: one checked brand and one allowed action per request (after the role check, so
+      // Super-Admin-only routes keep answering exactly as before)
+      if (account && usesBrandPermissions(account)) {
+        const access = await checkAdminRequest(req, account);
+        if (access.error) return res.status(403).json(access.error);
+        if (!access.self) pinToBrand(req, effective, access);
       }
 
       // Active account enforcement: check if customer account is blocked

@@ -246,7 +246,7 @@ export const EmployeeTasksPage = ({ onNavigate }) => {
             <h2 className="text-xl font-extrabold text-slate-900 m-0">Tasks</h2>
             <p className="text-[15px] text-slate-500 mt-1 mb-0">Give work to your team and follow its progress.</p>
           </div>
-          <button type="button" onClick={() => { setPrefill([]); setCreateOpen(true); }} className="inline-flex items-center gap-2 px-5 py-3 text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl cursor-pointer border-0">
+          <button data-perm="tasks.create" type="button" onClick={() => { setPrefill([]); setCreateOpen(true); }} className="inline-flex items-center gap-2 px-5 py-3 text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl cursor-pointer border-0">
             <Plus className="w-5 h-5" /> New tasks
           </button>
         </div>
@@ -358,7 +358,7 @@ export const EmployeeTasksPage = ({ onNavigate }) => {
 
             {selected.assignedEmployees?.length > 0 && (
               <div>
-                <button
+                <button data-perm="tasks.create"
                   type="button"
                   data-testid="td-give-another"
                   onClick={() => { setPrefill(selected.assignedEmployees.map((a) => String(a.employee))); setSelectedId(null); setCreateOpen(true); }}
@@ -383,7 +383,7 @@ export const EmployeeTasksPage = ({ onNavigate }) => {
             {!['Submitted for Review'].includes(selected.status) && (
               <div>
                 <label className={labelCls}>Change status</label>
-                <select className={inputCls} value={selected.status} onChange={(e) => handleUpdateTaskStatus(selected._id, e.target.value, e.target.value === 'Completed' ? 100 : undefined)}>
+                <select data-perm="tasks.edit" className={inputCls} value={selected.status} onChange={(e) => handleUpdateTaskStatus(selected._id, e.target.value, e.target.value === 'Completed' ? 100 : undefined)}>
                   {['Assigned', 'In Progress', 'Blocked', 'Completed', 'Rejected'].map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                   {!['Assigned', 'In Progress', 'Blocked', 'Completed', 'Rejected'].includes(selected.status) && <option value={selected.status}>{STATUS_LABEL[selected.status] || selected.status}</option>}
                 </select>
@@ -402,7 +402,7 @@ export const EmployeeTasksPage = ({ onNavigate }) => {
                 ))}
                 <form onSubmit={postComment} className="flex gap-2">
                   <input className={inputCls} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Write a comment" maxLength={2000} />
-                  <button type="submit" disabled={!comment.trim()} className="inline-flex items-center gap-2 px-5 py-3 text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl disabled:opacity-60 cursor-pointer border-0"><Send className="w-4 h-4" /> Send</button>
+                  <button data-perm="tasks.edit" type="submit" disabled={!comment.trim()} className="inline-flex items-center gap-2 px-5 py-3 text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl disabled:opacity-60 cursor-pointer border-0"><Send className="w-4 h-4" /> Send</button>
                 </form>
               </div>
             </div>

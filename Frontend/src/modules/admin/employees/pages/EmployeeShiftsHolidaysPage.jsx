@@ -111,7 +111,7 @@ export const EmployeeShiftsHolidaysPage = ({ onNavigate }) => {
           </div>
 
           {activeTab === 'SHIFTS' ? (
-            <button
+            <button data-perm="attendance.edit"
               type="button"
               onClick={() => setIsShiftModalOpen(true)}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors"
@@ -120,7 +120,7 @@ export const EmployeeShiftsHolidaysPage = ({ onNavigate }) => {
               <span>Add Working Shift</span>
             </button>
           ) : (
-            <button
+            <button data-perm="attendance.edit"
               type="button"
               onClick={() => setIsHolidayModalOpen(true)}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors"
@@ -334,7 +334,7 @@ export const EmployeeShiftsHolidaysPage = ({ onNavigate }) => {
                 >
                   Cancel
                 </button>
-                <button
+                <button data-perm="attendance.edit"
                   type="submit"
                   className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl"
                 >
@@ -404,7 +404,7 @@ export const EmployeeShiftsHolidaysPage = ({ onNavigate }) => {
                 >
                   Cancel
                 </button>
-                <button
+                <button data-perm="attendance.edit"
                   type="submit"
                   className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl"
                 >

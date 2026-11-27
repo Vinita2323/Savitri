@@ -575,7 +575,7 @@ export const AdminCashSettlements = () => {
 
               {selectedSettlement.status === 'PENDING' && (
                 <>
-                  <button
+                  <button data-perm="payouts.reject"
                     type="button"
                     disabled={actionLoading}
                     onClick={() => handleProcess('REJECT')}
@@ -584,7 +584,7 @@ export const AdminCashSettlements = () => {
                     <XCircle size={14} />
                     Reject
                   </button>
-                  <button
+                  <button data-perm="payouts.approve"
                     type="button"
                     disabled={actionLoading}
                     onClick={() => handleProcess('APPROVE')}

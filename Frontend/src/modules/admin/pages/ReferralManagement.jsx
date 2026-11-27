@@ -560,7 +560,7 @@ export const ReferralSettings = () => {
 
         {/* Save Bar */}
         <div className="flex items-center justify-end gap-3 pt-2">
-          <button
+          <button data-perm="settings.manage"
             type="submit"
             disabled={saving}
             className="px-6 py-3 bg-[#79B433] hover:bg-[#e64d00] text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
@@ -958,7 +958,7 @@ export const ReferralList = () => {
 
                         {/* Approve (if not yet rewarded or approved) */}
                         {(item.status === 'Pending' || item.status === 'Registered') && (
-                          <button
+                          <button data-perm="referrals.approve"
                             onClick={() => handleStatusUpdate(item._id, 'approve')}
                             disabled={actionLoading}
                             className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-colors cursor-pointer border border-emerald-200"
@@ -970,7 +970,7 @@ export const ReferralList = () => {
 
                         {/* Reject */}
                         {(item.status === 'Pending' || item.status === 'Registered') && (
-                          <button
+                          <button data-perm="referrals.approve"
                             onClick={() => handleStatusUpdate(item._id, 'reject')}
                             disabled={actionLoading}
                             className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors cursor-pointer border border-rose-200"
@@ -982,7 +982,7 @@ export const ReferralList = () => {
 
                         {/* Credit Reward Button (if Approved or Qualified and not yet credited) */}
                         {item.status !== 'Rewarded' && item.status !== 'Rejected' && item.rewardStatus !== 'Credited' && (
-                          <button
+                          <button data-perm="referrals.manage"
                             onClick={() => handleCreditReward(item._id)}
                             disabled={actionLoading}
                             className="px-2 py-1 rounded-lg bg-[#79B433] hover:bg-[#e64d00] text-white text-[11px] font-bold transition-colors cursor-pointer border-none flex items-center gap-1 shadow-2xs"
@@ -1122,7 +1122,7 @@ export const ReferralList = () => {
               {/* Action Controls in Modal */}
               <div className="pt-2 flex flex-wrap gap-2">
                 {selectedReferral.status !== 'Rewarded' && selectedReferral.status !== 'Rejected' && selectedReferral.rewardStatus !== 'Credited' && (
-                  <button
+                  <button data-perm="referrals.manage"
                     onClick={() => handleCreditReward(selectedReferral._id)}
                     disabled={actionLoading}
                     className="flex-1 py-2.5 px-4 bg-[#79B433] hover:bg-[#e64d00] text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
@@ -1133,14 +1133,14 @@ export const ReferralList = () => {
 
                 {(selectedReferral.status === 'Pending' || selectedReferral.status === 'Registered') && (
                   <>
-                    <button
+                    <button data-perm="referrals.approve"
                       onClick={() => handleStatusUpdate(selectedReferral._id, 'approve')}
                       disabled={actionLoading}
                       className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl cursor-pointer flex items-center gap-1.5"
                     >
                       <Check size={14} /> Approve
                     </button>
-                    <button
+                    <button data-perm="referrals.approve"
                       onClick={() => handleStatusUpdate(selectedReferral._id, 'reject')}
                       disabled={actionLoading}
                       className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl cursor-pointer flex items-center gap-1.5"

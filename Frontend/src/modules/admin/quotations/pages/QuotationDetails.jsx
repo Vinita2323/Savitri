@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { adminCan } from '../../../../utils/adminPermissions';
 import {
   ArrowLeft,
   Printer,
@@ -169,7 +170,7 @@ export const QuotationDetails = ({ onNavigate }) => {
 
           {/* Record the buyer's response (server validates the transition) */}
           {['Sent', 'Under Review', 'Revision Requested', 'Accepted'].includes(quotation.status) && (
-            <select
+            <select data-perm={adminCan('quotations.approve') || adminCan('quotations.reject') ? undefined : 'quotations.approve'}
               value=""
               onChange={async (e) => {
                 const next = e.target.value;
@@ -198,7 +199,7 @@ export const QuotationDetails = ({ onNavigate }) => {
           {statusError && <span className="text-xs font-semibold text-rose-600">{statusError}</span>}
 
           {quotation.status === 'Draft' && (
-            <button
+            <button data-perm="quotations.edit"
               type="button"
               onClick={() => {
                 setEditingQuotationId(quotation.id);
@@ -230,7 +231,7 @@ export const QuotationDetails = ({ onNavigate }) => {
             <span>Print Document</span>
           </button>
 
-          <button
+          <button data-perm="quotations.export"
             type="button"
             onClick={handleDownloadPdf}
             disabled={isDownloadingPdf}
@@ -659,7 +660,7 @@ export const QuotationDetails = ({ onNavigate }) => {
                 >
                   Cancel
                 </button>
-                <button
+                <button data-perm="quotations.edit"
                   type="button"
                   onClick={handleSendEmail}
                   disabled={emailSending || !emailRecipient.trim()}

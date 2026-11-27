@@ -40,6 +40,7 @@ const PosHistoryContent = () => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [saleTypeFilter, setSaleTypeFilter] = useState('ALL');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('ALL');
@@ -47,6 +48,7 @@ const PosHistoryContent = () => {
 
   const loadData = async () => {
     setIsLoading(true);
+    setLoadError('');
     try {
       const [historyData, summaryData] = await Promise.all([
         posService.getPosHistory({
@@ -61,7 +63,8 @@ const PosHistoryContent = () => {
       setSales(historyData.sales || []);
       setMetrics(summaryData || {});
     } catch (err) {
-      console.error('Error loading POS history:', err);
+      setSales([]);
+      setLoadError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -291,6 +294,12 @@ const PosHistoryContent = () => {
                 <tr>
                   <td colSpan="8" className="py-12 text-center text-gray-400">
                     Loading sales records...
+                  </td>
+                </tr>
+              ) : loadError ? (
+                <tr>
+                  <td colSpan="8" className="py-12 text-center text-rose-600 font-semibold" data-testid="pos-history-error">
+                    {loadError}
                   </td>
                 </tr>
               ) : sales.length > 0 ? (

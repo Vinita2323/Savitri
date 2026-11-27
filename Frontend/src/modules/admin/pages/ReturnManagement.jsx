@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { adminCan } from '../../../utils/adminPermissions';
 import {
   RefreshCw,
   Search,
@@ -489,14 +490,14 @@ export const ReturnManagement = () => {
                           {/* Approve/Reject for REQUESTED */}
                           {ret.status === 'REQUESTED' && (
                             <>
-                              <button
+                              <button data-perm="returns.approve"
                                 onClick={() => handleApproveOrReject(ret._id || ret.returnId, 'APPROVE')}
                                 title="Approve Return Request"
                                 className="p-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer"
                               >
                                 <CheckCircle size={15} />
                               </button>
-                              <button
+                              <button data-perm="returns.reject"
                                 onClick={() => {
                                   const reason = window.prompt('Enter rejection reason:');
                                   if (reason) handleApproveOrReject(ret._id || ret.returnId, 'REJECT', reason);
@@ -511,7 +512,7 @@ export const ReturnManagement = () => {
 
                           {/* Assign Captain */}
                           {['APPROVED', 'CAPTAIN_ASSIGNMENT_PENDING', 'CAPTAIN_ASSIGNED'].includes(ret.status) && (
-                            <button
+                            <button data-perm="returns.edit"
                               onClick={() => {
                                 setAssigningReturn(ret);
                                 setSelectedCaptainId(ret.captain?._id || ret.captainId || '');
@@ -527,7 +528,7 @@ export const ReturnManagement = () => {
 
                           {/* Inspect / Verify (if received at seller store or previously failed) */}
                           {['RECEIVED_BY_SELLER', 'UNDER_VERIFICATION', 'VERIFICATION_FAILED', 'REJECTED'].includes(ret.status) && (
-                            <button
+                            <button data-perm={adminCan('returns.approve') || adminCan('returns.reject') ? undefined : 'returns.approve'}
                               onClick={() => {
                                 setVerifyingReturn(ret);
                                 setShowVerifyModal(true);
@@ -619,7 +620,7 @@ export const ReturnManagement = () => {
               >
                 Cancel
               </button>
-              <button
+              <button data-perm="returns.edit"
                 type="button"
                 onClick={handleAssignCaptainSubmit}
                 disabled={assignLoading || !selectedCaptainId}
@@ -697,7 +698,7 @@ export const ReturnManagement = () => {
             </div>
 
             <div className="flex gap-2 pt-2">
-              <button
+              <button data-perm="returns.reject"
                 type="button"
                 onClick={() => handleVerifySubmit('FAILED')}
                 disabled={verifyLoading}
@@ -705,7 +706,7 @@ export const ReturnManagement = () => {
               >
                 Reject / Fail Check
               </button>
-              <button
+              <button data-perm="returns.approve"
                 type="button"
                 onClick={() => handleVerifySubmit('PASSED')}
                 disabled={verifyLoading}
@@ -799,7 +800,7 @@ export const ReturnManagement = () => {
             <div className="flex gap-2 pt-2 border-t border-slate-100">
               {selectedReturn.status === 'REQUESTED' && (
                 <>
-                  <button
+                  <button data-perm="returns.reject"
                     onClick={() => {
                       const reason = window.prompt('Enter rejection reason:');
                       if (reason) {
@@ -811,7 +812,7 @@ export const ReturnManagement = () => {
                   >
                     Reject Request
                   </button>
-                  <button
+                  <button data-perm="returns.approve"
                     onClick={() => {
                       handleApproveOrReject(selectedReturn._id || selectedReturn.returnId, 'APPROVE');
                       setShowDetailsModal(false);
@@ -825,7 +826,7 @@ export const ReturnManagement = () => {
               )}
 
               {['APPROVED', 'CAPTAIN_ASSIGNMENT_PENDING', 'CAPTAIN_ASSIGNED'].includes(selectedReturn.status) && (
-                <button
+                <button data-perm="returns.edit"
                   onClick={() => {
                     setAssigningReturn(selectedReturn);
                     setSelectedCaptainId(selectedReturn.captain?._id || selectedReturn.captainId || '');
@@ -840,7 +841,7 @@ export const ReturnManagement = () => {
               )}
 
               {['RECEIVED_BY_SELLER', 'UNDER_VERIFICATION', 'VERIFICATION_FAILED', 'REJECTED'].includes(selectedReturn.status) && (
-                <button
+                <button data-perm={adminCan('returns.approve') || adminCan('returns.reject') ? undefined : 'returns.approve'}
                   onClick={() => {
                     setVerifyingReturn(selectedReturn);
                     setShowDetailsModal(false);

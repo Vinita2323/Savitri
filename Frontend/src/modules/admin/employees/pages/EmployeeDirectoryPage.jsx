@@ -196,7 +196,7 @@ Open Payroll > Salary setup to finish it.`);
           </div>
 
           {/* Add Employee CTA */}
-          <button
+          <button data-perm="employees.create"
             type="button"
             onClick={() => setIsAddModalOpen(true)}
             className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm flex items-center gap-2 shadow-xs transition-colors shrink-0 cursor-pointer"
@@ -315,7 +315,7 @@ Open Payroll > Salary setup to finish it.`);
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
+                          <button data-perm="employees.edit"
                             type="button"
                             onClick={() => setEditingEmp(emp)}
                             className="p-2 text-slate-500 hover:text-blue-700 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"
@@ -323,7 +323,7 @@ Open Payroll > Salary setup to finish it.`);
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
-                          <button
+                          <button data-perm="employees.edit"
                             type="button"
                             onClick={() => handleToggleStatus(emp._id)}
                             className={`p-2 rounded-lg transition-colors cursor-pointer ${
@@ -519,7 +519,7 @@ Open Payroll > Salary setup to finish it.`);
                 >
                   Cancel
                 </button>
-                <button
+                <button data-perm="employees.create"
                   type="submit"
                   className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-xs cursor-pointer"
                 >
@@ -728,7 +728,7 @@ Open Payroll > Salary setup to finish it.`);
 
               <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3 flex items-center justify-between gap-3">
                 <span className="text-xs text-emerald-900">Salary configuration (type, amount, payment frequency, overtime, deductions, bank/UPI)</span>
-                <button type="button" data-testid="dir-salary" onClick={() => setSalaryFor({ id: editingEmp._id, employeeId: editingEmp.employeeId, name: editingEmp.fullName, brandId: editingEmp.brandId })} className="px-3 py-1.5 text-xs font-bold bg-white border border-emerald-300 text-emerald-800 rounded-lg cursor-pointer">Open salary</button>
+                <button data-perm="payroll.view" type="button" data-testid="dir-salary" onClick={() => setSalaryFor({ id: editingEmp._id, employeeId: editingEmp.employeeId, name: editingEmp.fullName, brandId: editingEmp.brandId })} className="px-3 py-1.5 text-xs font-bold bg-white border border-emerald-300 text-emerald-800 rounded-lg cursor-pointer">Open salary</button>
               </div>
 
               <div className="flex justify-end gap-2.5 pt-4 border-t">
@@ -739,7 +739,7 @@ Open Payroll > Salary setup to finish it.`);
                 >
                   Cancel
                 </button>
-                <button
+                <button data-perm="employees.edit"
                   type="submit"
                   className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm shadow-xs cursor-pointer"
                 >

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle2, Eye, EyeOff, Loader2, Search, X } from 'lucide-react';
 import adminConfigService from '../../../../services/adminConfigService';
+import { PermissionDrawer, moduleCount } from './PermissionDrawer';
 
 export const inputCls = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-[#79B433]';
 export const btnPrimary = 'cursor-pointer rounded-xl border-0 bg-[#79B433] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#689A2B] disabled:cursor-not-allowed disabled:opacity-50';
@@ -20,7 +21,7 @@ export const StatusChip = ({ status }) => (
 );
 
 export const Dialog = ({ title, subtitle, onClose, children, footer, notice, wide, testId }) => {
-  useEffect(() => { const h = (e) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h); }, [onClose]);
+  useEffect(() => { const h = (e) => e.key === 'Escape' && !e.defaultPrevented && onClose(); window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h); }, [onClose]);
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-3" role="dialog" aria-label={title} data-testid={testId}>
       <div className={`flex max-h-[94vh] w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ${wide ? 'max-w-5xl' : 'max-w-lg'}`}>
@@ -66,7 +67,7 @@ const decideMessage = (pending, adminId) => {
  * Every brand from the database with a checkbox. A brand that another admin manages needs an explicit decision:
  * "Move to this admin" (the other loses it) or "Share" (both use it).
  */
-export const BrandPicker = ({ brands, adminId = '', initial = [], selected, setSelected, decisions, setDecisions }) => {
+export const BrandPicker = ({ brands, adminId = '', initial = [], selected, setSelected, decisions, setDecisions, access, onConfigure, fullAccess = false }) => {
   const [q, setQ] = useState('');
   const [only, setOnly] = useState('all');
   const others = (b) => b.holders.filter((h) => h.adminId !== adminId);
@@ -90,7 +91,7 @@ export const BrandPicker = ({ brands, adminId = '', initial = [], selected, setS
       {(added.length > 0 || removed.length > 0) && initial.length > 0 && <p className="m-0 text-xs font-semibold text-slate-500">{added.length} to add, {removed.length} to remove. Removing a brand only removes access: no records are deleted.</p>}
       <div className="max-h-[44vh] overflow-auto rounded-xl border border-slate-200">
         <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-slate-50"><tr className="text-left text-xs uppercase text-slate-500"><th className="px-3 py-2">Select</th><th className="px-3 py-2">Brand</th><th className="px-3 py-2">City</th><th className="px-3 py-2">State</th><th className="px-3 py-2">Brand status</th><th className="px-3 py-2">Current admin</th></tr></thead>
+          <thead className="sticky top-0 bg-slate-50"><tr className="text-left text-xs uppercase text-slate-500"><th className="px-3 py-2">Select</th><th className="px-3 py-2">Brand</th><th className="px-3 py-2">City</th><th className="px-3 py-2">State</th><th className="px-3 py-2">Brand status</th><th className="px-3 py-2">Current admin</th><th className="px-3 py-2">Access configuration</th></tr></thead>
           <tbody className="divide-y divide-slate-100">
             {shown.map((b) => {
               const checked = selected.includes(b.brandId);
@@ -111,6 +112,18 @@ export const BrandPicker = ({ brands, adminId = '', initial = [], selected, setS
                         {!cityHeld && <option value="transfer">Move to this admin (remove from current)</option>}
                         <option value="share">Share (both can use it)</option>
                       </select>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5" data-testid="ac-brand-access">
+                    {!checked ? <span className="text-slate-300">-</span> : (
+                      <div className="min-w-[150px] space-y-1">
+                        {access[b.brandId]
+                          ? <p className="m-0 text-xs font-bold text-emerald-700" data-testid="ac-brand-config">Configured · {moduleCount(access[b.brandId].permissions)} module(s)</p>
+                          : fullAccess
+                            ? <p className="m-0 text-xs font-bold text-emerald-700" data-testid="ac-brand-config">Full access</p>
+                            : <p className="m-0 text-xs font-bold text-amber-700" data-testid="ac-brand-config">Not configured</p>}
+                        <button type="button" data-testid="ac-brand-configure" className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50" onClick={() => onConfigure(b)}>{access[b.brandId] ? 'Edit Access' : 'Configure Access'}</button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -138,8 +151,14 @@ const BLANK = { name: '', email: '', mobile: '', password: '', status: 'active' 
 const passwordOk = (p) => p.length >= 8 && /[A-Za-z]/.test(p) && /\d/.test(p);
 const PASSWORD_RULE = 'Password must be at least 8 characters and include a letter and a number.';
 
-export const CreateAdminDialog = ({ brands, onClose, onSaved }) => {
+/** The permission choices to send: one entry for every selected brand that has been configured. */
+const accessEntries = (selected, access) => selected.filter((id) => access[id]).map((id) => ({ brandId: id, ...access[id] }));
+const namesOf = (brands, ids) => brands.filter((b) => ids.includes(b.brandId)).map((b) => b.name).join(', ');
+
+export const CreateAdminDialog = ({ brands, catalog, onClose, onSaved }) => {
   const [f, setF] = useState(BLANK);
+  const [access, setAccess] = useState({});
+  const [configuring, setConfiguring] = useState(null);
   const [selected, setSelected] = useState([]);
   const [decisions, setDecisions] = useState({});
   const [error, setError] = useState('');
@@ -155,9 +174,11 @@ export const CreateAdminDialog = ({ brands, onClose, onSaved }) => {
     if (!passwordOk(f.password)) return problem(PASSWORD_RULE, field('ac-password'));
     const d = readDecisions(brands, '', [], selected, decisions);
     if (d.pending.length) return problem(decideMessage(d.pending, ''), decisionField(d.pending[0].brandId));
+    const empty = selected.filter((id) => !access[id]);
+    if (empty.length && !window.confirm(`Access is not configured for: ${namesOf(brands, empty)}. The admin will see nothing in these brands until you configure it. Create anyway?`)) return undefined;
     setBusy(true);
     try {
-      const res = await adminConfigService.create({ ...f, confirmPassword: f.password, brandIds: selected, transferBrandIds: d.transferBrandIds, shareBrandIds: d.shareBrandIds });
+      const res = await adminConfigService.create({ ...f, confirmPassword: f.password, brandIds: selected, transferBrandIds: d.transferBrandIds, shareBrandIds: d.shareBrandIds, access: accessEntries(selected, access) });
       onSaved(`${res.admin.name} was created with ${res.admin.brandCount} brand(s). They sign in at /admin/login with ${res.admin.email} and the password you set.`);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
     return undefined;
@@ -175,21 +196,32 @@ export const CreateAdminDialog = ({ brands, onClose, onSaved }) => {
         </div>
         <div>
           <h3 className="mb-2 mt-0 text-sm font-extrabold text-slate-900">Assign brands</h3>
-          <BrandPicker brands={brands} selected={selected} setSelected={setSelected} decisions={decisions} setDecisions={setDecisions} />
+          <p className="mb-2 mt-0 text-xs text-slate-500">After selecting a brand, use "Configure Access" to choose what the admin may do in that brand. Each brand has its own settings.</p>
+          <BrandPicker brands={brands} selected={selected} setSelected={setSelected} decisions={decisions} setDecisions={setDecisions} access={access} onConfigure={setConfiguring} />
         </div>
+        {configuring && <PermissionDrawer adminName={f.name.trim() || 'New admin'} brand={configuring} catalog={catalog} value={access[configuring.brandId]} onClose={() => setConfiguring(null)} onApply={(v) => { setAccess((x) => ({ ...x, [configuring.brandId]: v })); setConfiguring(null); }} />}
         {selected.length === 0 && <Note type="warn">With no brand selected this admin can sign in but will not see any business data.</Note>}
       </div>
     </Dialog>
   );
 };
 
-export const EditAdminDialog = ({ admin: initialAdmin, brands, startTab = 'details', onClose, onChanged }) => {
+/** What an older (full-access) admin can do in a brand today: everything. The drawer starts from this. */
+const fullValue = (catalog) => ({ roleProfile: 'CUSTOM', permissions: Object.fromEntries(catalog.modules.map((m) => [m.key, [...m.actions]])) });
+
+/** The saved permissions of an admin, as editable choices per brand. */
+const savedAccess = (admin) => Object.fromEntries(admin.brands.filter((b) => b.permissions?.configured).map((b) => [b.brandId, { roleProfile: b.permissions.roleProfile, permissions: b.permissions.permissions }]));
+
+export const EditAdminDialog = ({ admin: initialAdmin, brands, catalog, startTab = 'details', onClose, onChanged }) => {
   const [admin, setAdmin] = useState(initialAdmin);
   const [tab, setTab] = useState(startTab);
   const [f, setF] = useState({ name: initialAdmin.name, email: initialAdmin.email, mobile: initialAdmin.mobile });
   const current = useMemo(() => admin.brands.map((b) => b.brandId), [admin]);
   const [selected, setSelected] = useState(current);
   const [decisions, setDecisions] = useState({});
+  const [access, setAccess] = useState(() => savedAccess(initialAdmin));
+  const [configuring, setConfiguring] = useState(null);
+  const fullAccess = admin.permissionMode !== 'PER_BRAND'; // an older account: everything is allowed inside its brands
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
@@ -212,10 +244,14 @@ export const EditAdminDialog = ({ admin: initialAdmin, brands, startTab = 'detai
     if (confirmRestrict && !window.confirm(`${admin.name} can currently use EVERY brand. After saving they can use only the ${selected.length} selected brand(s). Continue?`)) return;
     const removed = current.filter((id) => !selected.includes(id));
     if (!confirmRestrict && removed.length && !window.confirm(`Remove access to ${removed.length} brand(s)? The admin loses access immediately. No records are deleted.`)) return;
+    const entries = accessEntries(selected, access);
+    const unset = selected.filter((id) => !access[id]);
+    // an older account: brands not configured here simply keep full access (handled by the server)
+    if (!fullAccess && unset.length && !window.confirm(`Access is not configured for: ${namesOf(brands, unset)}. The admin will see nothing in these brands. Save anyway?`)) return;
     run(async () => {
-      const r = await adminConfigService.setBrands(admin.id, { brandIds: selected, transferBrandIds: d.transferBrandIds, shareBrandIds: d.shareBrandIds, confirmRestrict });
-      setAdmin(r.admin); setSelected(r.admin.brands.map((b) => b.brandId)); setDecisions({});
-    }, 'Brand assignment saved. It applies to the very next request of every admin involved.');
+      const r = await adminConfigService.setBrands(admin.id, { brandIds: selected, transferBrandIds: d.transferBrandIds, shareBrandIds: d.shareBrandIds, confirmRestrict, access: entries });
+      setAdmin(r.admin); setSelected(r.admin.brands.map((b) => b.brandId)); setDecisions({}); setAccess(savedAccess(r.admin));
+    }, 'Brands and access saved. It applies to the very next request of every admin involved.');
   };
   const reset = () => {
     if (!passwordOk(pw)) { setMsg(''); setError(PASSWORD_RULE); showField(field('ac-reset-password')); return; }
@@ -226,7 +262,7 @@ export const EditAdminDialog = ({ admin: initialAdmin, brands, startTab = 'detai
     <Dialog wide title={`Edit ${admin.name}`} subtitle={`${admin.email} · ${admin.brandCount} brand(s)`} onClose={onClose} testId="ac-edit" notice={error ? <Note testId="ac-error">{error}</Note> : msg ? <Note type="success" testId="ac-msg">{msg}</Note> : null}>
       <div className="space-y-4">
         <div className="flex flex-wrap gap-1.5">
-          {[['details', 'Details'], ['brands', 'Brand assignment'], ['access', 'Status & password']].map(([k, l]) => (
+          {[['details', 'Details'], ['brands', 'Brands & access'], ['access', 'Status & password']].map(([k, l]) => (
             <button key={k} type="button" data-testid={`ac-tab-${k}`} aria-pressed={tab === k} onClick={() => { setTab(k); setError(''); setMsg(''); }} className={`cursor-pointer rounded-xl border px-3.5 py-2 text-sm font-bold ${tab === k ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>{l}</button>
           ))}
         </div>
@@ -244,8 +280,9 @@ export const EditAdminDialog = ({ admin: initialAdmin, brands, startTab = 'detai
         {tab === 'brands' && (
           <div className="space-y-3">
             {admin.access === 'ALL' && <Note type="warn">This older account can use every brand. Saving a selection here limits it to those brands.</Note>}
-            <BrandPicker brands={brands} adminId={admin.id} initial={current} selected={selected} setSelected={setSelected} decisions={decisions} setDecisions={setDecisions} />
-            <button type="button" data-testid="ac-save-brands" className={btnPrimary} disabled={busy} onClick={saveBrands}>Save brand assignment</button>
+            <BrandPicker brands={brands} adminId={admin.id} initial={current} selected={selected} setSelected={setSelected} decisions={decisions} setDecisions={setDecisions} access={access} onConfigure={setConfiguring} fullAccess={fullAccess} />
+            <button type="button" data-testid="ac-save-brands" className={btnPrimary} disabled={busy} onClick={saveBrands}>Save brands and access</button>
+            {configuring && <PermissionDrawer adminName={admin.name} brand={configuring} catalog={catalog} value={access[configuring.brandId] || (fullAccess ? fullValue(catalog) : undefined)} onClose={() => setConfiguring(null)} onApply={(v) => { setAccess((x) => ({ ...x, [configuring.brandId]: v })); setConfiguring(null); setError(''); setMsg(`Access for ${configuring.name} is ready. Press "Save brands and access" to apply it.`); }} />}
           </div>
         )}
         {tab === 'access' && (

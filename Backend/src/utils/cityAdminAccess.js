@@ -36,7 +36,8 @@ const RULES = [
 ];
 
 export const permissionForPath = (originalUrl) => {
-  const path = String(originalUrl || '').split('?')[0].replace(/^\/api(\/v\d+)?/, '');
+  // Express matches routes without regard to case, so this check must not depend on it either
+  const path = String(originalUrl || '').split('?')[0].toLowerCase().replace(/^\/api(\/v\d+)?/, '');
   for (const [re, key] of RULES) if (re.test(path)) return key;
   return null;
 };

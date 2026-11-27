@@ -687,7 +687,7 @@ export const TransportManagement = ({ initialTab = 'ALL' }) => {
                               📞 {booking.captainId.phone || '—'}
                             </span>
                             <div className="flex items-center gap-2 pt-1">
-                              <button
+                              <button data-perm="transport.edit"
                                 onClick={() => handleOpenAssignModal(booking)}
                                 className="text-[10px] font-bold text-blue-700 hover:underline border-none bg-transparent cursor-pointer p-0"
                               >
@@ -701,7 +701,7 @@ export const TransportManagement = ({ initialTab = 'ALL' }) => {
                               <Clock size={13} className="text-amber-600 animate-spin" />
                               <span>Searching Driver Pool...</span>
                             </div>
-                            <button
+                            <button data-perm="transport.edit"
                               onClick={() => handleOpenAssignModal(booking)}
                               className="w-full py-1.5 bg-[#1A2E0A] hover:bg-[#044e4b] text-white rounded-lg text-[11px] font-black cursor-pointer border-none transition-colors shadow-2xs flex items-center justify-center gap-1"
                             >
@@ -741,7 +741,7 @@ export const TransportManagement = ({ initialTab = 'ALL' }) => {
                             <Eye size={15} />
                           </button>
                           {!isCompleted && !isCancelled && (
-                            <button
+                            <button data-perm="transport.delete"
                               onClick={() => handleOpenCancelModal(booking)}
                               className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg cursor-pointer border border-rose-200 transition-colors"
                               title="Cancel Transport Booking"
@@ -876,7 +876,7 @@ export const TransportManagement = ({ initialTab = 'ALL' }) => {
                 ) : (
                   <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-500 flex items-center justify-between">
                     <span>No captain assigned yet. Ride is in searching state.</span>
-                    <button
+                    <button data-perm="transport.edit"
                       onClick={() => {
                         setIsDetailModalOpen(false);
                         handleOpenAssignModal(selectedBooking);
@@ -1131,7 +1131,7 @@ export const TransportManagement = ({ initialTab = 'ALL' }) => {
                 >
                   Cancel
                 </button>
-                <button
+                <button data-perm="transport.edit"
                   type="submit"
                   disabled={assigningCaptain || !selectedCaptainId}
                   className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl border-none cursor-pointer disabled:opacity-50 flex items-center gap-1"
@@ -1187,7 +1187,7 @@ export const TransportManagement = ({ initialTab = 'ALL' }) => {
                 >
                   Keep Booking
                 </button>
-                <button
+                <button data-perm="transport.delete"
                   type="submit"
                   disabled={cancellingBooking || !cancelReason.trim()}
                   className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl border-none cursor-pointer disabled:opacity-50 flex items-center gap-1"

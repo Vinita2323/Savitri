@@ -125,6 +125,9 @@ export const getProductFallbackImage = (name, category = '') => {
   return getInitialSvgDataUrl(name || category || 'Product');
 };
 
+/** The stock "rice" photo older product forms filled in when no image was chosen: it is not the product's picture. */
+export const isPlaceholderImage = (url) => typeof url === 'string' && url.includes('photo-1586201375761-83865001e31c');
+
 /**
  * Helper to resolve dynamic or relative image paths (Cloudinary, local disk, or Letter Avatar SVG).
  */

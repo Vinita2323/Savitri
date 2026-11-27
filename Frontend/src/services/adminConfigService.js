@@ -4,7 +4,7 @@ import API from './api';
 const unwrap = (promise, fallback) =>
   promise.then((res) => res.data).catch((err) => {
     const body = err.response?.data || {};
-    throw Object.assign(new Error(body.message || fallback || err.message || 'Request failed'), { status: err.response?.status, code: body.code, conflicts: body.conflicts });
+    throw Object.assign(new Error(body.message || fallback || err.message || 'Request failed'), { status: err.response?.status, code: body.code, conflicts: body.conflicts, unconfigured: body.unconfigured });
   });
 
 const B = '/super-admin/admin-config';
@@ -19,6 +19,8 @@ export const adminConfigService = {
   setStatus: (id, status) => unwrap(API.patch(`${B}/admins/${id}/status`, { status }), 'Could not change the status'),
   resetPassword: (id, body) => unwrap(API.post(`${B}/admins/${id}/reset-password`, body), 'Could not reset the password'),
   history: (params) => unwrap(API.get(`${B}/history`, { params }), 'Could not load the history'),
+  permissionCatalog: () => unwrap(API.get(`${B}/permission-catalog`), 'Could not load the list of permissions'),
+  permissionHistory: (params) => unwrap(API.get(`${B}/permission-history`, { params }), 'Could not load the permission history'),
 };
 
 export default adminConfigService;

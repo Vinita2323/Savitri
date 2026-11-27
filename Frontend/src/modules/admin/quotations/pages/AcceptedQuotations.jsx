@@ -222,7 +222,7 @@ export const AcceptedQuotations = ({ onNavigate }) => {
                           Order Converted
                         </button>
                       ) : (
-                        <button
+                        <button data-perm="quotations.approve"
                           type="button"
                           onClick={() => handleConvertToOrder(quote)}
                           className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#1A2E0A] hover:bg-[#2F5218] text-white text-xs font-bold transition-all cursor-pointer border-none shadow-2xs"

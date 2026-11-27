@@ -179,7 +179,7 @@ const SettingsPanel = ({ onClose, onSaved }) => {
             <label className="flex items-center gap-2 text-sm font-semibold text-slate-700"><input data-testid="sm-s-enabled" type="checkbox" checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} /> Selfie verification is on</label>
             <label className="block text-xs font-semibold text-slate-500">Verification every (minutes, 30–480)<input data-testid="sm-s-interval" type="number" className={`${inputCls} mt-1`} value={form.intervalMinutes} onChange={(e) => setForm({ ...form, intervalMinutes: e.target.value })} /></label>
             <label className="block text-xs font-semibold text-slate-500">Grace period (minutes, 1–120)<input data-testid="sm-s-grace" type="number" className={`${inputCls} mt-1`} value={form.graceMinutes} onChange={(e) => setForm({ ...form, graceMinutes: e.target.value })} /></label>
-            <div className="flex justify-end gap-2"><button type="button" className={btnGhost} onClick={onClose}>Close</button><button type="submit" data-testid="sm-s-save" disabled={busy} className={btnPrimary}>{busy ? 'Saving…' : 'Save'}</button></div>
+            <div className="flex justify-end gap-2"><button data-perm="attendance.edit" type="button" className={btnGhost} onClick={onClose}>Close</button><button data-perm="attendance.edit" type="submit" data-testid="sm-s-save" disabled={busy} className={btnPrimary}>{busy ? 'Saving…' : 'Save'}</button></div>
           </>
         )}
       </form>

@@ -162,7 +162,7 @@ export const EmployeeRulesPage = ({ onNavigate }) => {
               <p className="m-0 text-[15px] font-semibold text-slate-600">{dirty ? 'You have unsaved changes.' : 'All changes saved.'}</p>
               <div className="flex gap-3">
                 <button type="button" disabled={!dirty || busy} onClick={() => { setForm(saved); setMsg(''); }} className="px-5 py-3 text-[15px] font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 disabled:opacity-50 cursor-pointer">Undo changes</button>
-                <button type="button" disabled={!dirty || busy || Boolean(timeProblem) || form.graceMinutes === ''} onClick={save} className="px-7 py-3 text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl disabled:opacity-50 cursor-pointer border-0">{busy ? 'Saving…' : 'Save rules'}</button>
+                <button data-perm="attendance.edit" type="button" disabled={!dirty || busy || Boolean(timeProblem) || form.graceMinutes === ''} onClick={save} className="px-7 py-3 text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl disabled:opacity-50 cursor-pointer border-0">{busy ? 'Saving…' : 'Save rules'}</button>
               </div>
             </div>
           </>

@@ -84,7 +84,7 @@ export const EmployeeAttendanceReportPage = ({ onNavigate }) => {
             ) : (
               <input type="month" className={`${inputCls} !w-auto`} value={month} max={todayIST().slice(0, 7)} onChange={(e) => e.target.value && setMonth(e.target.value)} />
             )}
-            <button type="button" className={btnGhost} onClick={exportCsv}><Download className="w-4 h-4" /> Export CSV</button>
+            <button data-perm="attendance.export" type="button" className={btnGhost} onClick={exportCsv}><Download className="w-4 h-4" /> Export CSV</button>
           </div>
         </div>
 
@@ -109,7 +109,7 @@ export const EmployeeAttendanceReportPage = ({ onNavigate }) => {
                         <td className="px-3 py-3 text-slate-700">{r.lateMinutes ? `${r.lateMinutes}m` : '—'}</td>
                         <td className="px-3 py-3"><div className="flex justify-end gap-1.5">
                           {r.recordId && r.corrected && <button type="button" className={`${btnGhost} !px-2.5 !py-1.5`} title="Audit trail" onClick={() => showAudit(r)}><History className="w-3.5 h-3.5" /></button>}
-                          <button type="button" className={`${btnGhost} !px-2.5 !py-1.5 !text-xs`} onClick={() => openFix(r)}><Pencil className="w-3.5 h-3.5" /> Correct</button>
+                          <button type="button" className={`${btnGhost} !px-2.5 !py-1.5 !text-xs`} data-perm="attendance.edit" onClick={() => openFix(r)}><Pencil className="w-3.5 h-3.5" /> Correct</button>
                         </div></td>
                       </tr>
                     ))}
@@ -181,7 +181,7 @@ export const EmployeeAttendanceReportPage = ({ onNavigate }) => {
               <Field label="Logout time (IST)"><input type="time" className={inputCls} value={fix.checkOutTime} onChange={(e) => setFix((f) => ({ ...f, checkOutTime: e.target.value }))} /></Field>
             </div>
             <Field label="Reason (required)" hint="Recorded in the audit trail and shown to the employee"><textarea className={inputCls} rows={2} value={fix.reason} onChange={(e) => setFix((f) => ({ ...f, reason: e.target.value }))} /></Field>
-            <div className="flex justify-end gap-2"><button type="button" className={btnGhost} onClick={() => setFix(null)}>Cancel</button><button type="submit" className={btnPrimary} disabled={busy || !fix.reason.trim()}>Save correction</button></div>
+            <div className="flex justify-end gap-2"><button data-perm="attendance.edit" type="button" className={btnGhost} onClick={() => setFix(null)}>Cancel</button><button data-perm="attendance.edit" type="submit" className={btnPrimary} disabled={busy || !fix.reason.trim()}>Save correction</button></div>
           </form>
         </div>
       )}

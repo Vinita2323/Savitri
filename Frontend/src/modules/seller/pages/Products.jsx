@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { productService, authService, categoryService } from '../../../services/authService';
-import { getImageUrl, handleImageError, getInitialSvgDataUrl, compressAndResizeImage, uploadFileViaApi } from '../../../utils/imageUtils';
+import { getImageUrl, handleImageError, getInitialSvgDataUrl, compressAndResizeImage, uploadFileViaApi, isPlaceholderImage } from '../../../utils/imageUtils';
 import { getEffectiveStock } from '../../../utils/productStock';
 
 const Products = () => {
@@ -152,7 +152,7 @@ const Products = () => {
       salePrice: Number(ap.salePrice || ap.mrp || ap.price || 0),
       mrp: Number(ap.mrp || ap.salePrice || ap.price || 0),
       status: ap.status || 'Published',
-      image: ap.mainImage || ap.image || 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100&auto=format&fit=crop&q=80',
+      image: [ap.mainImage, ap.image].find((x) => x && !isPlaceholderImage(x)) || '',
       description: ap.description || '',
       brand: ap.brand || '',
       unitValue: ap.unitValue || (ap.unit ? ap.unit.split(' ')[0] : '1'),
@@ -373,7 +373,7 @@ const Products = () => {
 
     const targetId = editingProduct._id || editingProduct.id;
     const cleanMainImage = (typeof editFormData.image === 'string' && editFormData.image.length > 1500000)
-      ? 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&q=80'
+      ? ''
       : editFormData.image;
 
     const updatePayload = {

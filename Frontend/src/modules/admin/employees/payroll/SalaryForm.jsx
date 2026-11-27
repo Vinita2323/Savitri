@@ -179,7 +179,7 @@ export const SalaryConfigModal = ({ employee, brandId, onClose, onSaved }) => {
   const cur = data?.salary;
   return (
     <Modal title={`Salary: ${employee.name}`} onClose={onClose} wide testId="salary-modal"
-      footer={<><button type="button" className={btnGhost} onClick={onClose}>Close</button><button type="button" data-testid="sal-save" disabled={busy || !form} className={btnPrimary} onClick={save}>{busy ? 'Saving…' : cur ? (correction ? 'Save correction' : 'Save as new salary version') : 'Save salary'}</button></>}>
+      footer={<><button data-perm="payroll.edit" type="button" className={btnGhost} onClick={onClose}>Close</button><button data-perm="payroll.edit" type="button" data-testid="sal-save" disabled={busy || !form} className={btnPrimary} onClick={save}>{busy ? 'Saving…' : cur ? (correction ? 'Save correction' : 'Save as new salary version') : 'Save salary'}</button></>}>
       {!data && !error && <Spinner />}
       {error && <Notice type="error">{error}</Notice>}
       {data && form && (

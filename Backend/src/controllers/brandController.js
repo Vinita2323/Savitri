@@ -6,6 +6,7 @@ import { CityAdminError, readPerson, readStatus, readPermissions, createCityAdmi
 import { ensureBaselineBrands, canAccessAllBrands, isBrandAuthorizedForUser } from '../middleware/scopeMiddleware.js';
 import { findEligibleBrands, countMisconfiguredBrands, listRegistrationCities, parseLatLng } from '../utils/brandEligibility.js';
 import { normalizeCity } from '../utils/cityNormalization.js';
+import { revokeBrandAccess } from '../services/adminBrandAccessService.js';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[6-9]\d{9}$/;
@@ -488,9 +489,11 @@ export const deleteBrand = async (req, res, next) => {
     // Permanent delete is only allowed when nothing is attached to this brand. Any record that carries this
     // brandId (sellers, employees, quotations, POS sales, challans, ...) would be orphaned, so we report what
     // blocks the delete instead of silently deactivating or breaking those records.
+    // Admin access settings and their history are not business records: access is revoked below and the history is kept.
+    const accessRecords = ['AdminBrandAccess', 'AdminAssignmentLog', 'AdminPermissionLog'];
     const linked = [];
     for (const [modelName, model] of Object.entries(mongoose.models)) {
-      if (modelName === 'Brand' || !model.schema.path('brandId')) continue;
+      if (modelName === 'Brand' || accessRecords.includes(modelName) || !model.schema.path('brandId')) continue;
       const count = await model.countDocuments({ brandId: brand.brandId });
       if (count > 0) linked.push({ model: modelName, count });
     }
@@ -512,6 +515,7 @@ export const deleteBrand = async (req, res, next) => {
       await mongoose.models.Admin.updateMany({ authorizedBrands: { $all: [brand.brandId], $nin: ['*'] } }, { $set: { brandAccess: 'ASSIGNED' } });
       await mongoose.models.Admin.updateMany({ authorizedBrands: brand.brandId }, { $pull: { authorizedBrands: brand.brandId, exclusiveBrands: brand.brandId } });
     }
+    await revokeBrandAccess({ brandIds: [brand.brandId], actor: { id: req.user?.id, name: req.user?.name || '', email: req.user?.email || '' }, brandNames: new Map([[brand.brandId, brand.name]]) });
 
     res.status(200).json({
       success: true,

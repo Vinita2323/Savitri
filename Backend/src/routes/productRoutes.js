@@ -1,6 +1,7 @@
 import { protect } from '../middleware/authMiddleware.js';
 import { scopeUnlessSeller } from '../utils/accessControl.js';
 import { optionalAuth } from '../middleware/optionalAuth.js';
+import { staffViewGate } from '../middleware/adminPermissionGate.js';
 import express from 'express';
 import {
   createProduct,
@@ -20,13 +21,13 @@ router.post('/bulk-update', protect('seller'), bulkUpdateMyProducts);
 
 router.route('/')
   .post(...writeAuth, createProduct)
-  .get(optionalAuth, getProducts);
+  .get(optionalAuth, staffViewGate, getProducts);
 
 // Admin / Super Admin: deactivate, activate, block or unblock a product (brand scoped)
 router.patch('/:id/moderation', protect('admin', 'super_admin'), scopeUnlessSeller, moderateProduct);
 
 router.route('/:id')
-  .get(optionalAuth, getProductById)
+  .get(optionalAuth, staffViewGate, getProductById)
   .put(...writeAuth, updateProduct)
   .delete(...writeAuth, deleteProduct);
 

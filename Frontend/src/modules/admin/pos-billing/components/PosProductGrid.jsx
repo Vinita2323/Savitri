@@ -13,7 +13,11 @@ export const PosProductGrid = () => {
     setSearchQuery,
     isLoadingProducts,
     loadProducts,
+    productsError,
+    storesLoaded,
+    stores,
   } = usePos();
+  const noStore = storesLoaded && !productsError && stores.length === 0;
 
   const searchInputRef = useRef(null);
 
@@ -132,9 +136,17 @@ export const PosProductGrid = () => {
             <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
               <PackageSearch className="w-6 h-6" />
             </div>
-            <h4 className="text-sm font-semibold text-gray-800">No products found</h4>
-            <p className="text-xs text-gray-500 max-w-sm mt-1">
-              No products match "{searchQuery}" in category "{selectedCategory}".
+            <h4 className="text-sm font-semibold text-gray-800" data-testid="pos-empty-title">
+              {productsError ? 'Products could not be loaded' : noStore ? 'No store in this brand yet' : 'No products found'}
+            </h4>
+            <p className="text-xs text-gray-500 max-w-sm mt-1" data-testid="pos-empty-text">
+              {productsError
+                ? productsError
+                : noStore
+                  ? 'POS bills are made for a store (seller) of the selected brand. Add or approve a store first.'
+                  : searchQuery || selectedCategory !== 'All'
+                    ? `No products match "${searchQuery}" in category "${selectedCategory}".`
+                    : 'This store has no products yet.'}
             </p>
             {(searchQuery || selectedCategory !== 'All') && (
               <button
