@@ -1,8 +1,10 @@
+import { transportBrandFilter } from '../middleware/brandRecordGuards.js';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 import TransportBooking from '../models/TransportBooking.model.js';
 import VehicleType from '../models/VehicleType.model.js';
 import Captain from '../models/Captain.model.js';
+import User from '../models/User.model.js';
 import Rating from '../models/Rating.model.js';
 import CaptainNotification from '../models/CaptainNotification.model.js';
 import CaptainTransaction from '../models/CaptainTransaction.model.js';
@@ -1395,13 +1397,15 @@ export const getAdminTransportBookings = async (req, res, next) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
+    const brandOnly = req.restricted ? await transportBrandFilter(req) : null;
+
     const [rawBookings, allSummaries] = await Promise.all([
-      TransportBooking.find(query)
+      TransportBooking.find(brandOnly ? { $and: [brandOnly, query] } : query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
         .lean(),
-      TransportBooking.find({}).select('status fareBreakdown.totalFare captainEarnings').lean(),
+      TransportBooking.find(brandOnly || {}).select('status fareBreakdown.totalFare captainEarnings').lean(),
     ]);
 
     const total = allSummaries.length;

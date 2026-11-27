@@ -411,6 +411,8 @@ export function SellerPurchases({ showSummary = false }) {
 /** Totals per seller, from the same records and the same filters as the list below it (the server uses one shared filter for both). */
 function SellerWiseSummary({ filters, onOpenSeller, defaultOpen }) {
   const [open, setOpen] = useState(defaultOpen);
+  // the old-address redirect may deliver the "open it" request just after the page has appeared
+  useEffect(() => { if (defaultOpen) setOpen(true); }, [defaultOpen]);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const key = JSON.stringify(filters);

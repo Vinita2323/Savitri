@@ -2,6 +2,7 @@ import Brand from '../models/Brand.model.js';
 import Seller from '../models/Seller.model.js';
 import Captain from '../models/Captain.model.js';
 import Admin from '../models/Admin.model.js';
+import { isStrictAdmin } from '../utils/adminAccess.js';
 import SellerNotification from '../models/SellerNotification.model.js';
 
 const escapeRegex = (v) => String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -138,6 +139,27 @@ export const ensureBaselineBrands = async () => {
   }
 };
 
+const normalizedRole = (user) => String(user?.role || '').trim().toLowerCase().replace(/-/g, '_');
+
+const forbidBrand = (res, brand) => res.status(403).json({
+  success: false,
+  code: 'BRAND_FORBIDDEN',
+  message: `Forbidden: You are not authorized to access records for brand/region "${brand.name}" (${brand.city}).`,
+});
+
+// Lookup a brand by stable identifiers only (exact match, no user-controlled regex).
+const findBrandByParam = async (param) => {
+  let brandDoc = null;
+  if (/^[0-9a-fA-F]{24}$/.test(param)) brandDoc = await Brand.findById(param);
+  if (!brandDoc) brandDoc = await Brand.findOne({ $or: [{ brandId: param }, { code: param.toUpperCase() }] });
+  // Legacy: a city name resolves only when it identifies exactly one brand.
+  if (!brandDoc) {
+    const byCity = await Brand.find({ city: new RegExp(`^${escapeRegex(param)}$`, 'i') }).limit(2);
+    if (byCity.length === 1) brandDoc = byCity[0];
+  }
+  return brandDoc;
+};
+
 /**
  * Middleware: Resolves and validates brand/region scope on every incoming request.
  * Populates req.scope:
@@ -158,12 +180,20 @@ export const resolveBrandScope = async (req, res, next) => {
 
     await ensureBaselineBrands();
 
-    const rawId =
-      req.query.brandId ||
-      req.headers['x-brand-id'] ||
-      req.query.region ||
-      req.headers['x-region-id'] ||
-      (req.body && req.body.brandId);
+    const supplied = [req.query.brandId, req.headers['x-brand-id'], req.query.region, req.headers['x-region-id'], req.body && req.body.brandId];
+    let rawId = supplied.find(Boolean);
+
+    // A brand-restricted admin: EVERY brand named anywhere in the request must be one of theirs, so a different brand cannot be
+    // smuggled in through the body or a second parameter. "ALL" beside an own brand narrows to that brand; "ALL" on its own is refused.
+    const restricted = normalizedRole(req.user) === 'admin' && !(await isBrandAuthorizedForUser(req.user, 'ALL'));
+    if (restricted) {
+      const named = supplied.map((v) => (typeof v === 'string' ? v.trim() : '')).filter((v) => v && v !== '*' && v.toUpperCase() !== 'ALL');
+      if (named.length) rawId = named[0];
+      for (const other of [...new Set(named)].slice(1)) {
+        const doc = await findBrandByParam(other);
+        if (doc && !(await isBrandAuthorizedForUser(req.user, doc.brandId))) return forbidBrand(res, doc);
+      }
+    }
 
     let scopeParam = typeof rawId === 'string' ? rawId.trim() : '';
 
@@ -180,6 +210,7 @@ export const resolveBrandScope = async (req, res, next) => {
       if (!(await isBrandAuthorizedForUser(req.user, 'ALL'))) {
         return res.status(403).json({
           success: false,
+          code: 'BRAND_REQUIRED',
           message: 'Access denied: You are not authorized to view consolidated All-Region data.',
         });
       }
@@ -195,23 +226,7 @@ export const resolveBrandScope = async (req, res, next) => {
       return next();
     }
 
-    // Lookup brand by stable identifiers only (exact match, no user-controlled regex).
-    let brandDoc = null;
-    if (scopeParam.match(/^[0-9a-fA-F]{24}$/)) {
-      brandDoc = await Brand.findById(scopeParam);
-    }
-
-    if (!brandDoc) {
-      brandDoc = await Brand.findOne({
-        $or: [{ brandId: scopeParam }, { code: scopeParam.toUpperCase() }],
-      });
-    }
-
-    // Legacy: a city name resolves only when it identifies exactly one brand.
-    if (!brandDoc) {
-      const byCity = await Brand.find({ city: new RegExp(`^${escapeRegex(scopeParam)}$`, 'i') }).limit(2);
-      if (byCity.length === 1) brandDoc = byCity[0];
-    }
+    const brandDoc = await findBrandByParam(scopeParam);
 
     if (!brandDoc) {
       return res.status(400).json({
@@ -220,12 +235,7 @@ export const resolveBrandScope = async (req, res, next) => {
       });
     }
 
-    if (!(await isBrandAuthorizedForUser(req.user, brandDoc.brandId))) {
-      return res.status(403).json({
-        success: false,
-        message: `Forbidden: You are not authorized to access records for brand/region "${brandDoc.name}" (${brandDoc.city}).`,
-      });
-    }
+    if (!(await isBrandAuthorizedForUser(req.user, brandDoc.brandId))) return forbidBrand(res, brandDoc);
 
     // Sellers registered before brand assignment existed carry no brandId. They may be matched
     // by city only when this brand is the sole brand in that city; otherwise it is ambiguous.
@@ -269,13 +279,12 @@ export const getCityRegex = (city) => {
 // is no API yet to assign one; enable the flag after assigning brands to every admin.
 const brandsFailClosed = () => String(process.env.ADMIN_BRANDS_FAIL_CLOSED || '').toLowerCase() === 'true';
 
-const loadAdminBrandList = async (user) => {
-  let list = Array.isArray(user.authorizedBrands) ? user.authorizedBrands : null;
-  if (!list && user.id) {
-    const admin = await Admin.findById(user.id).select('authorizedBrands').lean().catch(() => null);
-    list = Array.isArray(admin?.authorizedBrands) ? admin.authorizedBrands : null;
+const loadAdminAccess = async (user) => {
+  let source = user;
+  if (!Array.isArray(user.authorizedBrands) && user.id) {
+    source = (await Admin.findById(user.id).select('authorizedBrands brandAccess adminType').lean().catch(() => null)) || user;
   }
-  return list;
+  return { list: Array.isArray(source.authorizedBrands) ? source.authorizedBrands : null, strict: isStrictAdmin(source) || isStrictAdmin(user) };
 };
 
 export const isBrandAuthorizedForUser = async (user, brandId) => {
@@ -283,7 +292,9 @@ export const isBrandAuthorizedForUser = async (user, brandId) => {
   const role = String(user.role || '').trim().toLowerCase().replace(/-/g, '_');
   if (role === 'super_admin') return true;
   if (role !== 'admin') return false;
-  const list = await loadAdminBrandList(user);
+  const { list, strict } = await loadAdminAccess(user);
+  // strict admins: exactly the listed brands, never "all" (an empty list is no access)
+  if (strict) return brandId !== 'ALL' && brandId !== '*' && Boolean(list?.includes(brandId));
   if (list?.includes('*')) return true;
   if (!list || list.length === 0) return !brandsFailClosed();
   return brandId !== 'ALL' && list.includes(brandId);
@@ -295,7 +306,7 @@ export const canAccessAllBrands = (user) => isBrandAuthorizedForUser(user, 'ALL'
 /** Brand slug when a restricted admin has exactly one assigned brand, else null. */
 const singleAssignedBrand = async (user) => {
   if (!user || String(user.role || '').replace(/-/g, '_') !== 'admin') return null;
-  const list = await loadAdminBrandList(user);
+  const { list } = await loadAdminAccess(user);
   if (list && list.length === 1 && list[0] !== '*') return list[0];
   return null;
 };

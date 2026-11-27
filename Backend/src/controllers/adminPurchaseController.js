@@ -470,6 +470,8 @@ const myFilter = (req, extra = {}) => {
   if (from || to) f.purchaseDate = { ...(from ? { $gte: from } : {}), ...(to ? { $lte: to } : {}) };
   const s = String(q.search || '').trim().slice(0, 80);
   if (s) { const rx = new RegExp(esc(s), 'i'); f.$or = [{ purchaseId: rx }, { supplierName: rx }, { invoiceNumber: rx }, { 'lines.productName': rx }, { 'lines.sku': rx }]; }
+  // a brand-restricted admin sees the purchases of the selected brand (and old ones recorded without a brand)
+  if (req.restricted) f.brandId = { $in: [req.scope.brandId, '', null] };
   return f;
 };
 
@@ -561,14 +563,15 @@ export const adminPurchaseDashboard = async (req, res) => {
     const period = PERIODS.includes(q.period) ? q.period : 'day';
     const from = day(q.from); const to = day(q.to, true);
     const range = from || to ? { purchaseDate: { ...(from ? { $gte: from } : {}), ...(to ? { $lte: to } : {}) } } : {};
-    const mineMatch = { adminId: new mongoose.Types.ObjectId(String(req.user.id)), status: 'RECORDED', ...range };
+    const ownBrand = req.restricted ? { brandId: { $in: [req.scope.brandId, '', null] } } : {};
+    const mineMatch = { adminId: new mongoose.Types.ObjectId(String(req.user.id)), status: 'RECORDED', ...range, ...ownBrand };
     const sellerBase = await sellerFilterFor(req);
     const sellerMatch = { ...sellerBase, status: 'RECORDED', ...range };
 
     const [mineAgg, mineDays, recentMine, sellerCount, sellerAgg, sellerDays, recentSeller] = await Promise.all([
       AdminPurchase.aggregate([{ $match: mineMatch }, { $group: { _id: null, n: { $sum: 1 }, amount: { $sum: '$finalPaise' }, qty: { $sum: '$totalQuantity' }, paid: { $sum: '$paidPaise' } } }]),
       AdminPurchase.aggregate([{ $match: mineMatch }, { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$purchaseDate', timezone: 'Asia/Kolkata' } }, purchases: { $sum: 1 }, amount: { $sum: '$finalPaise' }, quantity: { $sum: '$totalQuantity' } } }]),
-      AdminPurchase.find({ adminId: req.user.id, status: { $in: ['RECORDED', 'CANCELLED'] } }).sort({ createdAt: -1 }).limit(5).lean(),
+      AdminPurchase.find({ adminId: req.user.id, status: { $in: ['RECORDED', 'CANCELLED'] }, ...ownBrand }).sort({ createdAt: -1 }).limit(5).lean(),
       Seller.countDocuments(sellerBase.sellerId ? { _id: sellerBase.sellerId } : {}),
       SellerPurchase.aggregate([{ $match: sellerMatch }, { $group: { _id: null, n: { $sum: 1 }, amount: { $sum: '$totalAmount' }, qty: { $sum: '$quantity' }, sellers: { $addToSet: '$sellerId' } } }]),
       SellerPurchase.aggregate([{ $match: sellerMatch }, { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$purchaseDate', timezone: 'Asia/Kolkata' } }, purchases: { $sum: 1 }, amount: { $sum: '$totalAmount' }, quantity: { $sum: '$quantity' } } }]),

@@ -17,6 +17,7 @@ import captainRoutes from './routes/captainRoutes.js';
 import adminAuthRoutes from './routes/adminAuthRoutes.js';
 import superAdminAuthRoutes from './routes/superAdminAuthRoutes.js';
 import superAdminRoutes from './routes/superAdminRoutes.js';
+import adminConfigRoutes from './routes/adminConfigRoutes.js';
 import brandRoutes from './routes/brandRoutes.js';
 import publicBrandRoutes from './routes/publicBrandRoutes.js';
 import bannerRoutes from './routes/bannerRoutes.js';
@@ -177,6 +178,7 @@ const registerRoutes = (prefix = '') => {
   app.use(`${prefix}/auth/super-admin`, superAdminAuthRoutes);
   app.use(`${prefix}/super-admin/brands`, brandRoutes);
   app.use(`${prefix}/brands`, publicBrandRoutes);
+  app.use(`${prefix}/super-admin/admin-config`, adminConfigRoutes); // before /super-admin: not tied to a selected brand
   app.use(`${prefix}/super-admin`, superAdminRoutes);
   app.use(`${prefix}/banners`, bannerRoutes);
   app.use(`${prefix}/upload`, uploadRoutes);

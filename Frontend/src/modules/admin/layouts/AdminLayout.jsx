@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { useAdmin } from '../context/useAdmin';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { AdminHeader } from '../components/AdminHeader';
+import { AdminBrandGate } from '../components/AdminBrandGate';
 import PageSkeleton from '../../../components/PageSkeleton';
 
 // Lazy-loaded Admin Subpages and Features
@@ -105,7 +106,7 @@ const AdminPurchasePage = lazy(() => import('../purchases/AdminPurchasePage'));
 const AdminDocumentsPage = lazy(() => import('../pages/AdminDocumentsPage'));
 const EmployeeActivityPage = lazy(() => import('../employees/pages/EmployeeActivityPage'));
 
-export const AdminLayout = () => {
+const AdminLayoutContent = () => {
   const { activeTab, setActiveTab, tabData, sidebarOpen, setSidebarOpen, isCompact } = useAdmin();
 
   const renderActiveTabContent = (keyOverride) => {
@@ -469,3 +470,10 @@ export const AdminLayout = () => {
     </div>
   );
 };
+
+// A brand-restricted admin gets one of their own brands selected before any page loads data.
+export const AdminLayout = () => (
+  <AdminBrandGate>
+    <AdminLayoutContent />
+  </AdminBrandGate>
+);

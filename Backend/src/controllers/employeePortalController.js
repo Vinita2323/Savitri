@@ -15,6 +15,7 @@ import { cancelPendingOnCheckout } from '../services/employeeSelfieService.js';
 import Brand from '../models/Brand.model.js';
 import Holiday from '../models/Holiday.model.js';
 import Admin from '../models/Admin.model.js';
+import { adminCoversBrand } from '../utils/adminAccess.js';
 import { generateToken } from '../utils/generateToken.js';
 import { uploadToCloudinary } from '../config/cloudinary.js';
 import { EMPLOYEE_BLOCKED_STATUSES } from '../middleware/employeeAuth.js';
@@ -135,9 +136,9 @@ export const getPublicAdmins = async (req, res) => {
   try {
     const brandId = str(req.query.brandId, 60);
     const filter = { role: 'admin', $or: [{ status: 'active' }, { status: { $exists: false } }] };
-    const admins = await Admin.find(filter).select('name authorizedBrands').lean();
+    const admins = await Admin.find(filter).select('name authorizedBrands brandAccess adminType').lean();
     const list = admins
-      .filter((a) => !brandId || !a.authorizedBrands?.length || a.authorizedBrands.includes('*') || a.authorizedBrands.includes(brandId))
+      .filter((a) => !brandId || adminCoversBrand(a, brandId))
       .map((a) => ({ id: a._id, name: a.name }));
     return res.json({ success: true, admins: list });
   } catch (err) {
@@ -203,8 +204,8 @@ export const registerEmployee = async (req, res) => {
 
     let assignedAdmin = { id: null, name: '' };
     if (b.assignedAdminId && mongoose.Types.ObjectId.isValid(b.assignedAdminId)) {
-      const adm = await Admin.findById(b.assignedAdminId).select('name role authorizedBrands status').lean();
-      const ok = adm && adm.role === 'admin' && (!adm.authorizedBrands?.length || adm.authorizedBrands.includes('*') || adm.authorizedBrands.includes(brand.brandId));
+      const adm = await Admin.findById(b.assignedAdminId).select('name role authorizedBrands brandAccess adminType status').lean();
+      const ok = adm && adm.role === 'admin' && adminCoversBrand(adm, brand.brandId);
       if (ok) assignedAdmin = { id: adm._id, name: adm.name };
     }
 

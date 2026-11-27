@@ -24,6 +24,7 @@ import {
 } from '../controllers/adminController.js';
 import { setSellerCommission, resetSellerCommission, getSellerCommissionHistory } from '../controllers/sellerCommissionController.js';
 import { getAdminProfile, updateAdminProfile } from '../controllers/adminAuthController.js';
+import { getMyBrands } from '../controllers/myBrandsController.js';
 import { listMyDocuments, addMyDocument, updateMyDocument, deleteMyDocument, downloadMyDocument, uploadMiddleware } from '../controllers/adminDocumentController.js';
 import { simpleRateLimit } from '../middleware/simpleRateLimit.js';
 
@@ -32,6 +33,9 @@ const router = express.Router();
 // Admin Profile
 router.get('/profile', protect('admin', 'super_admin'), getAdminProfile);
 router.put('/profile', protect('admin', 'super_admin'), updateAdminProfile);
+
+// The brands the signed-in admin may work with (drives the brand switcher of the Admin panel)
+router.get('/my-brands', protect('admin', 'super_admin'), getMyBrands);
 
 // "Your documents": the signed-in admin's own private documents (never visible to anyone else)
 const docGuard = protect('admin', 'super_admin');

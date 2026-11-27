@@ -1,3 +1,4 @@
+import { referralBrandFilter } from '../middleware/brandRecordGuards.js';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 import Seller from '../models/Seller.model.js';
@@ -483,6 +484,7 @@ export const getReferralStats = async (req, res, next) => {
   try {
     const [stats, settings] = await Promise.all([
       Referral.aggregate([
+        ...(req.restricted ? [{ $match: await referralBrandFilter(req) }] : []),
         {
           $facet: {
             byStatus: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
@@ -590,6 +592,8 @@ export const getAllReferrals = async (req, res, next) => {
         { referredName: { $regex: search, $options: 'i' } },
       ];
     }
+
+    if (req.restricted) Object.assign(filter, await referralBrandFilter(req));
 
     const skip = (Number(page) - 1) * Number(limit);
     const [referrals, total] = await Promise.all([

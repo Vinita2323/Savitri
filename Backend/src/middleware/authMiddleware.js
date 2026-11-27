@@ -4,11 +4,14 @@ import Admin from '../models/Admin.model.js';
 import { extractBearerOrCookieToken } from '../utils/adminAuthCookie.js';
 import { getJwtSecret, JWT_ALGORITHMS } from '../utils/jwtConfig.js';
 import { permissionForPath } from '../utils/cityAdminAccess.js';
+import { assignedBrandIds } from '../utils/adminAccess.js';
 
 /** 'super-admin' / 'Super_Admin' -> 'super_admin' so route declarations cannot drift from token roles. */
 export const normalizeRole = (role) => String(role || '').trim().toLowerCase().replace(/-/g, '_');
 
 const ADMIN_ROLES = new Set(['admin', 'super_admin']);
+// What an admin with no assigned brand may still reach: sign-in pages, their own profile and documents, and their (empty) brand list
+const NO_BRAND_PATHS = /^\/api(\/v\d+)?\/(auth\/|admin\/(profile|my-brands|documents)(\/|$)|super-admin\/brands(\/|$))/;
 
 /** Whether an Admin document may authenticate. Missing status (legacy documents) = active. */
 export const isAdminAccountActive = (admin) => !admin?.status || admin.status === 'active';
@@ -35,7 +38,7 @@ export const protect = (...requiredRoles) => {
       if (ADMIN_ROLES.has(tokenRole)) {
         const adminId = decoded.id || decoded._id;
         const admin = adminId
-          ? await Admin.findById(adminId).select('role status tokenVersion authorizedBrands email name adminType permissions mustChangePassword').lean().catch(() => null)
+          ? await Admin.findById(adminId).select('role status tokenVersion authorizedBrands brandAccess email name adminType permissions mustChangePassword').lean().catch(() => null)
           : null;
 
         if (!admin) {
@@ -58,7 +61,12 @@ export const protect = (...requiredRoles) => {
           name: admin.name,
           authorizedBrands: Array.isArray(admin.authorizedBrands) ? admin.authorizedBrands : undefined,
           adminType: admin.adminType,
+          brandAccess: admin.brandAccess,
         };
+        // Managed admin with nothing assigned: no business data at all (also not the pages that are not tied to a brand)
+        if (admin.brandAccess === 'ASSIGNED' && assignedBrandIds(admin).length === 0 && !NO_BRAND_PATHS.test(String(req.originalUrl || '').split('?')[0])) {
+          return res.status(403).json({ success: false, code: 'NO_BRANDS', message: 'No brand is assigned to your account yet. Please ask your Super Admin to assign one.' });
+        }
         // City Admin: the permissions saved in the database decide which part of the API may be used (live, on every request)
         if (admin.adminType === 'CITY_ADMIN') {
           // a temporary password must be changed first: nothing else works until then

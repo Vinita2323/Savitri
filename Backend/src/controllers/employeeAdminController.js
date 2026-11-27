@@ -11,6 +11,7 @@ import EmployeeActivityLog from '../models/EmployeeActivityLog.model.js';
 import Holiday from '../models/Holiday.model.js';
 import Brand from '../models/Brand.model.js';
 import Admin from '../models/Admin.model.js';
+import { setBrandsFromList, managedHoldersOf, AdminConfigError } from '../services/adminAccountService.js';
 import { assertAttendanceUnlocked } from '../services/payrollService.js';
 import { PayrollError } from '../services/payrollSalary.js';
 import {
@@ -811,6 +812,19 @@ export const updateAdminAccess = async (req, res) => {
       if (valid.length !== new Set(list).size) return fail(res, 400, 'One or more brands are unknown.');
     }
     const before = admin.authorizedBrands;
+    if (admin.adminType === 'CITY_ADMIN') return fail(res, 400, 'A City Admin belongs to one brand. Manage it from that brand page.');
+    if (admin.brandAccess === 'ASSIGNED' && !list.includes('*')) {
+      // managed in Admin Configuration: same rules there (no accidental duplicates, history recorded)
+      try {
+        const out = await setBrandsFromList(admin, list, { id: req.user.id, name: req.user.name || '', email: req.user.email || '' });
+        return res.json({ success: true, admin: { _id: admin._id, name: admin.name, email: admin.email, authorizedBrands: out.admin.brands.map((b) => b.brandId) } });
+      } catch (e) { if (e instanceof AdminConfigError) return fail(res, e.status, e.message, e.extra); throw e; }
+    }
+    // an older account may not silently take a brand that a managed admin holds
+    const taken = await managedHoldersOf(list.filter((x) => x !== '*' && !(before || []).includes(x)), admin._id);
+    if (taken.length) return fail(res, 409, `Already managed by ${taken.map((a) => a.name || a.email).join(', ')}. Use Admin Configuration to transfer or share the brand.`);
+    // "all brands" chosen explicitly by the Super Admin ends the per-brand assignment
+    if (list.includes('*')) { admin.brandAccess = undefined; admin.exclusiveBrands = undefined; }
     admin.authorizedBrands = list;
     // Narrowing brand access must take effect immediately.
     admin.tokenVersion = (admin.tokenVersion || 0) + 1;

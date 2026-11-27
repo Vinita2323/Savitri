@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { employeeService } from '../../../../services/employeeService';
 import API from '../../../../services/api';
+import { getAdminBrand } from '../../../../utils/adminBrand';
 import { useSuperAdmin } from '../../../super-admin/context/SuperAdminContext';
 
 const EmployeeContext = createContext();
@@ -23,7 +24,9 @@ export const EmployeeProvider = ({ children }) => {
     API.get('/super-admin/brands')
       .then((res) => {
         const list = res.data?.brands || res.data?.data || [];
-        if (alive) setApiBrands([{ id: 'ALL', name: 'All Brands (Consolidated)' }, ...list.map((x) => ({ id: x.brandId, name: x.name }))]);
+        // a brand-restricted admin works in the brand picked in the header: forms must offer that brand only
+        const mine = list.filter((x) => x.brandId === getAdminBrand());
+        if (alive) setApiBrands([{ id: 'ALL', name: 'All Brands (Consolidated)' }, ...(mine.length ? mine : list).map((x) => ({ id: x.brandId, name: x.name }))]);
       })
       .catch(() => {});
     return () => {

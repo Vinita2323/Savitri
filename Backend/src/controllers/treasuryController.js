@@ -13,6 +13,9 @@ import {
   syncRefundFromGateway, backfillGatewayCaptures, evaluateMatch,
 } from '../services/razorpayTreasury.js';
 import { toPaise, fromPaise } from '../utils/money.js';
+import RefundRequest from '../models/RefundRequest.model.js';
+import Order from '../models/Order.model.js';
+import { orderInScope } from '../middleware/scopeMiddleware.js';
 
 /**
  * Cash & Bank treasury API. Security model:
@@ -563,6 +566,11 @@ export const matchRazorpaySettlement = async (req, res, next) => {
 
 export const unmatchRazorpaySettlement = async (req, res, next) => {
   try {
+    if (!isSuper(req) && scopeBrand(req)) {
+      const b = scopeBrand(req);
+      const s = oid(req.params.id) ? await GatewaySettlement.findById(req.params.id).select('brandId brandBreakdown').lean() : await GatewaySettlement.findOne({ settlementId: req.params.id }).select('brandId brandBreakdown').lean();
+      if (!s || (s.brandId !== b && !(s.brandBreakdown || []).some((x) => x.brandId === b))) return fail(res, 404, 'Settlement not found');
+    }
     await unmatchSettlement(req.params.id);
     res.json({ success: true });
   } catch (e) { if (e.status) return fail(res, e.status, e.message); next(e); }
@@ -591,6 +599,11 @@ export const getReconciliation = async (req, res, next) => {
 
 export const syncGatewayRefund = async (req, res, next) => {
   try {
+    if (!isSuper(req) && scopeBrand(req)) {
+      const refund = await RefundRequest.findOne(oid(req.params.id) ? { _id: req.params.id } : { refundId: req.params.id }).select('order orderId').lean();
+      const order = refund ? await Order.findOne({ $or: [{ orderId: refund.orderId }, ...(refund.order ? [{ _id: refund.order }] : [])] }).select('_id').lean() : null;
+      if (!order || !(await orderInScope(req.scope, order))) return fail(res, 404, 'Refund not found');
+    }
     const out = await syncRefundFromGateway(req.params.id);
     res.json({ success: true, gatewayStatus: out.gatewayStatus, status: out.refund.status });
   } catch (e) { if (e.status) return fail(res, e.status, e.message); if (e.name === 'GatewayError') return fail(res, e.statusCode, e.message); next(e); }

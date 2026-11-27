@@ -1,3 +1,4 @@
+import { editRequestBrandFilter } from '../middleware/brandRecordGuards.js';
 import ProfileEditRequest from '../models/ProfileEditRequest.model.js';
 import User from '../models/User.model.js';
 import Seller from '../models/Seller.model.js';
@@ -374,14 +375,19 @@ export const getAllEditRequests = async (req, res, next) => {
     const limitNum = Math.max(1, parseInt(limit, 10) || 15);
     const skip = (pageNum - 1) * limitNum;
 
+    // a brand-restricted admin only sees (and counts) requests of their brand
+    const brandOnly = req.restricted ? await editRequestBrandFilter(req) : null;
+    const listQuery = brandOnly ? { $and: [brandOnly, query] } : query;
+
     const [requests, total, counts] = await Promise.all([
-      ProfileEditRequest.find(query)
+      ProfileEditRequest.find(listQuery)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limitNum)
         .lean(),
-      ProfileEditRequest.countDocuments(query),
+      ProfileEditRequest.countDocuments(listQuery),
       ProfileEditRequest.aggregate([
+        ...(brandOnly ? [{ $match: brandOnly }] : []),
         {
           $group: {
             _id: { role: '$requesterRole', status: '$status' },

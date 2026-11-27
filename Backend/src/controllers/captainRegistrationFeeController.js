@@ -1,3 +1,4 @@
+import { brandCaptainIds } from '../utils/restrictedAdmin.js';
 import crypto from 'crypto';
 import CaptainRegistrationFeeConfig from '../models/CaptainRegistrationFeeConfig.model.js';
 import CaptainRegistrationPayment from '../models/CaptainRegistrationPayment.model.js';
@@ -810,6 +811,8 @@ export const adminGetFeePayments = async (req, res, next) => {
         filter.createdAt.$lte = end;
       }
     }
+
+    if (req.restricted) filter.captainId = { $in: await brandCaptainIds(req) };
 
     const [payments, totalCount] = await Promise.all([
       CaptainRegistrationPayment.find(filter)

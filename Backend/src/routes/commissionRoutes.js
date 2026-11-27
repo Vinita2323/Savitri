@@ -1,3 +1,4 @@
+import { scopeRestrictedAdmin } from '../utils/restrictedAdmin.js';
 import express from 'express';
 import {
   getCommissionSettings,
@@ -20,6 +21,6 @@ router.get('/current', getCurrentCommissionRates);
 // ----------------------------------------------------------------------------
 router.get('/admin/commission-settings', protect(['admin', 'super_admin']), getCommissionSettings);
 router.put('/admin/commission-settings', protect('super_admin'), updateCommissionSettings);
-router.get('/admin/commission-reports', protect(['admin', 'super_admin']), getCommissionReports);
+router.get('/admin/commission-reports', protect(['admin', 'super_admin']), scopeRestrictedAdmin, getCommissionReports);
 
 export default router;

@@ -1,3 +1,4 @@
+import { brandSellerIds } from '../utils/restrictedAdmin.js';
 import crypto from 'crypto';
 import SellerRegistrationFeeConfig from '../models/SellerRegistrationFeeConfig.model.js';
 import SellerRegistrationPayment from '../models/SellerRegistrationPayment.model.js';
@@ -789,6 +790,8 @@ export const adminGetFeePayments = async (req, res, next) => {
         filter.createdAt.$lte = end;
       }
     }
+
+    if (req.restricted) filter.sellerId = { $in: await brandSellerIds(req) };
 
     const [payments, totalCount] = await Promise.all([
       SellerRegistrationPayment.find(filter)

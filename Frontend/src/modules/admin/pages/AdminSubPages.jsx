@@ -62,6 +62,7 @@ import {
 import ProductVariantBuilder from '../../seller/components/ProductVariantBuilder';
 import { useDebounce } from '../../../hooks/useDebounce';
 import YourDocuments from '../../../components/YourDocuments';
+import MyBrandsCard from '../components/MyBrandsCard';
 
 /* =========================================================================
    1. USER MANAGEMENT PAGE (USERS, USER ORDERS & RETURN ORDERS TABS)
@@ -9740,6 +9741,9 @@ export const AdminProfile = () => {
           </div>
         )}
       </div>
+
+      {/* How many brands this admin manages (Admin panel only) */}
+      <MyBrandsCard />
 
       {/* Personal documents kept for emergencies: private to this account */}
       <YourDocuments />

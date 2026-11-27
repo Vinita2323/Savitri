@@ -1,3 +1,5 @@
+import { scopeRestrictedAdmin } from '../utils/restrictedAdmin.js';
+import { guardCaptainFeePayment } from '../middleware/brandRecordGuards.js';
 import express from 'express';
 import {
   getPublicFeeConfig,
@@ -28,7 +30,7 @@ router.post('/webhook', handleRegistrationFeeWebhook);
 // ----------------------------------------------------------------------------
 router.get('/admin', protect(['admin', 'super_admin']), adminGetFeeConfig);
 router.put('/admin', protect(['admin', 'super_admin']), adminUpdateFeeConfig);
-router.get('/admin/payments', protect(['admin', 'super_admin']), adminGetFeePayments);
-router.get('/admin/payments/:id', protect(['admin', 'super_admin']), adminGetFeePaymentById);
+router.get('/admin/payments', protect(['admin', 'super_admin']), scopeRestrictedAdmin, adminGetFeePayments);
+router.get('/admin/payments/:id', protect(['admin', 'super_admin']), scopeRestrictedAdmin, guardCaptainFeePayment, adminGetFeePaymentById);
 
 export default router;

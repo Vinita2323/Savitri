@@ -1,3 +1,4 @@
+import { brandUserIds } from '../utils/restrictedAdmin.js';
 import mongoose from 'mongoose';
 import PosSale from '../models/PosSale.model.js';
 import Product from '../models/Product.model.js';
@@ -93,7 +94,7 @@ export const getPosStores = async (req, res) => {
     }));
 
     // Add Central / Default Fulfillment store if list is empty
-    if (formatted.length === 0) {
+    if (formatted.length === 0 && !req.restricted) {
       formatted.push({
         id: 'store_central',
         storeName: 'Savitri Central Fulfillment Hub',
@@ -137,6 +138,8 @@ export const getPosProducts = async (req, res) => {
         { 'variants.sku': regex },
       ];
     }
+
+    if (req.restricted) query.$and = [{ sellerId: { $in: req.posSellerIds } }];
 
     const total = await Product.countDocuments(query);
     const products = await Product.find(query)
@@ -192,9 +195,11 @@ export const searchPosCustomers = async (req, res) => {
     const clean = query.trim();
     const regex = new RegExp(clean, 'i');
 
-    const users = await User.find({
-      $or: [{ phone: regex }, { name: regex }, { email: regex }],
-    })
+    const match = { $or: [{ phone: regex }, { name: regex }, { email: regex }] };
+    // a restricted admin searches their brand's customers; anyone else only by their full phone number (walk-in billing)
+    const users = await User.find(req.restricted
+      ? { $or: [{ $and: [{ _id: { $in: await brandUserIds(req) } }, match] }, ...(/^\d{10}$/.test(clean) ? [{ phone: clean }] : [])] }
+      : match)
       .select('name phone email addresses')
       .limit(10)
       .lean();
@@ -734,6 +739,7 @@ export const getHeldBills = async (req, res) => {
   try {
     const bills = await PosSale.find({
       status: { $in: ['HELD', 'DRAFT'] },
+      ...(req.restricted ? { 'store.storeId': { $in: req.posSellerIds } } : {}),
     })
       .sort({ updatedAt: -1 })
       .lean();
@@ -748,7 +754,8 @@ export const getHeldBills = async (req, res) => {
 export const deleteHeldBill = async (req, res) => {
   try {
     const { id } = req.params;
-    await PosSale.deleteOne({ _id: id, status: { $in: ['HELD', 'DRAFT'] } });
+    const removed = await PosSale.deleteOne({ _id: id, status: { $in: ['HELD', 'DRAFT'] }, ...(req.restricted ? { 'store.storeId': { $in: req.posSellerIds } } : {}) });
+    if (req.restricted && !removed.deletedCount) return res.status(404).json({ success: false, message: 'Held bill not found.' });
     return res.status(200).json({ success: true, message: 'Held bill removed.' });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -850,30 +857,31 @@ export const getPosDashboardSummary = async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const own = req.restricted ? { 'store.storeId': { $in: req.posSellerIds.map((x) => new mongoose.Types.ObjectId(String(x))) } } : {};
 
     const [todayCompleted, allCompletedCounter, allDeliveryOrders, pendingPayments, heldBillsCount] = await Promise.all([
       // Today's completed sales
       PosSale.aggregate([
-        { $match: { status: 'COMPLETED', createdAt: { $gte: today } } },
+        { $match: { status: 'COMPLETED', createdAt: { $gte: today }, ...own } },
         { $group: { _id: null, total: { $sum: '$grandTotal' }, count: { $sum: 1 } } },
       ]),
       // Counter sales total
       PosSale.aggregate([
-        { $match: { saleType: 'COUNTER_SALE', status: 'COMPLETED' } },
+        { $match: { saleType: 'COUNTER_SALE', status: 'COMPLETED', ...own } },
         { $group: { _id: null, total: { $sum: '$grandTotal' }, count: { $sum: 1 } } },
       ]),
       // Delivery orders created via POS
       PosSale.aggregate([
-        { $match: { saleType: 'DELIVERY_ORDER', status: 'COMPLETED' } },
+        { $match: { saleType: 'DELIVERY_ORDER', status: 'COMPLETED', ...own } },
         { $group: { _id: null, total: { $sum: '$grandTotal' }, count: { $sum: 1 } } },
       ]),
       // Pending / partial payments
       PosSale.aggregate([
-        { $match: { status: 'COMPLETED', 'payment.status': { $in: ['PARTIAL', 'PENDING'] } } },
+        { $match: { status: 'COMPLETED', 'payment.status': { $in: ['PARTIAL', 'PENDING'] }, ...own } },
         { $group: { _id: null, balanceDue: { $sum: '$payment.balanceDue' }, count: { $sum: 1 } } },
       ]),
       // Held bills count
-      PosSale.countDocuments({ status: { $in: ['HELD', 'DRAFT'] } }),
+      PosSale.countDocuments({ status: { $in: ['HELD', 'DRAFT'] }, ...own }),
     ]);
 
     return res.status(200).json({

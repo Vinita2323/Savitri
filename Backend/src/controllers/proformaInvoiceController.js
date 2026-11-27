@@ -1,3 +1,4 @@
+import { brandUserIds, brandSellerIds } from '../utils/restrictedAdmin.js';
 import mongoose from 'mongoose';
 import ProformaInvoice from '../models/ProformaInvoice.model.js';
 import User from '../models/User.model.js';
@@ -207,6 +208,8 @@ export const getClientsHandler = async (req, res, next) => {
       ];
     }
 
+    if (req.restricted) filter._id = { $in: await brandUserIds(req) };
+
     const users = await User.find(filter)
       .select('name email phone addresses')
       .sort({ createdAt: -1 })
@@ -274,6 +277,9 @@ export const getProductsHandler = async (req, res, next) => {
         { hsnCode: { $regex: term, $options: 'i' } },
       ];
     }
+
+    // a restricted admin picks from their brand's sellers' products and their own store's products
+    if (req.restricted) filter.$and = [{ $or: [{ sellerId: { $in: await brandSellerIds(req) } }, { ownerAdminId: req.user.id }] }];
 
     const products = await Product.find(filter)
       .select('name sku hsnCode salePrice mrp taxRate unit description')

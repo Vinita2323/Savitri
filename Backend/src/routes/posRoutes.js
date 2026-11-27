@@ -1,3 +1,5 @@
+import { markRestrictedAdmin } from '../utils/restrictedAdmin.js';
+import { posBrandGuard } from '../middleware/posBrandGuard.js';
 import express from 'express';
 import { protect } from '../middleware/authMiddleware.js';
 import {
@@ -22,6 +24,7 @@ const router = express.Router();
 // Protect: Super Admin and Admin only
 router.use(protect('admin', 'super_admin', 'super-admin'));
 router.use(resolveBrandScope);
+router.use(markRestrictedAdmin, posBrandGuard);
 
 // Store & Inventory
 router.get('/stores', getPosStores);

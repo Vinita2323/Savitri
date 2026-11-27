@@ -1,3 +1,5 @@
+import { scopeRestrictedAdmin } from '../utils/restrictedAdmin.js';
+import { guardTransportBooking } from '../middleware/brandRecordGuards.js';
 import express from 'express';
 import { protect } from '../middleware/authMiddleware.js';
 import {
@@ -32,13 +34,13 @@ router.post('/verify-payment', customerAuth, verifyTransportPayment);
 
 // ── Admin Transport Routes (MUST be declared before /:bookingId) ──────────────
 // GET  /api/transport/bookings/admin/all — get all platform transport bookings
-router.get('/admin/all', adminAuth, getAdminTransportBookings);
+router.get('/admin/all', adminAuth, scopeRestrictedAdmin, getAdminTransportBookings);
 
 // PUT  /api/transport/bookings/admin/:bookingId/assign-captain — admin manual assign
-router.put('/admin/:bookingId/assign-captain', adminAuth, adminAssignCaptainToTransportBooking);
+router.put('/admin/:bookingId/assign-captain', adminAuth, scopeRestrictedAdmin, guardTransportBooking, adminAssignCaptainToTransportBooking);
 
 // PUT  /api/transport/bookings/admin/:bookingId/cancel — admin cancel booking
-router.put('/admin/:bookingId/cancel', adminAuth, adminCancelTransportBooking);
+router.put('/admin/:bookingId/cancel', adminAuth, scopeRestrictedAdmin, guardTransportBooking, adminCancelTransportBooking);
 
 // ── User Bookings ─────────────────────────────────────────────────────────────
 // POST   /api/transport/bookings            — create booking (Cash on delivery / Direct)

@@ -508,7 +508,9 @@ export const deleteBrand = async (req, res, next) => {
     await Brand.findByIdAndDelete(brand._id);
     // Admins who were authorised for this brand no longer need the reference.
     if (mongoose.models.Admin) {
-      await mongoose.models.Admin.updateMany({ authorizedBrands: brand.brandId }, { $pull: { authorizedBrands: brand.brandId } });
+      // Admins who were limited to specific brands stay limited: removing their last brand must never turn into "all brands"
+      await mongoose.models.Admin.updateMany({ authorizedBrands: { $all: [brand.brandId], $nin: ['*'] } }, { $set: { brandAccess: 'ASSIGNED' } });
+      await mongoose.models.Admin.updateMany({ authorizedBrands: brand.brandId }, { $pull: { authorizedBrands: brand.brandId, exclusiveBrands: brand.brandId } });
     }
 
     res.status(200).json({

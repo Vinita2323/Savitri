@@ -1,3 +1,4 @@
+import { getAdminBrand, ADMIN_BRAND_CHECK_EVENT } from '../utils/adminBrand';
 import axios from 'axios';
 
 export const getBaseApiUrl = () => {
@@ -122,9 +123,10 @@ API.interceptors.request.use(
     }
 
     // Attach Brand / Region Scoping headers for Super Admin requests
+    // Admin panel: a brand-restricted admin's selected brand wins over any Super Admin selection left in this tab
     const activeBrandId =
       typeof sessionStorage !== 'undefined'
-        ? sessionStorage.getItem('savitri_super_admin_brand')
+        ? (currentPath.startsWith('/admin') && getAdminBrand()) || sessionStorage.getItem('savitri_super_admin_brand')
         : null;
     if (activeBrandId) {
       config.headers['X-Brand-Id'] = activeBrandId;
@@ -159,6 +161,10 @@ API.interceptors.response.use(
   (response) => (isStaleBrandResponse(response.config) ? new Promise(() => {}) : response),
   (error) => {
     if (isStaleBrandResponse(error?.config)) return new Promise(() => {});
+    // the selected brand is no longer assigned to this admin: let the Admin panel pick one that still is
+    if (error.response?.status === 403 && ['BRAND_FORBIDDEN', 'NO_BRANDS'].includes(error.response?.data?.code) && typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+      window.dispatchEvent(new CustomEvent(ADMIN_BRAND_CHECK_EVENT));
+    }
     // A Super Admin page that was answered with a non-Super-Admin login (for example a City Admin login left in this browser
     // after the Super Admin session ended): send the person to the Super Admin login instead of showing a confusing error
     if (error.response?.status === 403 && /restricted to super_admin/i.test(String(error.response?.data?.message || '')) && typeof window !== 'undefined' && window.location.pathname.startsWith('/super-admin') && !window.location.pathname.startsWith('/super-admin/login')) {

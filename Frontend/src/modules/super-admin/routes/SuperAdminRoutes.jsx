@@ -68,6 +68,7 @@ const EmployeeRulesPage = lazy(() => import('../../admin/employees/pages/Employe
 const EmployeeSelfieMonitoringPage = lazy(() => import('../../admin/employees/pages/EmployeeSelfieMonitoringPage'));
 const SuperAdminProfilePage = lazy(() => import('../../admin/pages/AdminSubPages').then((m) => ({ default: m.AdminProfile })));
 const SuperAdminDocuments = lazy(() => import('../pages/SuperAdminDocuments').then((m) => ({ default: m.SuperAdminDocuments })));
+const SuperAdminAdminConfig = lazy(() => import('../pages/SuperAdminAdminConfig').then((m) => ({ default: m.SuperAdminAdminConfig })));
 const SuperAdminAdminPurchases = lazy(() => import('../pages/SuperAdminAdminPurchases').then((m) => ({ default: m.SuperAdminAdminPurchases })));
 const EmployeePayrollPage = lazy(() => import('../../admin/employees/pages/EmployeePayrollPage'));
 const EmployeeActivityPage = lazy(() => import('../../admin/employees/pages/EmployeeActivityPage'));
@@ -189,6 +190,7 @@ const SuperAdminRoutesContent = () => {
           <Route path="/seller-settlements" element={<SuperAdminSellerSettlements />} />
           <Route path="/seller-purchases" element={<SuperAdminSellerPurchases />} />
           <Route path="/admin-purchases" element={<SuperAdminAdminPurchases />} />
+          <Route path="/admin-configuration" element={<SuperAdminAdminConfig />} />
           <Route path="/stores" element={<SuperAdminStores />} />
           <Route path="/brands/:brandSlug/stores" element={<SuperAdminStores />} />
           <Route path="/brands" element={<SuperAdminBrands />} />

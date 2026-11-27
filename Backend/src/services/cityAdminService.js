@@ -204,6 +204,9 @@ export const reassign = async ({ brand, body, actor }) => {
     const { city, cityId } = cityOf(brand);
     if (current) { current.status = 'inactive'; revokeSessions(current); addHistory(current, 'REASSIGNED_AWAY', actor); await current.save(); }
     Object.assign(next, { adminType: 'CITY_ADMIN', brandId: brand.brandId, city, cityId, authorizedBrands: [brand.brandId], status: 'active', permissions: readPermissions(body.permissions), assignedBy: { id: actor?.id, name: actor?.name || '' } });
+    // a City Admin holds exactly one brand: brands held through Admin Configuration are released
+    next.brandAccess = undefined;
+    next.exclusiveBrands = undefined;
     revokeSessions(next);
     addHistory(next, 'ASSIGNED', actor, `Assigned to ${brand.name}`);
     await next.save();

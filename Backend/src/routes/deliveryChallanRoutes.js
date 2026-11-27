@@ -1,3 +1,4 @@
+import { markRestrictedAdmin } from '../utils/restrictedAdmin.js';
 import express from 'express';
 import { protect } from '../middleware/authMiddleware.js';
 import {
@@ -20,6 +21,7 @@ const router = express.Router();
 // Apply admin and super-admin authentication to all delivery challan routes
 router.use(protect('admin', 'super_admin', 'super-admin'));
 router.use(resolveBrandScope);
+router.use(markRestrictedAdmin);
 
 // Helper / Lookup endpoints
 router.get('/next-number', getNextChallanNumber);

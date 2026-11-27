@@ -29,6 +29,7 @@ import {
   Clock,
   ShoppingBag,
   Camera,
+  UserCog,
   FileText,
   IdCard,
   MapPinned,
@@ -113,6 +114,11 @@ export const SuperAdminSidebar = () => {
           to: '/super-admin/brands',
           label: 'Business Brands',
           icon: Building2,
+        },
+        {
+          to: '/super-admin/admin-configuration',
+          label: 'Admin Configuration',
+          icon: UserCog,
         },
         {
           to: '/super-admin/stores',

@@ -58,6 +58,11 @@ const adminSchema = new mongoose.Schema(
       default: undefined,
     },
 
+    // 'ASSIGNED' = managed in Admin Configuration: only the listed brands, and an empty list means no brand (never "all").
+    brandAccess: { type: String, enum: ['ASSIGNED'], default: undefined },
+    // The brands this admin holds exclusively (not shared). A unique index stops two admins taking the same brand at once.
+    exclusiveBrands: { type: [String], default: undefined },
+
     // ── City Admin (an admin tied to exactly ONE brand / city). Unset on every other admin account. ──
     adminType: { type: String, enum: ['CITY_ADMIN'], default: undefined },
     brandId: { type: String, trim: true, default: undefined },
@@ -90,6 +95,7 @@ adminSchema.methods.matchPassword = async function (enteredPassword) {
 // One ACTIVE City Admin per brand; usernames are unique when present (autoIndex is off: see ensureCityAdminIndexes)
 adminSchema.index({ brandId: 1 }, { unique: true, partialFilterExpression: { adminType: 'CITY_ADMIN', status: 'active' } });
 adminSchema.index({ username: 1 }, { unique: true, sparse: true });
+adminSchema.index({ exclusiveBrands: 1 }, { unique: true, partialFilterExpression: { 'exclusiveBrands.0': { $exists: true } } });
 
 const Admin = mongoose.model('Admin', adminSchema);
 export default Admin;

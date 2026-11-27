@@ -1,3 +1,5 @@
+import { getScopedOrderIds } from '../middleware/scopeMiddleware.js';
+import { transportBrandFilter } from '../middleware/brandRecordGuards.js';
 import CommissionSettings from '../models/CommissionSettings.model.js';
 import DeliveryPricing from '../models/DeliveryPricing.model.js';
 import Order from '../models/Order.model.js';
@@ -254,6 +256,8 @@ export const getCommissionReports = async (req, res, next) => {
       orderQuery.orderId = { $regex: String(orderId).trim(), $options: 'i' };
     }
 
+    if (req.restricted) orderQuery._id = { $in: (await getScopedOrderIds(req.scope)) || [] };
+
     // Fetch matching Orders with seller & captain populated (optimized projection)
     const ordersPromise = Order.find(orderQuery)
       .select('orderId items shippingAddress paymentMethod paymentStatus orderStatus grandTotal itemsTotal sellerCommissionRate sellerCommissionAmount sellerEarning captainCommissionRate captainCommissionAmount captainEarnings captainEarning captainStatus createdAt')
@@ -270,6 +274,8 @@ export const getCommissionReports = async (req, res, next) => {
     if (orderId) {
       bookingQuery.bookingId = { $regex: String(orderId).trim(), $options: 'i' };
     }
+
+    if (req.restricted) Object.assign(bookingQuery, await transportBrandFilter(req));
 
     const bookingsPromise = TransportBooking.find(bookingQuery)
       .select('bookingId fareBreakdown paymentMethod paymentStatus status captainCommissionRate captainCommissionAmount captainEarnings captainEarning createdAt')

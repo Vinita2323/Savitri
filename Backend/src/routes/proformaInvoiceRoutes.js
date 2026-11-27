@@ -1,3 +1,4 @@
+import { markRestrictedAdmin } from '../utils/restrictedAdmin.js';
 import express from 'express';
 import { protect } from '../middleware/authMiddleware.js';
 import {
@@ -23,6 +24,7 @@ const router = express.Router();
 // Require admin or super-admin role for all Proforma Invoice operations
 router.use(protect('admin', 'super_admin', 'super-admin'));
 router.use(resolveBrandScope);
+router.use(markRestrictedAdmin);
 
 // Helper lookups
 router.get('/next-number', getNextProformaNumberHandler);

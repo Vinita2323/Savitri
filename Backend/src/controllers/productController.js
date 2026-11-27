@@ -13,6 +13,7 @@ import { getEligibleSellersForLocation, isValidCoordinate } from '../utils/selle
 import { evaluateSellerStorefrontEligibility, evaluateProductSellerEligibility } from '../utils/sellerEligibility.js';
 import { getEffectiveStock, syncRootStockFromVariants } from '../utils/productStock.js';
 import { canAccessProduct, canAccessSellerId } from '../utils/accessControl.js';
+import { isStrictAdmin, assignedBrandIds } from '../utils/adminAccess.js';
 import { normalizeRole } from '../middleware/authMiddleware.js';
 import { normalizeProductShipping } from '../utils/shippingValidation.js';
 
@@ -295,7 +296,7 @@ export const getProducts = async (req, res) => {
     const viewer = isAdminOrInternal ? 'adm' : ownSellerView ? `own:${req.user.id}` : 'cust';
 
     const cacheKey = `${req.originalUrl}_${userLat || 'none'}_${userLng || 'none'}_${viewer}`;
-    const cached = productsCache.get(cacheKey);
+    const cached = isAdminOrInternal ? null : productsCache.get(cacheKey);
     if (cached && (now - cached.timestamp < 10000)) {
       return res.status(200).json(cached.data);
     }
@@ -344,11 +345,16 @@ export const getProducts = async (req, res) => {
       const intersect = (ids) => { const set = new Set(ids.map(String)); allowedSellerIds = allowedSellerIds === null ? [...set] : allowedSellerIds.filter((x) => set.has(x)); };
       let brandIds = null;
       if (viewerRole === 'admin') {
-        const me = await Admin.findById(req.user.id).select('authorizedBrands').lean();
+        const me = await Admin.findById(req.user.id).select('authorizedBrands brandAccess adminType').lean();
         const list = me?.authorizedBrands;
-        if (Array.isArray(list) && list.length > 0 && !list.includes('*')) brandIds = list;
+        if (isStrictAdmin(me)) brandIds = assignedBrandIds(me); // strict: an empty list shows nothing
+        else if (Array.isArray(list) && list.length > 0 && !list.includes('*')) brandIds = list;
       }
       const brandHeader = String(req.headers['x-brand-id'] || '').trim();
+      // a brand-restricted admin naming a brand that is not theirs is refused, as on every other admin API
+      if (viewerRole === 'admin' && brandIds && brandHeader && brandHeader.toUpperCase() !== 'ALL' && !brandIds.includes(brandHeader)) {
+        return res.status(403).json({ success: false, code: 'BRAND_FORBIDDEN', message: 'Forbidden: You are not authorized to access records for this brand.' });
+      }
       if (brandHeader && brandHeader.toUpperCase() !== 'ALL') brandIds = brandIds ? brandIds.filter((b) => b === brandHeader) : [brandHeader];
       if (brandIds) intersect((await Seller.find({ brandId: { $in: brandIds } }).select('_id').lean()).map((x) => x._id));
       if (isId(req.query.adminSellerId)) intersect([req.query.adminSellerId]);

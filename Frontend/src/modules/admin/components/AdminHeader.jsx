@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/useAdmin';
+import { AdminBrandSwitcher } from './AdminBrandGate';
 import { useAuth } from '../../../context/AuthContext';
 import { authService } from '../../../services/authService';
 import { X, Menu, Settings, Bell, User, LogOut } from 'lucide-react';
@@ -28,7 +29,7 @@ export const AdminHeader = () => {
   return (
     <header className="h-16 sm:h-20 bg-white border-b border-slate-200/80 px-3 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-xs font-sans relative">
       {/* Left Section: Toggle Button */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         <button 
           onClick={toggleSidebar}
           className="p-1.5 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors border-none bg-transparent cursor-pointer"
@@ -36,6 +37,7 @@ export const AdminHeader = () => {
         >
           {sidebarOpen ? <X size={20} className="text-slate-700" /> : <Menu size={20} className="text-slate-700" />}
         </button>
+        <AdminBrandSwitcher />
       </div>
 
       {/* Middle Section: Navigation Links */}

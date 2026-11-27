@@ -1,3 +1,4 @@
+import { brandUserIds } from '../utils/restrictedAdmin.js';
 import mongoose from 'mongoose';
 import DeliveryChallan from '../models/DeliveryChallan.model.js';
 import Order from '../models/Order.model.js';
@@ -165,6 +166,8 @@ export const getClients = async (req, res, next) => {
     ]);
 
     const orderUserIds = clientOrderCounts.map((c) => c._id).filter(Boolean);
+
+    if (req.restricted) filter._id = { $in: await brandUserIds(req) };
 
     const users = await User.find(filter)
       .select('name phone email addresses createdAt status')

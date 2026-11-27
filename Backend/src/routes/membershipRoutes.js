@@ -1,3 +1,4 @@
+import { scopeRestrictedAdmin } from '../utils/restrictedAdmin.js';
 import express from 'express';
 import { protect } from '../middleware/authMiddleware.js';
 import {
@@ -41,12 +42,12 @@ router.post('/admin/captain/plans', protect('admin', 'super_admin'), adminCreate
 router.put('/admin/captain/plans/:id', protect('admin', 'super_admin'), adminUpdateCaptainPlan);
 router.put('/admin/captain/plans/:id/toggle', protect('admin', 'super_admin'), adminToggleCaptainPlan);
 router.delete('/admin/captain/plans/:id', protect('admin', 'super_admin'), adminDeleteCaptainPlan);
-router.get('/admin/seller/subscriptions', protect('admin', 'super_admin'), adminGetSellerSubscriptions);
-router.get('/admin/captain/subscriptions', protect('admin', 'super_admin'), adminGetCaptainSubscriptions);
+router.get('/admin/seller/subscriptions', protect('admin', 'super_admin'), scopeRestrictedAdmin, adminGetSellerSubscriptions);
+router.get('/admin/captain/subscriptions', protect('admin', 'super_admin'), scopeRestrictedAdmin, adminGetCaptainSubscriptions);
 router.put('/admin/seller/subscriptions/:id/confirm-payment', protect('super_admin'), adminConfirmSellerPayment);
 router.put('/admin/captain/subscriptions/:id/confirm-payment', protect('super_admin'), adminConfirmCaptainPayment);
-router.get('/admin/seller/stats', protect('admin', 'super_admin'), adminGetSellerMembershipStats);
-router.get('/admin/captain/stats', protect('admin', 'super_admin'), adminGetCaptainMembershipStats);
+router.get('/admin/seller/stats', protect('admin', 'super_admin'), scopeRestrictedAdmin, adminGetSellerMembershipStats);
+router.get('/admin/captain/stats', protect('admin', 'super_admin'), scopeRestrictedAdmin, adminGetCaptainMembershipStats);
 router.post('/admin/check-expiry', protect('admin', 'super_admin'), adminCheckExpiry);
 
 export default router;

@@ -1,3 +1,4 @@
+import { brandSellerIds, brandCaptainIds } from '../utils/restrictedAdmin.js';
 import crypto from 'crypto';
 import SellerMembershipPlan from '../models/SellerMembershipPlan.model.js';
 import CaptainMembershipPlan from '../models/CaptainMembershipPlan.model.js';
@@ -799,6 +800,7 @@ export const adminGetSellerSubscriptions = async (req, res, next) => {
     const query = {};
     if (status) query.membershipStatus = status;
     if (planId) query.planId = planId;
+    if (req.restricted) query.sellerId = { $in: await brandSellerIds(req) };
 
     let subscriptions = await SellerMembership.find(query)
       .populate('sellerId', 'businessName phone email ownerName')
@@ -834,6 +836,7 @@ export const adminGetCaptainSubscriptions = async (req, res, next) => {
     const query = {};
     if (status) query.membershipStatus = status;
     if (planId) query.planId = planId;
+    if (req.restricted) query.captainId = { $in: await brandCaptainIds(req) };
 
     let subscriptions = await CaptainMembership.find(query)
       .populate('captainId', 'name phone email')
@@ -993,13 +996,14 @@ export const adminCheckExpiry = async (req, res, next) => {
 // ============================================================
 export const adminGetSellerMembershipStats = async (req, res, next) => {
   try {
+    const own = req.restricted ? { sellerId: { $in: await brandSellerIds(req) } } : {};
     const totalRevenue = await SellerMembership.aggregate([
-      { $match: { paymentStatus: 'paid' } },
+      { $match: { paymentStatus: 'paid', ...own } },
       { $group: { _id: null, total: { $sum: '$priceAtPurchase' } } },
     ]);
-    const activeCount = await SellerMembership.countDocuments({ membershipStatus: 'active' });
-    const pendingCount = await SellerMembership.countDocuments({ membershipStatus: 'pending_payment' });
-    const expiredCount = await SellerMembership.countDocuments({ membershipStatus: 'expired' });
+    const activeCount = await SellerMembership.countDocuments({ membershipStatus: 'active', ...own });
+    const pendingCount = await SellerMembership.countDocuments({ membershipStatus: 'pending_payment', ...own });
+    const expiredCount = await SellerMembership.countDocuments({ membershipStatus: 'expired', ...own });
 
     res.status(200).json({
       success: true,
@@ -1020,13 +1024,14 @@ export const adminGetSellerMembershipStats = async (req, res, next) => {
 // ============================================================
 export const adminGetCaptainMembershipStats = async (req, res, next) => {
   try {
+    const own = req.restricted ? { captainId: { $in: await brandCaptainIds(req) } } : {};
     const totalRevenue = await CaptainMembership.aggregate([
-      { $match: { paymentStatus: 'paid' } },
+      { $match: { paymentStatus: 'paid', ...own } },
       { $group: { _id: null, total: { $sum: '$priceAtPurchase' } } },
     ]);
-    const activeCount = await CaptainMembership.countDocuments({ membershipStatus: 'active' });
-    const pendingCount = await CaptainMembership.countDocuments({ membershipStatus: 'pending_payment' });
-    const expiredCount = await CaptainMembership.countDocuments({ membershipStatus: 'expired' });
+    const activeCount = await CaptainMembership.countDocuments({ membershipStatus: 'active', ...own });
+    const pendingCount = await CaptainMembership.countDocuments({ membershipStatus: 'pending_payment', ...own });
+    const expiredCount = await CaptainMembership.countDocuments({ membershipStatus: 'expired', ...own });
 
     res.status(200).json({
       success: true,

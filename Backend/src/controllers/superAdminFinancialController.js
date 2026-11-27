@@ -1,3 +1,4 @@
+import { isRestrictedAdmin } from '../utils/restrictedAdmin.js';
 import mongoose from 'mongoose';
 import PlatformLedger from '../models/PlatformLedger.model.js';
 import PayoutRequest from '../models/PayoutRequest.model.js';
@@ -1791,7 +1792,8 @@ export const getSuperAdminStores = async (req, res, next) => {
     });
 
     // Lookup brand metadata
-    const allBrands = await Brand.find({}, 'name code city logo brandId').lean();
+    const brandVisibility = (await isRestrictedAdmin(req.user)) ? { brandId: { $in: req.user.authorizedBrands || [] } } : {};
+    const allBrands = await Brand.find(brandVisibility, 'name code city logo brandId').lean();
     const brandMap = {};
     allBrands.forEach((b) => {
       brandMap[b.brandId] = b;
@@ -1947,7 +1949,7 @@ export const getSuperAdminStoreById = async (req, res, next) => {
       if (!isMatch) {
         return res.status(403).json({
           success: false,
-          message: `Access denied: Store "${seller.businessName}" does not belong to authorized brand scope (${scope.brand?.name || scope.brandId}).`,
+          message: 'Access denied: this store does not belong to your selected brand.',
         });
       }
     }
