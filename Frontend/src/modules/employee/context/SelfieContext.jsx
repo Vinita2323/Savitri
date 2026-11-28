@@ -1,5 +1,11 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import employeePortalService from '../../../services/employeePortalService';
+import { playRing, stopRing, unlockRingOnFirstInteraction } from '../../../utils/notificationRing';
+
+// The reminder that last rang on this device (kept for the browser session), so each reminder rings once, not on every check
+const RUNG_KEY = 'savitri_selfie_rung';
+const readRung = () => { try { return sessionStorage.getItem(RUNG_KEY) || ''; } catch { return ''; } };
+const saveRung = (k) => { try { sessionStorage.setItem(RUNG_KEY, k); } catch { /* storage unavailable */ } };
 
 const SelfieContext = createContext(null);
 
@@ -13,6 +19,7 @@ export const SelfieProvider = ({ children }) => {
   const [loaded, setLoaded] = useState(false);
   const [, setTick] = useState(0);
   const offset = useRef(0); // server clock minus this device's clock
+  const rung = useRef(readRung());
 
   const refresh = useCallback(async () => {
     try {
@@ -25,6 +32,26 @@ export const SelfieProvider = ({ children }) => {
     } finally {
       setLoaded(true);
     }
+  }, []);
+
+  // Ring (the captain's notification sound) when a periodic selfie becomes due, is overdue, or was missed and can still be
+  // taken; stop when done. Not for the login selfie: that screen already opens the camera full screen.
+  useEffect(() => {
+    if (!status) return;
+    const actionable = Boolean(status.required && status.canCapture && !status.loginRequired && ['DUE_SOON', 'OVERDUE', 'MISSED'].includes(status.currentStatus));
+    if (!actionable) { stopRing(); return; }
+    const key = `${status.currentStatus}|${status.nextDueAt || ''}`;
+    if (key === rung.current) return;
+    rung.current = key;
+    saveRung(key);
+    playRing();
+  }, [status]);
+
+  useEffect(() => {
+    unlockRingOnFirstInteraction();
+    const onStop = () => stopRing();
+    window.addEventListener('employee-selfie-ring-stop', onStop);
+    return () => { window.removeEventListener('employee-selfie-ring-stop', onStop); stopRing(); };
   }, []);
 
   useEffect(() => {

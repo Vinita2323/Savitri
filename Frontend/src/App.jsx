@@ -26,6 +26,7 @@ import { NotificationProvider } from './modules/user/context/NotificationContext
 import { LocationProvider } from './context/LocationContext';
 import { AuthProvider } from './context/AuthContext';
 import { initializePushNotifications, setupForegroundNotificationHandler } from './services/pushNotificationService';
+import { playRing } from './utils/notificationRing';
 
 function App() {
   const location = useLocation();
@@ -42,6 +43,11 @@ function App() {
 
     setupForegroundNotificationHandler((payload) => {
       console.log('🔔 [App Notification Received]:', payload);
+      // a selfie reminder for an employee rings with the same sound captains hear, and refreshes the selfie status at once
+      if (/^selfie_(due|overdue|missed)$/.test(String(payload?.data?.type || '')) && window.location.pathname.startsWith('/employee')) {
+        playRing();
+        window.dispatchEvent(new CustomEvent('employee-selfie-changed'));
+      }
       // Optional direct navigation if deep link provided
       if (payload?.data?.link) {
         // Handled or displayed via in-app toast

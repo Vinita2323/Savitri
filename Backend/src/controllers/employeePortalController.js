@@ -19,6 +19,8 @@ import { adminCoversBrand } from '../utils/adminAccess.js';
 import { generateToken } from '../utils/generateToken.js';
 import { uploadToCloudinary } from '../config/cloudinary.js';
 import { EMPLOYEE_BLOCKED_STATUSES } from '../middleware/employeeAuth.js';
+import { generateOtp, getMockOtp } from '../utils/generateOtp.js';
+import { sendOtpSMS } from '../services/smsIndiaHubService.js';
 import {
   istDateString,
   istMidnight,
@@ -105,6 +107,98 @@ const noteFailure = (key) => {
     f.count = 0;
   }
   failures.set(key, f);
+};
+
+// ── forgot password: a 6-digit code sent by SMS to the employee's registered mobile number ──
+const RESET_CODE_MS = 10 * 60 * 1000; // a code works for 10 minutes
+const RESEND_AFTER_MS = 60 * 1000; // a new code at most once a minute
+const MAX_SENDS_PER_HOUR = 5;
+const MAX_CODE_ATTEMPTS = 5; // wrong codes before the code stops working
+// The same answer whether or not the account exists, so nobody can find out which numbers or emails are registered.
+const RESET_SENT = 'If this email or mobile number belongs to an employee account, a 6-digit code has been sent by SMS to its registered mobile number. It is valid for 10 minutes.';
+const RESET_BAD_CODE = 'This code is not valid or has expired. Please request a new code.';
+const resetHash = (empId, code) => crypto.createHash('sha256').update(`${empId}:${String(code).trim()}`).digest('hex');
+const sameHash = (a, b) => a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+
+const findByIdentifier = (identifier, extra = '') => {
+  const isEmail = identifier.includes('@');
+  const query = isEmail ? { email: identifier.toLowerCase() } : { phone: normalizePhone(identifier) };
+  if (!isEmail && query.phone.length !== 10) return null;
+  return Employee.findOne(query).select(`+passwordReset ${extra}`.trim());
+};
+
+const canResetPassword = (emp) => emp && (emp.registrationStatus || 'Approved') === 'Approved'
+  && !EMPLOYEE_BLOCKED_STATUSES.includes(emp.employmentStatus) && normalizePhone(emp.phone).length === 10;
+
+/** POST /employee-portal/forgot-password: sends the code (if the account exists and may sign in). Always the same answer. */
+export const forgotPasswordSendCode = async (req, res) => {
+  try {
+    const identifier = str(req.body?.identifier || req.body?.email || req.body?.mobile, 150);
+    if (!identifier) return fail(res, 400, 'Enter your email or mobile number.');
+    const emp = await findByIdentifier(identifier);
+    const answer = () => res.json({ success: true, message: RESET_SENT, resendAfterSeconds: RESEND_AFTER_MS / 1000 });
+    if (!canResetPassword(emp)) return answer();
+
+    const now = Date.now();
+    const pr = emp.passwordReset || {};
+    if (pr.sentAt && now - new Date(pr.sentAt).getTime() < RESEND_AFTER_MS) return answer(); // the code sent a moment ago still works
+    const newWindow = !pr.windowStart || now - new Date(pr.windowStart).getTime() > 60 * 60 * 1000;
+    const sends = newWindow ? 0 : pr.sends || 0;
+    if (sends >= MAX_SENDS_PER_HOUR) return answer();
+
+    const { otp } = generateOtp();
+    emp.passwordReset = {
+      codeHash: resetHash(emp._id, otp), expiresAt: new Date(now + RESET_CODE_MS), attempts: 0,
+      sentAt: new Date(now), sends: sends + 1, windowStart: newWindow ? new Date(now) : pr.windowStart,
+    };
+    await emp.save();
+    const sms = await sendOtpSMS({ phone: emp.phone, otp, role: 'employee' }).catch((e) => ({ success: false, message: e.message }));
+    if (!sms?.success) console.warn('[EmployeePortal] password reset SMS not sent:', sms?.message);
+    await logActivity({ action: 'password_reset_requested', actor: { name: emp.fullName, role: 'employee' }, employee: emp, ip: clientIp(req) });
+    return answer();
+  } catch (err) {
+    return serverError(res, err);
+  }
+};
+
+/** POST /employee-portal/reset-password: checks the code and sets the new password. All sessions are signed out. */
+export const resetPasswordWithCode = async (req, res) => {
+  try {
+    const identifier = str(req.body?.identifier || req.body?.email || req.body?.mobile, 150);
+    const code = str(String(req.body?.code ?? req.body?.otp ?? ''), 10);
+    const newPassword = typeof req.body?.newPassword === 'string' ? req.body.newPassword : '';
+    if (!identifier || !/^\d{6}$/.test(code)) return fail(res, 400, 'Enter the 6-digit code from the SMS.');
+    if (!PASSWORD_RULE.test(newPassword)) return fail(res, 400, 'New password must be at least 8 characters and include a letter and a number.');
+
+    const emp = await findByIdentifier(identifier, '+password');
+    const pr = emp?.passwordReset;
+    if (!canResetPassword(emp) || !pr?.codeHash || !pr.expiresAt || new Date(pr.expiresAt).getTime() < Date.now()) return fail(res, 400, RESET_BAD_CODE, { code: 'CODE_INVALID' });
+    if ((pr.attempts || 0) >= MAX_CODE_ATTEMPTS) {
+      emp.passwordReset = { ...pr.toObject(), codeHash: '', expiresAt: null };
+      await emp.save();
+      return fail(res, 400, 'Too many wrong codes. Please request a new code.', { code: 'CODE_INVALID' });
+    }
+    const mock = getMockOtp(); // development only: the fixed test code, never set in production
+    const right = sameHash(resetHash(emp._id, code), pr.codeHash) || Boolean(mock && code === mock);
+    if (!right) {
+      const attempts = (pr.attempts || 0) + 1;
+      emp.passwordReset = { ...pr.toObject(), attempts };
+      await emp.save();
+      const left = MAX_CODE_ATTEMPTS - attempts;
+      return fail(res, 400, left > 0 ? `The code is not correct. ${left} attempt(s) left.` : 'Too many wrong codes. Please request a new code.', { code: left > 0 ? 'CODE_WRONG' : 'CODE_INVALID' });
+    }
+
+    emp.password = await bcrypt.hash(newPassword, 10);
+    emp.tokenVersion = (emp.tokenVersion || 0) + 1; // every device is signed out
+    emp.passwordReset = undefined;
+    await emp.save();
+    failures.delete(identifier.toLowerCase());
+    await logActivity({ action: 'password_reset_by_code', actor: { name: emp.fullName, role: 'employee' }, employee: emp, ip: clientIp(req) });
+    await notifyEmployee(emp, { type: 'password_changed', title: 'Password changed', message: 'Your password was reset using a code sent to your mobile number. If this was not you, contact your administrator at once.' }).catch(() => {});
+    return res.json({ success: true, message: 'Your password has been changed. Please sign in with your new password.' });
+  } catch (err) {
+    return serverError(res, err);
+  }
 };
 
 const signEmployeeToken = (emp, sessionId) =>

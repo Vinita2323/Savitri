@@ -140,6 +140,19 @@ const employeeSchema = new mongoose.Schema(
     // Web push (FCM) device tokens, used for reminders when the app is in the background
     fcmTokens: { type: [String], default: [], select: false },
     registrationSource: { type: String, enum: ['self', 'admin'], default: 'admin' },
+    // "Forgot password": the one-time code sent by SMS, stored only as a hash. Never returned by any API.
+    passwordReset: {
+      type: new mongoose.Schema({
+        codeHash: { type: String, default: '' },
+        expiresAt: { type: Date, default: null },
+        attempts: { type: Number, default: 0 }, // wrong codes entered for this code
+        sentAt: { type: Date, default: null },
+        sends: { type: Number, default: 0 }, // codes sent in the current hour
+        windowStart: { type: Date, default: null },
+      }, { _id: false }),
+      select: false,
+      default: undefined,
+    },
     // Bumped on password reset / deactivation so older tokens stop working immediately.
     tokenVersion: { type: Number, default: 0 },
     lastLoginAt: { type: Date, default: null },

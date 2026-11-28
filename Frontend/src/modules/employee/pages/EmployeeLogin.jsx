@@ -14,6 +14,7 @@ export default function EmployeeLogin() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const justRegistered = location.state?.registered;
+  const passwordReset = location.state?.passwordReset;
 
   if (!checking && isAuthenticated) return <Navigate to="/employee/dashboard" replace />;
 
@@ -47,13 +48,14 @@ export default function EmployeeLogin() {
         </div>
 
         {justRegistered && <div className="mb-4"><Notice type="success">Registration submitted. You can log in once an administrator approves your account.</Notice></div>}
+        {passwordReset && !error && <div className="mb-4" data-testid="emp-reset-done"><Notice type="success">{passwordReset}</Notice></div>}
         {error && <div className="mb-4"><Notice type="error">{error}</Notice></div>}
 
         <form onSubmit={submit} className="space-y-4" noValidate autoComplete="off">
           <Field label="Email or mobile number">
             <input className={inputCls} value={identifier} onChange={(e) => setIdentifier(e.target.value)} name="employee-login-id" autoComplete="off" placeholder="you@company.com or 98XXXXXXXX" autoFocus />
           </Field>
-          <Field label="Password">
+          <Field label={<span className="flex items-center justify-between gap-2"><span>Password</span><Link to="/employee/forgot-password" data-testid="emp-forgot-link" className="text-xs font-semibold text-emerald-700 hover:underline">Forgot password?</Link></span>}>
             <div className="relative">
               <input className={`${inputCls} pr-11`} type={show ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} name="employee-login-secret" autoComplete="new-password" placeholder="Your password" />
               <button type="button" onClick={() => setShow((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer bg-transparent border-0" aria-label={show ? 'Hide password' : 'Show password'}>

@@ -41,6 +41,8 @@ export const employeePortalService = {
   admins: (brandId) => unwrap(API.get(`${P}/public/admins`, { params: { brandId } }), 'Could not load admins').then((d) => d.admins || []),
   register: (body) => unwrap(API.post(`${P}/register`, body), 'Registration failed'),
   login: (identifier, password) => unwrap(API.post(`${P}/login`, { identifier, password }), 'Login failed'),
+  forgotPassword: (identifier) => unwrap(API.post(`${P}/forgot-password`, { identifier }), 'Could not send the code. Please try again.'),
+  resetPassword: (identifier, code, newPassword) => unwrap(API.post(`${P}/reset-password`, { identifier, code, newPassword }), 'Could not change the password.'),
 
   // authenticated
   logout: () => API.post(`${P}/logout`).catch(() => null),

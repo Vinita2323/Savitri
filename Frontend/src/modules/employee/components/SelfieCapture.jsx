@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import employeePortalService from '../../../services/employeePortalService';
 import LiveCamera from './LiveCamera';
@@ -17,6 +17,8 @@ export default function SelfieCapture({ type, onDone }) {
   const [error, setError] = useState(null);
   const [camKey, setCamKey] = useState(0);
   const [result, setResult] = useState(null);
+  // the reminder ring stops as soon as the camera is open
+  useEffect(() => { window.dispatchEvent(new Event('employee-selfie-ring-stop')); }, []);
 
   const submit = async (blob, meta) => {
     setPhase('uploading');

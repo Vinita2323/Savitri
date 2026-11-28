@@ -29,6 +29,11 @@ try {
       badge: '/LogoSavitri.png',
       data: payload.data || {},
     };
+    // Selfie reminders: phones play their own notification sound here (a web page cannot choose it), so make them hard to
+    // miss: vibrate, and stay on screen until tapped. The ring itself plays as soon as the employee portal is open.
+    if (/^selfie_(due|overdue|login_required|missed)$/.test(String(payload.data?.type || ''))) {
+      Object.assign(notificationOptions, { tag: 'selfie-reminder', renotify: true, requireInteraction: true, vibrate: [400, 200, 400, 200, 800] });
+    }
 
     return self.registration.showNotification(notificationTitle, notificationOptions);
   });

@@ -143,7 +143,7 @@ export const SelfieReminderBanner = () => {
     <div data-testid="selfie-banner" data-status={s} role="alert" className={`mb-4 flex flex-wrap items-center gap-3 rounded-2xl border px-4 py-3 ${overdue ? 'bg-rose-50 border-rose-300 text-rose-900' : 'bg-amber-50 border-amber-300 text-amber-900'}`}>
       {overdue ? <AlertTriangle className="w-5 h-5 shrink-0" /> : <Clock className="w-5 h-5 shrink-0" />}
       <p className="m-0 text-sm font-semibold flex-1 min-w-[200px]">{text}</p>
-      {status.canCapture && <Link to="/employee/selfie?capture=1" data-testid="selfie-banner-btn" className={`${btnPrimary} no-underline ${overdue ? '!bg-rose-600 hover:!bg-rose-700' : ''}`}><Camera className="w-4 h-4" /> Capture Live Selfie</Link>}
+      {status.canCapture && <Link to="/employee/selfie?capture=1" onClick={() => window.dispatchEvent(new Event('employee-selfie-ring-stop'))} data-testid="selfie-banner-btn" className={`${btnPrimary} no-underline ${overdue ? '!bg-rose-600 hover:!bg-rose-700' : ''}`}><Camera className="w-4 h-4" /> Capture Live Selfie</Link>}
     </div>
   );
 };

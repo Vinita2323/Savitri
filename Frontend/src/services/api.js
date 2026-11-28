@@ -68,6 +68,8 @@ API.interceptors.request.use(
       requestUrl.includes('/auth/user/verify-otp') ||
       requestUrl.includes('/employee-portal/login') ||
       requestUrl.includes('/employee-portal/register') ||
+      requestUrl.includes('/employee-portal/forgot-password') ||
+      requestUrl.includes('/employee-portal/reset-password') ||
       requestUrl.includes('/employee-portal/public');
 
     if (isPublicAuthEndpoint) {
@@ -188,7 +190,7 @@ API.interceptors.response.use(
       const currentPath = (typeof window !== 'undefined' && window.location && window.location.pathname) ? window.location.pathname : '';
 
       if (currentPath.startsWith('/employee/')) {
-        if (!currentPath.startsWith('/employee/login') && !currentPath.startsWith('/employee/register')) {
+        if (!currentPath.startsWith('/employee/login') && !currentPath.startsWith('/employee/register') && !currentPath.startsWith('/employee/forgot-password')) {
           localStorage.removeItem('savitri_employee_token');
           localStorage.removeItem('savitri_employee_data');
           sessionStorage.setItem('savitri_employee_auth_expired_redirect', currentPath);

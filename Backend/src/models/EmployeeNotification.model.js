@@ -24,6 +24,7 @@ const employeeNotificationSchema = new mongoose.Schema(
         'selfie_submitted',
         'selfie_overdue',
         'selfie_missed',
+        'password_changed',
         'general',
       ],
       default: 'general',

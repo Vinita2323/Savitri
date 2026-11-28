@@ -6,6 +6,7 @@ import { Spinner } from '../components/ui';
 
 const EmployeeLogin = lazy(() => import('../pages/EmployeeLogin'));
 const EmployeeRegister = lazy(() => import('../pages/EmployeeRegister'));
+const EmployeeForgotPassword = lazy(() => import('../pages/EmployeeForgotPassword'));
 const PortalDashboard = lazy(() => import('../pages/PortalDashboard'));
 const PortalAttendance = lazy(() => import('../pages/PortalAttendance'));
 const PortalTasks = lazy(() => import('../pages/PortalTasks'));
@@ -36,6 +37,7 @@ export default function EmployeeRoutes() {
         <Routes>
           <Route path="login" element={<EmployeeLogin />} />
           <Route path="register" element={<EmployeeRegister />} />
+          <Route path="forgot-password" element={<EmployeeForgotPassword />} />
           <Route element={<EmployeeProtected />}>
             <Route element={<EmployeeLayout />}>
               <Route path="dashboard" element={<PortalDashboard />} />

@@ -12,6 +12,8 @@ import {
   getPublicAdmins,
   registerEmployee,
   loginEmployee,
+  forgotPasswordSendCode,
+  resetPasswordWithCode,
   logoutEmployee,
   checkOutEmployee,
   checkInEmployee,
@@ -77,6 +79,9 @@ router.get('/public/departments', simpleRateLimit({ windowMs: 60_000, max: 60 })
 router.get('/public/admins', simpleRateLimit({ windowMs: 60_000, max: 60 }), getPublicAdmins);
 router.post('/register', simpleRateLimit({ windowMs: 60_000, max: 8 }), registerEmployee);
 router.post('/login', simpleRateLimit({ windowMs: 60_000, max: 20 }), loginEmployee);
+// Forgot password (no login): a code by SMS, then a new password. Both limited per address as well as per account.
+router.post('/forgot-password', simpleRateLimit({ windowMs: 60_000, max: 5 }), forgotPasswordSendCode);
+router.post('/reset-password', simpleRateLimit({ windowMs: 60_000, max: 10 }), resetPasswordWithCode);
 
 // ── authenticated employee only: everything below is scoped to req.employee, never to an id in the request ──
 router.use(protectEmployee);
