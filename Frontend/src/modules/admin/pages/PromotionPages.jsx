@@ -1345,7 +1345,7 @@ export const PromoFlashSale = () => {
   useEffect(() => {
     const fetchLiveFlashProducts = async () => {
       try {
-        const res = await productService.getProducts({ section: 'flash_sale', admin: 'true' });
+        const res = await productService.getAllProducts({ section: 'flash_sale', admin: 'true' });
         if (res && res.products && Array.isArray(res.products) && res.products.length > 0) {
           const formatted = res.products.map((p, idx) => ({
             _id: p._id,

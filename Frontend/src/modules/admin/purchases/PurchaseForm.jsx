@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Trash2, Upload } from 'lucide-react';
+import { Camera, Plus, Trash2, Upload, X } from 'lucide-react';
 import adminPurchaseService from '../../../services/adminPurchaseService';
+import SupplierNameInput from '../../../components/SupplierNameInput';
 import { Card, Notice, btnGhost, btnPrimary, inputCls } from '../../employee/components/ui';
 import { Labeled, Modal, fmtMoney, parsePaise, parsePct, mulDivInt, today, METHODS } from './purchaseUi';
 
@@ -39,6 +40,10 @@ export default function PurchaseForm({ onSaved }) {
   const [f, setF] = useState({ supplierName: '', supplierPhone: '', supplierEmail: '', supplierAddress: '', purchaseDate: today(), discount: '', additionalExpenses: '', paymentStatus: 'PAID', paymentMethod: 'CASH', paidAmount: '', invoiceNumber: '', notes: '' });
   const [invoice, setInvoice] = useState(null);
   const [uploading, setUploading] = useState(false);
+  // photos of the goods as proof: [{ key, name, mime, size, preview }]
+  const [photos, setPhotos] = useState([]);
+  const [photoBusy, setPhotoBusy] = useState(0);
+  const photoRef = useRef(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [dup, setDup] = useState(null);
@@ -48,6 +53,18 @@ export default function PurchaseForm({ onSaved }) {
 
   const load = (q = '') => adminPurchaseService.products(q).then((r) => setProducts(r.products)).catch((e) => setError(e.message));
   useEffect(() => { load(); }, []);
+
+  // suppliers bought from before: choosing one fills in its saved details
+  const [suppliers, setSuppliers] = useState([]);
+  useEffect(() => { adminPurchaseService.suppliers().then((r) => setSuppliers(r.suppliers || [])).catch(() => {}); }, []);
+  const pickSupplier = (s, { typed } = {}) => setF((x) => ({
+    ...x,
+    supplierName: s.name,
+    // chosen from the list: use the saved details; typed in full: only fill what is still empty
+    supplierPhone: typed && x.supplierPhone ? x.supplierPhone : s.phone || (typed ? x.supplierPhone : ''),
+    supplierEmail: typed && x.supplierEmail ? x.supplierEmail : s.email || (typed ? x.supplierEmail : ''),
+    supplierAddress: typed && x.supplierAddress ? x.supplierAddress : s.address || (typed ? x.supplierAddress : ''),
+  }));
   useEffect(() => { const t = setTimeout(() => load(search), 300); return () => clearTimeout(t); }, [search]);
 
   const byId = useMemo(() => Object.fromEntries(products.map((p) => [p.id, p])), [products]);
@@ -84,11 +101,42 @@ export default function PurchaseForm({ onSaved }) {
     try { const r = await adminPurchaseService.uploadInvoice(file); setInvoice(r.invoiceFile); } catch (x) { setError(x.message); } finally { setUploading(false); }
   };
 
+  const MAX_PHOTOS = 5;
+  const addPhotos = async (e) => {
+    const files = [...(e.target.files || [])];
+    e.target.value = '';
+    if (!files.length) return;
+    setError('');
+    const room = MAX_PHOTOS - photos.length - photoBusy;
+    if (room <= 0) { setError(`You can add at most ${MAX_PHOTOS} proof photos.`); return; }
+    if (files.length > room) setError(`Only ${room} more photo(s) can be added (at most ${MAX_PHOTOS}).`);
+    for (const file of files.slice(0, room)) {
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setError(`"${file.name}" is not a JPG, PNG or WEBP photo.`); continue; }
+      if (file.size > 5 * 1024 * 1024) { setError(`"${file.name}" is larger than 5 MB.`); continue; }
+      setPhotoBusy((n) => n + 1);
+      try {
+        const r = await adminPurchaseService.uploadProofPhoto(file);
+        setPhotos((list) => [...list, { ...r.photo, preview: URL.createObjectURL(file) }]);
+      } catch (x) {
+        setError(x.message);
+      } finally {
+        setPhotoBusy((n) => n - 1);
+      }
+    }
+  };
+  const removePhoto = (key) => setPhotos((list) => {
+    const gone = list.find((p) => p.key === key);
+    if (gone?.preview) URL.revokeObjectURL(gone.preview);
+    return list.filter((p) => p.key !== key);
+  });
+  useEffect(() => () => photos.forEach((p) => p.preview && URL.revokeObjectURL(p.preview)), []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const submit = async (confirmDuplicate = false) => {
     setError(''); setDup(null); setBusy(true);
     try {
       const body = {
         ...f, idempotencyKey: keyRef.current, confirmDuplicate: confirmDuplicate || undefined, invoiceFile: invoice || undefined,
+        proofPhotos: photos.map(({ key, name, mime, size }) => ({ key, name, mime, size })),
         items: lines.map((l) => ({ productId: l.productId, variantSku: l.variantSku || undefined, quantity: Number(l.quantity), unitPrice: l.unitPrice, gstPercent: l.gst })),
       };
       const r = await adminPurchaseService.create(body);
@@ -104,7 +152,7 @@ export default function PurchaseForm({ onSaved }) {
     <div className="space-y-4" data-testid="purchase-form">
       <Card title="Supplier">
         <div className="grid sm:grid-cols-3 gap-3">
-          <Labeled label="Supplier / vendor name *"><input data-testid="pf-supplier" className={inputCls} value={f.supplierName} onChange={(e) => setF({ ...f, supplierName: e.target.value })} /></Labeled>
+          <Labeled label="Supplier / vendor name *"><SupplierNameInput testId="pf-supplier" className={inputCls} value={f.supplierName} onChange={(v) => setF((x) => ({ ...x, supplierName: v }))} onPick={pickSupplier} suppliers={suppliers} /></Labeled>
           <Labeled label="Contact phone"><input data-testid="pf-phone" className={inputCls} value={f.supplierPhone} onChange={(e) => setF({ ...f, supplierPhone: e.target.value })} /></Labeled>
           <Labeled label="Contact email"><input data-testid="pf-email" className={inputCls} value={f.supplierEmail} onChange={(e) => setF({ ...f, supplierEmail: e.target.value })} /></Labeled>
           <Labeled label="Address" className="sm:col-span-2"><input data-testid="pf-address" className={inputCls} value={f.supplierAddress} onChange={(e) => setF({ ...f, supplierAddress: e.target.value })} /></Labeled>
@@ -151,6 +199,25 @@ export default function PurchaseForm({ onSaved }) {
             <input ref={fileRef} data-testid="pf-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" onChange={chooseFile} className="text-xs" />
             {uploading && <p className="m-0 text-xs text-slate-500">Uploading…</p>}
             {invoice && <p className="m-0 text-xs text-emerald-700" data-testid="pf-invoice-ok"><Upload size={12} className="inline mr-1" />{invoice.name} attached</p>}
+          </div>
+          <div className="sm:col-span-3" data-testid="pf-proof">
+            <p className="m-0 text-xs font-semibold text-slate-600 mb-1">Purchase proof photos (optional)</p>
+            <p className="m-0 mb-2 text-xs text-slate-400">Photos of the goods you received, as proof of the purchase. Up to {MAX_PHOTOS} photos (JPG, PNG or WEBP, 5 MB each).</p>
+            <div className="flex flex-wrap items-center gap-3">
+              {photos.map((ph) => (
+                <div key={ph.key} className="relative h-20 w-20 overflow-hidden rounded-xl border border-slate-200 bg-slate-50" data-testid="pf-proof-photo">
+                  <img src={ph.preview} alt={ph.name} className="h-full w-full object-cover" />
+                  <button type="button" aria-label={`Remove ${ph.name}`} data-testid="pf-proof-remove" onClick={() => removePhoto(ph.key)} className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full border-0 bg-white/90 text-rose-600 shadow cursor-pointer"><X size={14} /></button>
+                </div>
+              ))}
+              {photoBusy > 0 && <div className="flex h-20 w-20 items-center justify-center rounded-xl border border-dashed border-slate-300 text-xs text-slate-500">Uploading…</div>}
+              {photos.length + photoBusy < MAX_PHOTOS && (
+                <button type="button" data-testid="pf-proof-add" onClick={() => photoRef.current?.click()} className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-emerald-400 bg-emerald-50/40 text-xs font-semibold text-emerald-700 cursor-pointer">
+                  <Camera size={18} /> Add photo
+                </button>
+              )}
+              <input ref={photoRef} data-testid="pf-proof-file" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" multiple onChange={addPhotos} className="hidden" />
+            </div>
           </div>
           <Labeled label="Notes" className="sm:col-span-3"><textarea data-testid="pf-notes" rows={2} className={inputCls} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></Labeled>
         </div>

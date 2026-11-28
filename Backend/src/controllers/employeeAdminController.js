@@ -27,6 +27,8 @@ import {
   istDateString,
   leaveDateRange,
   istMidnight,
+  attendanceStartDate,
+  inSystemOnFilter,
   istMinutesOfDay,
   logActivity,
   monthRange,
@@ -384,8 +386,11 @@ export const getDailyAttendance = async (req, res) => {
       const re = new RegExp(escapeRegex(s), 'i');
       empFilter.$or = [{ fullName: re }, { employeeId: re }, { email: re }, { phone: re }];
     }
+    // Only employees who were already in the system that day (or who have a real record for it, e.g. a correction)
+    const recordedThatDay = await Attendance.distinct('employee', { ...bf, dateString: date });
+    empFilter.$and = [{ $or: [inSystemOnFilter(date), { _id: { $in: recordedThatDay } }] }];
     const total = await Employee.countDocuments(empFilter);
-    const emps = await Employee.find(empFilter).select('fullName employeeId department designation brandId brandName avatar joiningDate').sort({ fullName: 1 }).skip((page - 1) * limit).limit(limit).lean();
+    const emps = await Employee.find(empFilter).select('fullName employeeId department designation brandId brandName avatar joiningDate createdAt').sort({ fullName: 1 }).skip((page - 1) * limit).limit(limit).lean();
     const [records, holidays] = await Promise.all([
       Attendance.find({ employee: { $in: emps.map((e) => e._id) }, dateString: date }).lean(),
       Holiday.find({ dateString: date, isOptional: { $ne: true } }).lean(),
@@ -403,7 +408,7 @@ export const getDailyAttendance = async (req, res) => {
         const hol = holidays.find((h) => h.brandId === 'ALL' || h.brandId === e.brandId);
         if (hol) status = 'Holiday';
         else if (rules.weeklyOffs.includes(weekdayOfDateString(date))) status = 'Weekly Off';
-        else if (date > today || (e.joiningDate && date < istDateString(e.joiningDate))) status = '-';
+        else if (date > today || (attendanceStartDate(e) && date < attendanceStartDate(e))) status = '-';
         else if (date < today) status = 'Absent';
         else status = istMinutesOfDay() > parseHHmm(rules.officeStartTime, 570) + (Number(rules.graceMinutes) || 0) ? 'Absent' : 'Not marked';
       }
@@ -443,6 +448,9 @@ export const getMonthlyAll = async (req, res) => {
   try {
     const { month, first, last } = monthRange(str(req.query.month, 7));
     const empFilter = { ...brandFilter(req), registrationStatus: { $nin: ['Pending', 'Rejected'] }, employmentStatus: { $in: ['Active', 'On Leave'] } };
+    // employees who joined after this month are not part of it (unless they have a record in it)
+    const recordedInMonth = await Attendance.distinct('employee', { ...brandFilter(req), dateString: { $gte: first, $lte: last } });
+    empFilter.$or = [inSystemOnFilter(last), { _id: { $in: recordedInMonth } }];
     const emps = await Employee.find(empFilter).limit(500).lean();
     const recs = await Attendance.find({ employee: { $in: emps.map((e) => e._id) }, dateString: { $gte: first, $lte: last } }).select('employee status totalDurationMinutes').lean();
     const grouped = new Map();

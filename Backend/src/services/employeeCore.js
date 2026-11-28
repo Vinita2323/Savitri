@@ -354,6 +354,21 @@ export const monthRange = (month) => {
   return { month: m, first, last };
 };
 
+/**
+ * The first day an employee counts in attendance: the later of the joining date and the day the account was registered.
+ * Before it the employee was not in the system, so those days are neither listed nor counted as absent.
+ */
+export const attendanceStartDate = (emp) => {
+  const dates = [emp?.joiningDate, emp?.createdAt].filter(Boolean).map((d) => new Date(d)).filter((d) => !Number.isNaN(d.getTime()));
+  return dates.length ? istDateString(new Date(Math.max(...dates.map((d) => d.getTime())))) : null;
+};
+
+/** Mongo filter: employees already in the system on the given day (registered and joined by the end of it). */
+export const inSystemOnFilter = (ds) => {
+  const end = new Date(istMidnight(ds).getTime() + 86400000 - 1);
+  return { createdAt: { $lte: end }, $or: [{ joiningDate: { $exists: false } }, { joiningDate: null }, { joiningDate: { $lte: end } }] };
+};
+
 export const buildMonthlySummary = async (emp, month) => {
   const { month: m, first, last } = monthRange(month);
   const today = istDateString();
@@ -364,7 +379,7 @@ export const buildMonthlySummary = async (emp, month) => {
   ]);
   const recByDate = Object.fromEntries(records.map((r) => [r.dateString, r]));
   const holByDate = Object.fromEntries(holidays.map((h) => [h.dateString, h.name]));
-  const joined = emp.joiningDate ? istDateString(emp.joiningDate) : first;
+  const joined = attendanceStartDate(emp) || first;
   const offs = new Set(rules.weeklyOffs || []);
 
   const days = [];

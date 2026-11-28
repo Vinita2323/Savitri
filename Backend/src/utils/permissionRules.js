@@ -113,7 +113,7 @@ rule('GET', '/super-admin/stores(/:)?', ['sellers.view']);
 
 // ── purchases ──
 rule('GET', '/admin-purchases(/.*)?', ['purchases.view']);
-rule('POST', '/admin-purchases(/products|/invoice)?', ['purchases.create']);
+rule('POST', '/admin-purchases(/products|/invoice|/proof)?', ['purchases.create']);
 rule('PUT', '/admin-purchases/:/cancel', ['purchases.edit']);
 
 // ── POS ──

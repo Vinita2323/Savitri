@@ -93,6 +93,22 @@ export function Dashboard({ go }) {
 
 // ───────────────────────── my purchase details ─────────────────────────
 
+/** Small preview of one proof photo; the file is private, so it is fetched with the signed-in admin's session. */
+const ProofThumb = ({ loader, name, onOpen }) => {
+  const [url, setUrl] = useState('');
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let made = '';
+    loader().then((b) => { made = URL.createObjectURL(b); setUrl(made); }).catch(() => setFailed(true));
+    return () => { if (made) URL.revokeObjectURL(made); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <button type="button" data-testid="pur-proof-thumb" onClick={onOpen} title={name} className="h-20 w-20 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-0 cursor-pointer">
+      {url ? <img src={url} alt={name} className="h-full w-full object-cover" /> : <span className="text-[11px] text-slate-400">{failed ? 'Missing' : '…'}</span>}
+    </button>
+  );
+};
+
 export function PurchaseDetail({ id, onClose, onChanged, fetcher = adminPurchaseService.get, canCancel = true, invoiceLoader }) {
   const [d, setD] = useState(null);
   const [error, setError] = useState('');
@@ -101,6 +117,7 @@ export function PurchaseDetail({ id, onClose, onChanged, fetcher = adminPurchase
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [file, setFile] = useState(false);
+  const [photo, setPhoto] = useState(null); // proof photo opened large
   const load = useCallback(() => fetcher(id).then(setD).catch((e) => setError(e.message)), [id, fetcher]);
   useEffect(() => { load(); }, [load]);
 
@@ -150,6 +167,14 @@ export function PurchaseDetail({ id, onClose, onChanged, fetcher = adminPurchase
               <button type="button" data-testid="pur-invoice-dl" className={btnGhost} onClick={download}><Download size={14} className="inline mr-1" />Download</button>
             </div>
           )}
+          {p.proofPhotos?.length > 0 && (
+            <div data-testid="pur-proof">
+              <p className="m-0 mb-2 text-sm">Proof photos ({p.proofPhotos.length})</p>
+              <div className="flex flex-wrap gap-2">
+                {p.proofPhotos.map((ph) => <ProofThumb key={ph.n} name={ph.name} loader={() => adminPurchaseService.proofBlob(id, ph.n)} onOpen={() => setPhoto(ph)} />)}
+              </div>
+            </div>
+          )}
           {p.status === 'CANCELLED' && <Notice type="warning">Cancelled {fmtDateTime(p.cancelledAt)} by {p.cancelledBy}: {p.cancelReason}. The stock was taken back out.</Notice>}
           {canCancel && p.status === 'RECORDED' && <button data-perm="purchases.edit" type="button" data-testid="pur-cancel" className={btnDanger} onClick={() => { setError(''); setAsk(true); }}>Cancel purchase and reverse stock</button>}
           {d.movements?.length > 0 && (
@@ -171,6 +196,7 @@ export function PurchaseDetail({ id, onClose, onChanged, fetcher = adminPurchase
           <Labeled label="Reason (kept in the history)"><textarea data-testid="pur-ask-text" rows={3} className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} /></Labeled>
         </Modal>
       )}
+      {photo && <FileModal title={photo.name} mime={photo.mime} loader={() => adminPurchaseService.proofBlob(id, photo.n)} onClose={() => setPhoto(null)} />}
       {file && p?.invoiceFile && <FileModal title={p.invoiceFile.name} mime={p.invoiceFile.mime} loader={() => (invoiceLoader || ((x) => adminPurchaseService.invoiceBlob(id, x)))(false)} onClose={() => setFile(false)} />}
     </Drawer>
   );

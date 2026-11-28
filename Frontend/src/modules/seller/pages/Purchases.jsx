@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertCircle, Boxes, CheckCircle2, ChevronLeft, ChevronRight, FileText, IndianRupee, Loader2, Paperclip, Plus, Search, ShoppingBag, Truck, X } from 'lucide-react';
 import { productService, authService } from '../../../services/authService';
 import { sellerPurchaseService } from '../../../services/sellerPurchaseService';
+import SupplierNameInput from '../../../components/SupplierNameInput';
 import { subscribeRealtime } from '../../../services/financeSocket';
 import { getEffectiveStock } from '../../../utils/productStock';
 import { INVOICE_ACCEPT, checkInvoiceFile, fileHref, formatFileSize } from '../../../utils/fileUrl';
@@ -127,6 +128,12 @@ const Purchases = () => {
     setPickerOpen(false);
   };
 
+  // suppliers bought from before: choosing one fills in the saved phone number
+  const [suppliers, setSuppliers] = useState([]);
+  const loadSuppliers = useCallback(() => sellerPurchaseService.suppliers().then((r) => setSuppliers(r.suppliers || [])).catch(() => {}), []);
+  useEffect(() => { loadSuppliers(); }, [loadSuppliers]);
+  const pickSupplier = (s, { typed } = {}) => setForm((x) => ({ ...x, supplierName: s.name, supplierPhone: typed && x.supplierPhone ? x.supplierPhone : s.phone || (typed ? x.supplierPhone : '') }));
+
   const submit = async (e) => {
     e.preventDefault();
     setFormError(''); setNotice('');
@@ -157,6 +164,7 @@ const Purchases = () => {
       setPage(1);
       setReload((n) => n + 1);
       loadProducts();
+      loadSuppliers();
       setTimeout(() => setNotice(''), 6000);
     } catch (err) {
       setFormError(err?.response?.data?.message || 'Could not record this purchase.');
@@ -271,12 +279,11 @@ const Purchases = () => {
           </div>
           <div>
             <label className={label}>Supplier *</label>
-            <input data-testid="pur-supplier" list="pur-suppliers" className={input} value={form.supplierName} onChange={(e) => setForm({ ...form, supplierName: e.target.value })} maxLength={120} placeholder="Supplier name" />
-            <datalist id="pur-suppliers">{list.suppliers.map((x) => <option key={x} value={x} />)}</datalist>
+            <SupplierNameInput testId="pur-supplier" className={input} value={form.supplierName} onChange={(v) => setForm((x) => ({ ...x, supplierName: v }))} onPick={pickSupplier} suppliers={suppliers} />
           </div>
           <div>
             <label className={label}>Supplier phone</label>
-            <input className={input} value={form.supplierPhone} onChange={(e) => setForm({ ...form, supplierPhone: e.target.value })} maxLength={20} placeholder="Optional" />
+            <input data-testid="pur-supplier-phone" className={input} value={form.supplierPhone} onChange={(e) => setForm({ ...form, supplierPhone: e.target.value })} maxLength={20} placeholder="Optional" />
           </div>
           <div>
             <label className={label}>Invoice / bill no.</label>

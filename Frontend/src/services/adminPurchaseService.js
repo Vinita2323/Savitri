@@ -40,9 +40,16 @@ export const adminPurchaseService = {
     return unwrap(API.post(`${B}/invoice`, fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 }), 'Could not upload the invoice');
   },
   invoiceBlob: (id, download = false) => openBlob(`${B}/${id}/invoice`, download),
+  uploadProofPhoto: (file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return unwrap(API.post(`${B}/proof`, fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 }), 'Could not upload the photo');
+  },
+  proofBlob: (id, n, download = false) => openBlob(`${B}/${id}/proof/${n}`, download),
 
   // read only
   sellers: () => unwrap(API.get(`${B}/sellers`), 'Could not load sellers'),
+  suppliers: () => unwrap(API.get(`${B}/suppliers`), 'Could not load your suppliers'),
   sellerPurchases: (params) => unwrap(API.get(`${B}/sellers/purchases`, { params: clean(params) }), 'Could not load seller purchases'),
   sellerPurchase: (id) => unwrap(API.get(`${B}/sellers/purchases/${id}`), 'Could not load the purchase'),
   sellerSummary: (params) => unwrap(API.get(`${B}/sellers/summary`, { params: clean(params) }), 'Could not load the summary'),

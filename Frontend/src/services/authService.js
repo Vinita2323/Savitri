@@ -478,6 +478,23 @@ export const productService = {
     const response = await API.get('/products', { params });
     return response.data;
   },
+  /**
+   * Every product matching the filters. The server sends at most 100 per request (50 when no limit is given), so this reads
+   * page after page until the total is reached. Use it for lists that are searched and filtered in the browser.
+   */
+  getAllProducts: async (params = {}) => {
+    const PER_REQUEST = 100;
+    let products = [];
+    let total = null;
+    for (let page = 1; page <= 200; page += 1) {
+      const response = await API.get('/products', { params: { ...params, page, limit: PER_REQUEST } });
+      const batch = Array.isArray(response.data?.products) ? response.data.products : [];
+      if (total === null && typeof response.data?.total === 'number') total = response.data.total;
+      products = products.concat(batch);
+      if (batch.length < PER_REQUEST || (total !== null && products.length >= total)) break;
+    }
+    return { success: true, total: total ?? products.length, count: products.length, products };
+  },
   getProductById: async (id) => {
     const response = await API.get(`/products/${id}`);
     return response.data;

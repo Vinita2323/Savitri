@@ -4,6 +4,7 @@ import Brand from '../models/Brand.model.js';
 import { normalizeCity } from '../utils/cityNormalization.js';
 import { ALL_PERMISSION_KEYS, cleanPermissions } from '../utils/cityAdminAccess.js';
 import { revokeBrandAccess } from './adminBrandAccessService.js';
+import { assignedBrandIds } from '../utils/adminAccess.js';
 
 /**
  * City Admin = an Admin account (role "admin") tied to exactly ONE brand. Brand and city are always read from the Brand
@@ -226,19 +227,41 @@ export const reassign = async ({ brand, body, actor }) => {
   return { admin: next, temporaryPassword: person.temporary ? person.password : undefined };
 };
 
-/** Every brand with its City Admin status, for the Brands list (never includes password hashes) */
+/**
+ * Every brand with its admin status, for the Brands list (never includes password hashes). A brand has an admin when it has
+ * an active City Admin OR an active admin assigned to it in Admin Configuration. Older admins that can use every brand are
+ * not counted: they were never assigned to this brand.
+ */
 export const brandsWithAdminStatus = async () => {
-  const [brands, admins] = await Promise.all([Brand.find({}).sort({ createdAt: -1 }).lean(), Admin.find({ adminType: 'CITY_ADMIN' }).select(SELECT).lean()]);
+  const [brands, admins, assigned] = await Promise.all([
+    Brand.find({}).sort({ createdAt: -1 }).lean(),
+    Admin.find({ adminType: 'CITY_ADMIN' }).select(SELECT).lean(),
+    Admin.find({ role: 'admin', adminType: { $ne: 'CITY_ADMIN' }, 'authorizedBrands.0': { $exists: true } }).select('name email status authorizedBrands').lean(),
+  ]);
   const byBrand = new Map();
   for (const a of admins) {
     const cur = byBrand.get(a.brandId);
     if (!cur || (a.status === 'active' && cur.status !== 'active')) byBrand.set(a.brandId, a);
   }
+  const assignedByBrand = new Map();
+  for (const a of assigned) {
+    if (a.status && a.status !== 'active') continue;
+    for (const id of assignedBrandIds(a)) {
+      if (!assignedByBrand.has(id)) assignedByBrand.set(id, []);
+      assignedByBrand.get(id).push({ id: String(a._id), name: a.name || a.email });
+    }
+  }
   return brands.map((b) => {
     const a = byBrand.get(b.brandId) || null;
+    const brandAdmins = assignedByBrand.get(b.brandId) || [];
+    const cityActive = a && a.status === 'active';
     return {
       brandId: b.brandId, name: b.name, code: b.code, city: b.city || '', cityMissing: !String(b.city || '').trim(), brandStatus: b.status,
-      adminStatus: adminStatusOf(a), admin: a ? shapeCityAdmin(a) : null,
+      adminStatus: cityActive || brandAdmins.length ? 'CONFIGURED' : adminStatusOf(a),
+      admin: a ? shapeCityAdmin(a) : null,
+      // admins assigned in Admin Configuration (several may share a brand)
+      assignedAdmins: brandAdmins,
+      managedBy: cityActive ? 'CITY_ADMIN' : brandAdmins.length ? 'ADMIN_CONFIG' : a ? 'CITY_ADMIN' : '',
     };
   });
 };

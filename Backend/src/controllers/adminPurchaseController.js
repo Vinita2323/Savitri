@@ -14,6 +14,7 @@ import { invalidateProductsCache } from './productController.js';
 import { emitToRoom } from '../socket/socket.js';
 import { toPaise, ratio, MoneyError } from '../utils/payrollMoney.js';
 import { istStart, istEnd, isValidDay, rollUp, PERIODS } from '../utils/reportPeriods.js';
+import { buildSupplierBook, SUPPLIER_BOOK_SCAN } from '../utils/supplierBook.js';
 
 /**
  * Admin purchases (stock bought for the Admin's own store) and READ-ONLY visibility of the purchases of associated sellers.
@@ -70,6 +71,24 @@ export const invoiceUploadMiddleware = (req, res, next) =>
     return err.code === 'LIMIT_FILE_SIZE' ? fail(res, 413, 'The file is larger than 5 MB.') : fail(res, 400, 'The file could not be read. Send one PDF, JPG, PNG or WEBP file.');
   });
 const invoicePath = (key) => { const f = path.resolve(ADMIN_INVOICE_ROOT, key); return f.startsWith(ADMIN_INVOICE_ROOT + path.sep) ? f : null; };
+
+export const MAX_PROOF_PHOTOS = 5;
+
+/** POST /proof: one photo of the purchased goods (JPG, PNG or WEBP), stored privately like the bill. */
+export const uploadProofPhoto = async (req, res) => {
+  try {
+    if (!req.file) return fail(res, 400, 'Choose a photo (JPG, PNG or WEBP, up to 5 MB).');
+    const type = sniff(req.file.buffer);
+    if (!type || type.mime === 'application/pdf') return fail(res, 400, 'Only photos (JPG, PNG or WEBP) can be added as proof.');
+    const key = path.posix.join(String(req.user.id), `${crypto.randomBytes(16).toString('hex')}.${type.ext}`);
+    await fs.promises.mkdir(path.dirname(invoicePath(key)), { recursive: true });
+    await fs.promises.writeFile(invoicePath(key), req.file.buffer, { flag: 'wx' });
+    return res.status(201).json({ success: true, photo: { key, name: String(req.file.originalname || 'photo').replace(/[^A-Za-z0-9._ -]/g, '_').slice(0, 80), mime: type.mime, size: req.file.size } });
+  } catch (err) {
+    console.error('[AdminPurchase] proof upload', err);
+    return fail(res, 500, 'Could not save the photo.');
+  }
+};
 
 /** POST /invoice: stores the bill privately and returns a reference to send with the purchase. Only for the uploader. */
 export const uploadInvoice = async (req, res) => {
@@ -287,12 +306,26 @@ const buildPurchase = async (req) => {
     if (!f || !fs.existsSync(f)) return { error: 'The invoice file could not be found. Please upload it again.' };
     invoiceFile = { key, name: String(b.invoiceFile.name || 'invoice').slice(0, 80), mime: String(b.invoiceFile.mime || '').slice(0, 60), size: Number(b.invoiceFile.size) || 0 };
   }
+  // proof photos: each one must be a photo this admin uploaded
+  const proofPhotos = [];
+  if (b.proofPhotos !== undefined && b.proofPhotos !== null) {
+    if (!Array.isArray(b.proofPhotos)) return { error: 'Proof photos are not valid.' };
+    if (b.proofPhotos.length > MAX_PROOF_PHOTOS) return { error: `You can add at most ${MAX_PROOF_PHOTOS} proof photos.` };
+    for (const ph of b.proofPhotos) {
+      const key = String(ph?.key || '');
+      const mine = key.startsWith(`${req.user.id}/`) && /^[a-f0-9]{24}\/[a-f0-9]{32}\.(jpg|png|webp)$/.test(key);
+      const f = mine ? invoicePath(key) : null;
+      if (!f || !fs.existsSync(f)) return { error: 'A proof photo could not be found. Please add it again.' };
+      if (proofPhotos.some((x) => x.key === key)) continue;
+      proofPhotos.push({ key, name: String(ph.name || 'photo').slice(0, 80), mime: String(ph.mime || '').slice(0, 60), size: Number(ph.size) || 0 });
+    }
+  }
   return {
     data: {
       supplierName, supplierPhone, supplierEmail, supplierAddress: String(b.supplierAddress || '').trim().slice(0, 250), purchaseDate,
       invoiceNumber: String(b.invoiceNumber || '').trim().slice(0, 60), notes: String(b.notes || '').trim().slice(0, 500),
       lines, totalQuantity: lines.reduce((t, l) => t + l.quantity, 0), subtotalPaise, gstPaise, additionalExpensesPaise, discountPaise, finalPaise,
-      paymentStatus, paidPaise, paymentMethod, invoiceFile, updateCostPrice: b.updateCostPrice !== false && b.updateCostPrice !== 'false',
+      paymentStatus, paidPaise, paymentMethod, invoiceFile, proofPhotos, updateCostPrice: b.updateCostPrice !== false && b.updateCostPrice !== 'false',
     },
   };
 };
@@ -312,6 +345,7 @@ export const shape = (p, { full = true } = {}) => {
   if (!full) return base;
   return {
     ...base, supplierEmail: o.supplierEmail, supplierAddress: o.supplierAddress, notes: o.notes, invoiceFile: o.invoiceFile?.key ? { name: o.invoiceFile.name, mime: o.invoiceFile.mime, size: o.invoiceFile.size } : null,
+    proofPhotos: (o.proofPhotos || []).map((ph, n) => ({ n, name: ph.name, mime: ph.mime, size: ph.size })),
     lines: (o.lines || []).map((l) => ({ product: String(l.product), productName: l.productName, sku: l.sku, variantSku: l.variantSku, variantTitle: l.variantTitle, unit: l.unit, quantity: l.quantity, unitPricePaise: l.unitPricePaise, gstPercentX100: l.gstPercentX100, subtotalPaise: l.subtotalPaise, gstPaise: l.gstPaise, previousStock: l.previousStock, newStock: l.newStock, stockApplied: l.stockApplied })),
     cancelledAt: o.cancelledAt, cancelledBy: o.cancelledBy?.name || '', cancelReason: o.cancelReason, history: o.history,
   };
@@ -358,7 +392,7 @@ export const createAdminPurchase = async (req, res) => {
       adminId, adminName: req.user.name || req.user.email || '', adminRole: String(req.user.role || ''), brandId: req.scope && !req.scope.isAll ? req.scope.brandId : '', storeName, idempotencyKey, fingerprint,
       supplierName: d.supplierName, supplierPhone: d.supplierPhone, supplierEmail: d.supplierEmail, supplierAddress: d.supplierAddress, purchaseDate: d.purchaseDate, invoiceNumber: d.invoiceNumber, notes: d.notes,
       lines, totalQuantity: d.totalQuantity, subtotalPaise: d.subtotalPaise, gstPaise: d.gstPaise, additionalExpensesPaise: d.additionalExpensesPaise, discountPaise: d.discountPaise, finalPaise: d.finalPaise,
-      paymentStatus: d.paymentStatus, paidPaise: d.paidPaise, paymentMethod: d.paymentMethod, invoiceFile: d.invoiceFile, status: 'PROCESSING', history: [{ action: 'CREATED', by: req.user.name || '', note: 'Purchase received' }],
+      paymentStatus: d.paymentStatus, paidPaise: d.paidPaise, paymentMethod: d.paymentMethod, invoiceFile: d.invoiceFile, proofPhotos: d.proofPhotos, status: 'PROCESSING', history: [{ action: 'CREATED', by: req.user.name || '', note: 'Purchase received' }],
     };
 
     // 2) the purchase record first (unique idempotency key = only one request can get past this point)
@@ -475,6 +509,20 @@ const myFilter = (req, extra = {}) => {
   return f;
 };
 
+/** GET /admin-purchases/suppliers: the suppliers this admin has bought from, newest first, with their latest details. */
+export const listMySuppliers = async (req, res) => {
+  try {
+    const rows = await AdminPurchase.find({ adminId: new mongoose.Types.ObjectId(String(req.user.id)) })
+      .sort({ purchaseDate: -1, createdAt: -1 }).limit(SUPPLIER_BOOK_SCAN)
+      .select('supplierName supplierPhone supplierEmail supplierAddress purchaseDate createdAt').lean();
+    const suppliers = buildSupplierBook(rows).map((s) => ({ name: s.name, phone: s.supplierPhone, email: s.supplierEmail, address: s.supplierAddress, lastPurchaseAt: s.lastPurchaseAt, purchases: s.purchases }));
+    return res.json({ success: true, suppliers });
+  } catch (err) {
+    console.error('[AdminPurchase] suppliers', err);
+    return fail(res, 500, 'Could not load your suppliers.');
+  }
+};
+
 export const listMyAdminPurchases = async (req, res) => {
   try {
     const filter = myFilter(req);
@@ -502,6 +550,28 @@ export const getAdminPurchase = async (req, res) => {
   } catch (err) {
     console.error('[AdminPurchase] get', err);
     return fail(res, 500, 'Could not load the purchase.');
+  }
+};
+
+/** One proof photo (by its position): only the admin who bought it, or a Super Admin. */
+export const downloadProofPhoto = async (req, res) => {
+  try {
+    const n = Number(req.params.n);
+    if (!isId(req.params.id) || !Number.isInteger(n) || n < 0 || n >= MAX_PROOF_PHOTOS) return fail(res, 404, 'Photo not found.');
+    const p = await AdminPurchase.findById(req.params.id).select('adminId proofPhotos').lean();
+    const ph = p?.proofPhotos?.[n];
+    if (!ph?.key || (!isSuper(req) && String(p.adminId) !== String(req.user.id))) return fail(res, 404, 'Photo not found.');
+    const f = invoicePath(ph.key);
+    if (!f || !fs.existsSync(f)) return fail(res, 410, 'The stored photo is missing.');
+    res.setHeader('Content-Type', ph.mime || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `${req.query.download === '1' ? 'attachment' : 'inline'}; filename="${String(ph.name || 'photo').replace(/"/g, '')}"`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('Content-Security-Policy', "default-src 'none'");
+    return fs.createReadStream(f).pipe(res);
+  } catch (err) {
+    console.error('[AdminPurchase] proof photo', err);
+    return fail(res, 500, 'Could not open the photo.');
   }
 };
 

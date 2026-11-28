@@ -4657,7 +4657,7 @@ export const ProductManagement = () => {
     let apiProducts = [];
     try {
       // admin=true bypasses storefront location filter so catalog is visible (#84)
-      const res = await productService.getProducts({ admin: 'true' });
+      const res = await productService.getAllProducts({ admin: 'true' }); // every page, not only the first 50
       if (res && res.products && Array.isArray(res.products)) {
         apiProducts = res.products;
       }
@@ -4801,19 +4801,29 @@ export const ProductManagement = () => {
     });
   }, [products, debouncedSearchQuery, categoryFilter, sellerFilter, statusFilter, stockFilter]);
 
+  // Pages of the filtered list ("Show 10 / 25 / 50 / 100 entries")
+  const pageSize = Math.max(1, Number(entriesPerPage) || 10);
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+  const page = Math.min(currentPage, totalPages);
+  const pageProducts = filteredProducts.slice((page - 1) * pageSize, page * pageSize);
+  const firstShown = filteredProducts.length ? (page - 1) * pageSize + 1 : 0;
+  const lastShown = Math.min(page * pageSize, filteredProducts.length);
+  // a new search, filter or page size starts again on page 1
+  React.useEffect(() => { setCurrentPage(1); }, [debouncedSearchQuery, categoryFilter, sellerFilter, statusFilter, stockFilter, entriesPerPage]);
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Top Header & Breadcrumb */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Products & Stock</h1>
-          <div className="text-xs text-slate-500 font-medium">
+          <div className="text-sm text-slate-500 font-medium">
             Dashboard / <span className="text-[#F7941D] font-semibold">Stock Management</span>
           </div>
         </div>
         <button data-perm="products.create" 
           onClick={() => { setEditingProductData(null); setActiveTab('add_product'); }}
-          className="px-4 py-2.5 bg-[#79B433] hover:bg-[#689A2B] text-white text-xs font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+          className="px-4 py-2.5 bg-[#79B433] hover:bg-[#689A2B] text-white text-sm font-bold rounded-xl border-none cursor-pointer flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
         >
           <Plus size={16} /> Add New Product
         </button>
@@ -4827,7 +4837,7 @@ export const ProductManagement = () => {
             <ChevronRight size={18} className="text-[#F7941D]" />
             View Stock Management
           </h2>
-          <span className="text-[10px] uppercase font-extrabold tracking-wider bg-[#79B433] text-white px-3 py-1 rounded-full shadow-2xs">
+          <span className="text-xs uppercase font-extrabold tracking-wider bg-[#79B433] text-white px-3 py-1 rounded-full shadow-2xs">
             {products.length} Products Listed
           </span>
         </div>
@@ -4836,11 +4846,11 @@ export const ProductManagement = () => {
           {/* Top Filter Rows */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Filter By Category</label>
+              <label className="text-sm font-bold text-slate-700 block mb-1.5">Filter By Category</label>
               <select 
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full border border-slate-300 rounded-md px-3.5 py-2.5 bg-slate-50/60 text-xs font-medium text-slate-800 outline-none focus:border-[#F7941D] focus:bg-white transition-all shadow-2xs"
+                className="w-full border border-slate-300 rounded-md px-3.5 py-2.5 bg-slate-50/60 text-sm font-medium text-slate-800 outline-none focus:border-[#F7941D] focus:bg-white transition-all shadow-2xs"
               >
                 <option value="All Category">All Category</option>
                 {categories.map(cat => (
@@ -4850,11 +4860,11 @@ export const ProductManagement = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Filter by Sellers</label>
+              <label className="text-sm font-bold text-slate-700 block mb-1.5">Filter by Sellers</label>
               <select 
                 value={sellerFilter}
                 onChange={(e) => setSellerFilter(e.target.value)}
-                className="w-full border border-slate-300 rounded-md px-3.5 py-2.5 bg-slate-50/60 text-xs font-medium text-slate-800 outline-none focus:border-[#F7941D] focus:bg-white transition-all shadow-2xs"
+                className="w-full border border-slate-300 rounded-md px-3.5 py-2.5 bg-slate-50/60 text-sm font-medium text-slate-800 outline-none focus:border-[#F7941D] focus:bg-white transition-all shadow-2xs"
               >
                 <option>All Sellers</option>
                 <option>Keshari Vagitl Shope</option>
@@ -4863,11 +4873,11 @@ export const ProductManagement = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Filter by Status</label>
+              <label className="text-sm font-bold text-slate-700 block mb-1.5">Filter by Status</label>
               <select 
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full border border-slate-300 rounded-md px-3.5 py-2.5 bg-slate-50/60 text-xs font-medium text-slate-800 outline-none focus:border-[#F7941D] focus:bg-white transition-all shadow-2xs"
+                className="w-full border border-slate-300 rounded-md px-3.5 py-2.5 bg-slate-50/60 text-sm font-medium text-slate-800 outline-none focus:border-[#F7941D] focus:bg-white transition-all shadow-2xs"
               >
                 <option>All Products</option>
                 <option>Published</option>
@@ -4876,11 +4886,11 @@ export const ProductManagement = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Filter by Stock</label>
+              <label className="text-sm font-bold text-slate-700 block mb-1.5">Filter by Stock</label>
               <select 
                 value={stockFilter}
                 onChange={(e) => setStockFilter(e.target.value)}
-                className="w-full border border-slate-300 rounded-md px-3.5 py-2.5 bg-slate-50/60 text-xs font-medium text-slate-800 outline-none focus:border-[#F7941D] focus:bg-white transition-all shadow-2xs"
+                className="w-full border border-slate-300 rounded-md px-3.5 py-2.5 bg-slate-50/60 text-sm font-medium text-slate-800 outline-none focus:border-[#F7941D] focus:bg-white transition-all shadow-2xs"
               >
                 <option>All Products</option>
                 <option>In Stock</option>
@@ -4890,17 +4900,18 @@ export const ProductManagement = () => {
           </div>
 
           {/* Sub Controls: Show entries, Export, Search */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs font-medium text-slate-600">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-sm font-medium text-slate-600">
             <div className="flex items-center gap-2">
               <span>Show</span>
               <select 
                 value={entriesPerPage}
                 onChange={(e) => setEntriesPerPage(e.target.value)}
-                className="border border-slate-200 rounded-xl px-2.5 py-1.5 bg-slate-50 text-xs text-slate-800 outline-none focus:border-[#F7941D]"
+                className="border border-slate-200 rounded-xl px-2.5 py-1.5 bg-slate-50 text-sm text-slate-800 outline-none focus:border-[#F7941D]"
               >
                 <option value="10">10</option>
                 <option value="25">25</option>
                 <option value="50">50</option>
+                <option value="100">100</option>
               </select>
               <span>entries</span>
             </div>
@@ -4908,9 +4919,9 @@ export const ProductManagement = () => {
             <div className="flex items-center gap-3">
               <button 
                 onClick={handleExportCSV}
-                className="px-4 py-1.5 bg-[#1A2E0A] hover:bg-[#003837] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 border-none cursor-pointer shadow-2xs transition-all active:scale-95"
+                className="px-4 py-1.5 bg-[#1A2E0A] hover:bg-[#003837] text-white text-sm font-bold rounded-xl flex items-center gap-1.5 border-none cursor-pointer shadow-2xs transition-all active:scale-95"
               >
-                <Download size={13} className="text-[#F7941D]" /> Export
+                <Download size={15} className="text-[#F7941D]" /> Export
               </button>
 
               <div className="flex items-center gap-1.5">
@@ -4920,7 +4931,7 @@ export const ProductManagement = () => {
                   placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-44 border border-slate-200 rounded-xl px-3 py-1.5 bg-slate-50 text-xs text-slate-800 outline-none focus:border-[#F7941D]"
+                  className="w-44 border border-slate-200 rounded-xl px-3 py-1.5 bg-slate-50 text-sm text-slate-800 outline-none focus:border-[#F7941D]"
                 />
               </div>
             </div>
@@ -4928,9 +4939,9 @@ export const ProductManagement = () => {
 
           {/* Stock Table */}
           <div className="overflow-x-auto border border-slate-200 rounded-xl">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px] tracking-wider">
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-xs tracking-wider">
                   <th className="py-3.5 px-4">Variation Id ⇅</th>
                   <th className="py-3.5 px-4">Name ⇅</th>
                   <th className="py-3.5 px-4">Seller ⇅</th>
@@ -4942,9 +4953,9 @@ export const ProductManagement = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredProducts.length > 0 ? (
-                  filteredProducts.map((prod) => (
-                    <tr key={prod.id} className="hover:bg-slate-50/80 transition-colors">
+                {pageProducts.length > 0 ? (
+                  pageProducts.map((prod) => (
+                    <tr key={prod.id} data-testid="stock-row" className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3.5 px-4 font-mono font-medium text-slate-500">{prod.sku || prod.id}</td>
                       <td className="py-3.5 px-4 font-bold text-slate-900">{prod.name}</td>
                       <td className="py-3.5 px-4 text-slate-600 font-medium">{prod.seller}</td>
@@ -4958,7 +4969,7 @@ export const ProductManagement = () => {
                       <td className="py-3.5 px-4 text-slate-600 font-medium">{prod.variation}</td>
                       <td className="py-3.5 px-4 font-mono font-bold text-slate-800">{prod.stock}</td>
                       <td className="py-3.5 px-4">
-                        <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold rounded-full">
+                        <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-full">
                           {prod.status}
                         </span>
                       </td>
@@ -4969,21 +4980,21 @@ export const ProductManagement = () => {
                             className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg border border-emerald-200 cursor-pointer transition-colors"
                             title="View Details"
                           >
-                            <Eye size={13} />
+                            <Eye size={15} />
                           </button>
                           <button data-perm="products.edit" 
                             onClick={() => handleEditProduct(prod)}
                             className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg border border-blue-200 cursor-pointer transition-colors"
                             title="Edit Stock"
                           >
-                            <Edit3 size={13} />
+                            <Edit3 size={15} />
                           </button>
                           <button data-perm="products.delete" 
                             onClick={() => handleDeleteProduct(prod.id)}
                             className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-200 cursor-pointer transition-colors"
                             title="Delete Stock Item"
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </td>
@@ -4991,7 +5002,7 @@ export const ProductManagement = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="8" className="py-8 text-center text-slate-400 italic text-xs">
+                    <td colSpan="8" className="py-8 text-center text-slate-400 italic text-sm">
                       No stock products found matching filters
                     </td>
                   </tr>
@@ -5001,22 +5012,33 @@ export const ProductManagement = () => {
           </div>
 
           {/* Table Footer & Pagination */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-slate-500">
-            <span>Showing 1 to {filteredProducts.length} of {products.length} entries</span>
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-sm text-slate-500">
+            <span data-testid="stock-showing">
+              Showing {firstShown} to {lastShown} of {filteredProducts.length} entries
+              {filteredProducts.length !== products.length && ` (filtered from ${products.length} total)`}
+            </span>
             
-            <div className="inline-flex rounded-xl border border-slate-200 p-0.5 bg-slate-50">
+            <div className="inline-flex items-center rounded-xl border border-slate-200 p-0.5 bg-slate-50">
               <button 
-                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-                className="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 border-none bg-transparent cursor-pointer"
+                type="button"
+                data-testid="stock-prev"
+                aria-label="Previous page"
+                disabled={page <= 1}
+                onClick={() => setCurrentPage(Math.max(page - 1, 1))}
+                className="px-2.5 py-1 text-sm font-semibold text-slate-600 hover:text-slate-900 border-none bg-transparent cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 ‹
               </button>
-              <button className="px-3 py-1 bg-[#79B433] text-white text-xs font-bold rounded-lg shadow-2xs border-none cursor-pointer">
-                {currentPage}
-              </button>
+              <span data-testid="stock-page" className="px-3 py-1 bg-[#79B433] text-white text-sm font-bold rounded-lg shadow-2xs">
+                {page} / {totalPages}
+              </span>
               <button 
-                onClick={() => setCurrentPage(p => p + 1)}
-                className="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 border-none bg-transparent cursor-pointer"
+                type="button"
+                data-testid="stock-next"
+                aria-label="Next page"
+                disabled={page >= totalPages}
+                onClick={() => setCurrentPage(Math.min(page + 1, totalPages))}
+                className="px-2.5 py-1 text-sm font-semibold text-slate-600 hover:text-slate-900 border-none bg-transparent cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 ›
               </button>
@@ -5045,8 +5067,8 @@ export const ProductManagement = () => {
               />
               <div>
                 <h4 className="text-base font-bold text-slate-900 m-0 leading-tight">{viewModalData.name}</h4>
-                <p className="text-xs text-slate-500 m-0 mt-1">{viewModalData.seller}</p>
-                <div className="mt-2 inline-block px-2.5 py-0.5 bg-[#fff4ed] text-[#F7941D] border border-[#ffcfb3] text-xs font-bold rounded-full">
+                <p className="text-sm text-slate-500 m-0 mt-1">{viewModalData.seller}</p>
+                <div className="mt-2 inline-block px-2.5 py-0.5 bg-[#fff4ed] text-[#F7941D] border border-[#ffcfb3] text-sm font-bold rounded-full">
                   {viewModalData.status}
                 </div>
               </div>
@@ -9895,7 +9917,7 @@ export const SellersOverview = () => {
     const loadProducts = async () => {
       setProductsLoading(true);
       try {
-        const res = await productService.getProducts({
+        const res = await productService.getAllProducts({
           sellerId: selectedSeller.id,
           admin: 'true',
         });

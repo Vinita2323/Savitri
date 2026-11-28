@@ -374,7 +374,13 @@ export const SuperAdminBrands = () => {
 
                     <div className="mt-2 flex items-center gap-2" data-testid="brand-admin-row" data-brand={brand.brandId || brand.id}>
                       <CityAdminStatusChip s={adminByBrand[brand.brandId || brand.id]?.adminStatus || 'PENDING'} />
-                      {adminByBrand[brand.brandId || brand.id]?.admin && <span className="truncate text-[11px] text-slate-500">{adminByBrand[brand.brandId || brand.id].admin.name}</span>}
+                      {(() => {
+                        const info = adminByBrand[brand.brandId || brand.id];
+                        // the City Admin first, then the admins assigned in Admin Configuration
+                        const city = info?.admin ? `${info.admin.name} (${info.admin.status === 'active' ? 'City Admin' : 'inactive City Admin'})` : '';
+                        const names = [city, ...(info?.assignedAdmins || []).map((x) => x.name)].filter(Boolean);
+                        return names.length ? <span className="truncate text-[11px] text-slate-500" data-testid="brand-admin-names" title={names.join(', ')}>{names.join(', ')}</span> : null;
+                      })()}
                     </div>
 
                     {/* Category & City */}
@@ -442,12 +448,12 @@ export const SuperAdminBrands = () => {
                       </Link>
 
                       <Link
-                        to={`/super-admin/brands/edit/${brand.brandId || brand.id}#cityadmin`}
+                        to={adminByBrand[brand.brandId || brand.id]?.managedBy === 'ADMIN_CONFIG' ? '/super-admin/admin-configuration' : `/super-admin/brands/edit/${brand.brandId || brand.id}#cityadmin`}
                         data-testid="brand-admin-action"
                         className="flex items-center gap-1 rounded-lg border border-[#79B433]/40 bg-[#79B433]/5 px-2.5 py-1 text-[11px] font-bold text-[#4d7a1c] no-underline hover:bg-[#79B433]/10"
                       >
                         <ShieldCheck size={12} />
-                        <span>{{ CONFIGURED: 'View Admin', INACTIVE: 'Edit Admin' }[adminByBrand[brand.brandId || brand.id]?.adminStatus] || 'Configure Admin'}</span>
+                        <span>{adminByBrand[brand.brandId || brand.id]?.managedBy === 'ADMIN_CONFIG' ? 'View Admins' : { CONFIGURED: 'View Admin', INACTIVE: 'Edit Admin' }[adminByBrand[brand.brandId || brand.id]?.adminStatus] || 'Configure Admin'}</span>
                       </Link>
 
                       {(

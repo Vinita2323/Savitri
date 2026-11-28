@@ -31,7 +31,9 @@ router.get('/dashboard', c.adminPurchaseDashboard);
 router.get('/products', c.listEligibleProducts);
 router.post('/products', simpleRateLimit({ windowMs: 60_000, max: 30 }), c.quickAddProduct);
 router.get('/stock-updates', c.listStockUpdates);
+router.get('/suppliers', c.listMySuppliers); // before '/:id'
 router.post('/invoice', simpleRateLimit({ windowMs: 60_000, max: 30 }), c.invoiceUploadMiddleware, c.uploadInvoice);
+router.post('/proof', simpleRateLimit({ windowMs: 60_000, max: 40 }), c.invoiceUploadMiddleware, c.uploadProofPhoto);
 
 // Associated sellers: READ ONLY (there is deliberately no write route here)
 router.get('/sellers', c.listAssociatedSellers);
@@ -48,5 +50,6 @@ router.post('/', simpleRateLimit({ windowMs: 60_000, max: 60 }), c.createAdminPu
 router.get('/:id', ownBrandPurchase, c.getAdminPurchase);
 router.put('/:id/cancel', simpleRateLimit({ windowMs: 60_000, max: 60 }), ownBrandPurchase, c.cancelAdminPurchase);
 router.get('/:id/invoice', ownBrandPurchase, c.downloadInvoice);
+router.get('/:id/proof/:n', ownBrandPurchase, c.downloadProofPhoto);
 
 export default router;

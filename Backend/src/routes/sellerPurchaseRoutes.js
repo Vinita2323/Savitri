@@ -8,6 +8,7 @@ import { simpleRateLimit } from '../middleware/simpleRateLimit.js';
 import {
   createSellerPurchase,
   listMySellerPurchases,
+  listMySellerSuppliers,
   cancelSellerPurchase,
   uploadPurchaseInvoice,
   setPurchaseInvoice,
@@ -49,6 +50,7 @@ const runInvoiceUpload = (req, res, next) => {
 // Everything here belongs to the signed-in seller; the super admin reads purchases through /api/super-admin/seller-purchases.
 router.use(protect('seller'));
 router.get('/', listMySellerPurchases);
+router.get('/suppliers', listMySellerSuppliers);
 router.post('/', simpleRateLimit({ windowMs: 60_000, max: 60 }), createSellerPurchase);
 router.post('/invoice', simpleRateLimit({ windowMs: 60_000, max: 30 }), runInvoiceUpload, uploadPurchaseInvoice);
 router.put('/:id/invoice', simpleRateLimit({ windowMs: 60_000, max: 60 }), setPurchaseInvoice);

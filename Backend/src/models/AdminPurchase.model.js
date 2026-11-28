@@ -62,6 +62,8 @@ const schema = new mongoose.Schema(
 
     // Supplier bill. Stored privately and streamed to the owner (and Super Admin) only.
     invoiceFile: { key: { type: String, default: '' }, name: { type: String, default: '' }, mime: { type: String, default: '' }, size: { type: Number, default: 0 } },
+    // Photos of the goods as proof of the purchase (up to 5). Stored privately like the bill.
+    proofPhotos: { type: [{ _id: false, key: String, name: String, mime: String, size: Number }], default: [] },
 
     // PROCESSING (stock being applied) -> RECORDED -> CANCELLING -> CANCELLED; FAILED if stock could not be applied (nothing kept)
     status: { type: String, enum: ['PROCESSING', 'RECORDED', 'CANCELLING', 'CANCELLED', 'FAILED'], default: 'PROCESSING', index: true },

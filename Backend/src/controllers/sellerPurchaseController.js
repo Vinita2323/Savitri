@@ -7,6 +7,7 @@ import Seller from '../models/Seller.model.js';
 import SellerPurchase from '../models/SellerPurchase.model.js';
 import { emitToRoom } from '../socket/socket.js';
 import { invalidateProductsCache } from './productController.js';
+import { buildSupplierBook, SUPPLIER_BOOK_SCAN } from '../utils/supplierBook.js';
 
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const round2 = (n) => Number(Number(n).toFixed(2));
@@ -292,6 +293,19 @@ export const setPurchaseInvoice = async (req, res, next) => {
 };
 
 // GET /api/seller-purchases   (the signed-in seller's own purchases)
+/** GET /seller-purchases/suppliers: the suppliers this seller has bought from, newest first, with their latest phone. */
+export const listMySellerSuppliers = async (req, res, next) => {
+  try {
+    const sellerId = new mongoose.Types.ObjectId(String(req.user.id));
+    const rows = await SellerPurchase.find({ sellerId }).sort({ purchaseDate: -1, createdAt: -1 }).limit(SUPPLIER_BOOK_SCAN)
+      .select('supplierName supplierPhone purchaseDate createdAt').lean();
+    const suppliers = buildSupplierBook(rows, ['supplierPhone']).map((s) => ({ name: s.name, phone: s.supplierPhone, lastPurchaseAt: s.lastPurchaseAt, purchases: s.purchases }));
+    res.status(200).json({ success: true, suppliers });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const listMySellerPurchases = async (req, res, next) => {
   try {
     const sellerId = new mongoose.Types.ObjectId(String(req.user.id));
